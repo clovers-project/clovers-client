@@ -4,7 +4,5 @@ __pycache__/
 .venv
 dist
 clovers_library
-member_list.json
 clovers.toml
 data
-LeafGames

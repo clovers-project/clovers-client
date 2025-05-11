@@ -14,6 +14,7 @@ dependencies = [
     "clovers-utils[all] (>=0.2.3,<0.3.0)",
     "openai (>=1.60.1,<2.0.0)",
     "httpx (>=0.28.1,<0.29.0)",
+    "websockets (>=15.0.1,<16.0.0)",
 ]
 
 [build-system]

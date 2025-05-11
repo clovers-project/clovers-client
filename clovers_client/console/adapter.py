@@ -1,27 +1,10 @@
-import json
 from clovers import Adapter, Result
-from clovers.logger import logger
-from pathlib import Path
 from collections.abc import AsyncGenerator
 from io import BytesIO
 from PIL import Image
 from .data import User, Event
 
-adapter = Adapter("console")
-
-
-member_list_file = Path("member_list.json")
-if member_list_file.exists():
-    with open("member_list.json", "rb") as f:
-        member_list = json.load(f)
-    member_dict = {v["user_id"]: v for v in member_list}
-
-    @adapter.call_method("group_member_list")
-    async def _(group_id: str):
-        return member_list
-
-else:
-    logger.error("没有找到 member_list.json ，适配器将没有 group_member_list 调用方法")
+adapter = Adapter("console".upper())
 
 
 async def send_text(message: str):
@@ -37,12 +20,6 @@ async def send_list(message: list[Result]):
         match item.send_method:
             case "text":
                 await send_text(item.data)
-            case "at":
-                user = member_dict.get(item.data)
-                if user:
-                    print(f"@{user['nickname'] or user["card"]}", end=" ")
-                else:
-                    print(f"@{item.data}", end=" ")
             case "image":
                 await send_image(item.data)
             case "list":
