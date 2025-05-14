@@ -14,7 +14,7 @@ sys.path.insert(0, r"D:\CLOVERS\clovers-AIchat")
 import logging
 import asyncio
 
-from clovers_client.onebot_v11 import Leaf as OneBot_V11
+from clovers_client.console import Leaf as console
 
 
 # 配置日志记录器
@@ -24,4 +24,4 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-asyncio.run(OneBot_V11().run())
+asyncio.run(console().run())
