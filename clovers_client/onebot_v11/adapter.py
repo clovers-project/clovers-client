@@ -3,8 +3,11 @@ from io import BytesIO
 from base64 import b64encode
 import httpx
 from clovers import Adapter
-from .config import __config__
 from .typing import Post, FileLike, ListMessage, SegmentedMessage, GroupMessage, PrivateMessage
+from .config import __config__
+
+Bot_Nickname = __config__.Bot_Nickname
+superusers = __config__.superusers
 
 
 def f2s(file: FileLike) -> str:
@@ -111,6 +114,11 @@ async def _(message: PrivateMessage, post: Post, recv: dict):
         await post("send_private_msg", json=data)
 
 
+@adapter.property_method("Bot_Nickname")
+async def _():
+    return Bot_Nickname
+
+
 @adapter.property_method("user_id")
 async def _(recv: dict):
     return str(recv["user_id"])
@@ -163,9 +171,6 @@ async def _(post: Post, recv: dict):
         reply = await post("get_msg", data={"message_id": reply_id})
         url.extend(msg["data"]["url"] for msg in reply.json()["data"]["message"] if msg["type"] == "image")
     return url
-
-
-superusers = set(__config__.superusers)
 
 
 @adapter.property_method("permission")
