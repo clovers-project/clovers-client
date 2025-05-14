@@ -1,5 +1,7 @@
 import sys
+from pathlib import Path
 
+sys.path.insert(0, Path(__file__).parent.parent.as_posix())
 sys.path.insert(0, r"D:\CLOVERS\clovers")
 sys.path.insert(0, r"D:\CLOVERS\clovers-apscheduler")
 sys.path.insert(0, r"D:\CLOVERS\clovers-divine")

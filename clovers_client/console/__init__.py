@@ -1,15 +1,34 @@
 import asyncio
-from clovers import Leaf
-from .data import Event
-from .config import __config__
+from pathlib import Path
+from clovers import Leaf as BaseLeaf
+from clovers.clovers import list_modules
+from .adapter import __adapter__
+from .config import Event, __config__
 
 Bot_Nickname = __config__.Bot_Nickname
 master = __config__.master
 
 
-class MyLeaf(Leaf):
-    @staticmethod
-    def extract_message(inputs: str, event: Event, **ignore):
+class Leaf(BaseLeaf):
+    def __init__(self, name="CONSOLE"):
+        self.name = name
+        super().__init__(self.name)
+        self.adapter.update(__adapter__)
+
+        for plugin in __config__.plugins:
+            self.load_plugin(plugin)
+        for plugin_dir in __config__.plugin_dirs:
+            plugin_dir = Path(plugin_dir)
+            if not plugin_dir.exists():
+                plugin_dir.mkdir(parents=True, exist_ok=True)
+                continue
+            for plugin in list_modules(plugin_dir):
+                self.load_plugin(plugin)
+
+    def extract_message(self, inputs: str, event: Event, **ignore):
+        if inputs == "exit":
+            self.running = False
+            return
         if inputs.startswith(Bot_Nickname):
             inputs = inputs.lstrip(Bot_Nickname)
             event.to_me = True
@@ -26,7 +45,7 @@ class MyLeaf(Leaf):
         return inputs
 
     async def run(self):
-        asyncio.create_task(self.startup())
-        while (inputs := input("Enter message: ")) != "exit":
-            await asyncio.create_task(self.response(inputs=inputs, user=master, event=Event()))
-        await asyncio.create_task(self.shutdown())
+        async with self:
+            while self.running:
+                inputs = input("Enter Message:")
+                await asyncio.create_task(self.response(inputs=inputs, event=Event(user=master)))

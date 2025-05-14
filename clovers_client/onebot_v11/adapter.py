@@ -20,7 +20,7 @@ def f2s(file: FileLike) -> str:
     return f"base64://{b64encode(file).decode()}"
 
 
-adapter = Adapter("onebot_v11".upper())
+adapter = Adapter("OneBot V11")
 
 
 def list2message(message: ListMessage):

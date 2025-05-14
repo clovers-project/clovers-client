@@ -29,6 +29,7 @@ class Leaf(BaseLeaf):
         for adapter_dir in __config__.adapter_dirs:
             adapter_dir = Path(adapter_dir)
             if not adapter_dir.exists():
+                adapter_dir.mkdir(parents=True, exist_ok=True)
                 continue
             for adapter in list_modules(adapter_dir):
                 self.load_adapter(adapter)
@@ -38,6 +39,7 @@ class Leaf(BaseLeaf):
         for plugin_dir in __config__.plugin_dirs:
             plugin_dir = Path(plugin_dir)
             if not plugin_dir.exists():
+                plugin_dir.mkdir(parents=True, exist_ok=True)
                 continue
             for plugin in list_modules(plugin_dir):
                 self.load_plugin(plugin)
