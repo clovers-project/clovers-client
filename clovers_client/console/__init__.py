@@ -1,7 +1,7 @@
 import asyncio
 from pathlib import Path
-from clovers import Leaf as BaseLeaf
-from clovers.clovers import list_modules
+from clovers import Leaf, Client as CloversClient
+from clovers.utils import list_modules
 from .adapter import __adapter__
 from .config import Event, __config__
 
@@ -9,10 +9,9 @@ Bot_Nickname = __config__.Bot_Nickname
 master = __config__.master
 
 
-class Leaf(BaseLeaf):
+class Client(Leaf, CloversClient):
     def __init__(self, name="CONSOLE"):
-        self.name = name
-        super().__init__(self.name)
+        super().__init__(name)
         self.adapter.update(__adapter__)
 
         for plugin in __config__.plugins:

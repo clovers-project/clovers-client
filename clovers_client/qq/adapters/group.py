@@ -1,3 +1,4 @@
+from base64 import b64encode
 from pathlib import Path
 from io import BytesIO
 from botpy.message import GroupMessage
@@ -30,7 +31,7 @@ def media_kwargs(data: FileLike, file_type: FileType):
             img_bytes = data
         else:
             raise TypeError("Unsupported type")
-        kwargs["file_data"] = img_bytes
+        kwargs["file_data"] = b64encode(img_bytes).decode()
     return {"media": kwargs}
 
 

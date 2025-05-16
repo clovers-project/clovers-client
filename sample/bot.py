@@ -10,12 +10,13 @@ sys.path.insert(0, r"D:\CLOVERS\clovers-setu-collection")
 sys.path.insert(0, r"D:\CLOVERS\clovers-groupmate-waifu")
 sys.path.insert(0, r"D:\CLOVERS\clovers-AIchat")
 
-import logging
 import asyncio
+import logging
+from clovers.logger import logger
 
-from clovers_client.qq import Leaf as Leaf
+from clovers_client.console import Client as Client
 
-
+logger.setLevel(level=logging.INFO)
 # 配置日志记录器
 logging.basicConfig(
     level=logging.INFO,
@@ -23,4 +24,4 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-asyncio.run(Leaf().run())
+asyncio.run(Client().run())

@@ -3,8 +3,8 @@ from pathlib import Path
 import asyncio
 import httpx
 import websockets
-from clovers import Leaf as BaseLeaf
-from clovers.clovers import list_modules
+from clovers import Leaf, Client as CloversClient
+from clovers.utils import list_modules
 from clovers.logger import logger
 from .adapter import __adapter__
 from .config import __config__
@@ -14,10 +14,9 @@ ws_url = __config__.ws_url
 Bot_Nickname = __config__.Bot_Nickname
 
 
-class Leaf(BaseLeaf):
+class Client(Leaf, CloversClient):
     def __init__(self, name="OneBot V11"):
-        self.name = name
-        super().__init__(self.name)
+        super().__init__(name)
         # 下面是获取配置
         self.client = httpx.AsyncClient()
         self.ws_connect = websockets.connect(ws_url)
@@ -48,6 +47,8 @@ class Leaf(BaseLeaf):
         if not recv.get("post_type") == "message":
             return
         message = "".join(seg["data"]["text"] for seg in recv["message"] if seg["type"] == "text")
+        if recv.get("message_type") == "private":
+            recv["to_me"] = True
         if message.startswith(Bot_Nickname):
             recv["to_me"] = True
             return message.lstrip(Bot_Nickname)

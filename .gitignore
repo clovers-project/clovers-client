@@ -3,6 +3,7 @@ __pycache__/
 .vscode
 .venv
 dist
+*.log
 clovers_library
 clovers.toml
 data
