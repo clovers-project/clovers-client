@@ -3,13 +3,15 @@ from pydantic import BaseModel
 
 class Config(BaseModel):
     Bot_Nickname: str = "C酱"
-    superusers: set[str] = set()
-    url: str = "http://127.0.0.1:3000"
-    ws_url: str = "ws://127.0.0.1:3001"
-    adapters: list[str] = []
-    adapter_dirs: list[str] = []
+    appid: str = ""
+    secret: str = ""
+    group_adapters: list[str] = []
+    group_adapter_dirs: list[str] = []
+    guild_adapters: list[str] = []
+    guild_adapter_dirs: list[str] = []
     plugins: list[str] = []
     plugin_dirs: list[str] = []
+    superusers: set[str] = set()
 
 
 from clovers.config import config as clovers_config
