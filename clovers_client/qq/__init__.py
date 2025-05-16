@@ -1,5 +1,4 @@
 from pathlib import Path
-import asyncio
 import botpy
 from botpy.message import Message, GroupMessage
 from clovers import Leaf as BaseLeaf

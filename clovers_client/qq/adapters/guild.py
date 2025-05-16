@@ -2,9 +2,8 @@ from pathlib import Path
 from io import BytesIO
 from botpy.message import Message
 from botpy import Client
-from collections.abc import AsyncGenerator
-from clovers import Adapter, Result
-from .typing import ListMessage, SegmentedMessage, FileLike
+from clovers import Adapter
+from .typing import ListResult, SegmentedResult, FileLike
 from ..config import __config__
 
 Bot_Nickname = __config__.Bot_Nickname
@@ -13,42 +12,38 @@ superusers = __config__.superusers
 adapter = Adapter()
 
 
+def image_kwargs(data: FileLike):
+    if isinstance(data, str):
+        return {"image": data}
+    else:
+        if isinstance(data, Path):
+            img_bytes = data.read_bytes()
+        elif isinstance(data, BytesIO):
+            img_bytes = data.getvalue()
+        elif isinstance(data, bytes):
+            img_bytes = data
+        else:
+            raise TypeError("Unsupported type")
+        return {"file_image": img_bytes}
+
+
 @adapter.send_method("at")
 async def _(data: str, event: Message):
     await event.reply(content=f"<@{data}>")
 
 
-def to_image(data: FileLike):
-    kwargs = {}
-    if isinstance(data, str):
-        kwargs["image"] = data
-        return kwargs
-    if isinstance(data, Path):
-        img_bytes = data.read_bytes()
-    elif isinstance(data, BytesIO):
-        img_bytes = data.getvalue()
-    elif isinstance(data, bytes):
-        img_bytes = data
-    else:
-        raise TypeError("Unsupported type")
-    kwargs["file_image"] = img_bytes
-    return kwargs
+@adapter.send_method("text")
+async def _(data: str, event: Message):
+    await event.reply(content=data)
 
 
 @adapter.send_method("image")
 async def _(data: FileLike, event: Message):
-    await event.reply(**to_image(data))
-
-
-# @adapter.send_method("voice")
-# async def _(data: str, event: Message):
-#     """发送音频消息"""
+    await event.reply(**image_kwargs(data))
 
 
 @adapter.send_method("list")
-async def _(data: list[Result], event: Message):
-    """发送图片文本混合信息"""
-    print(data)
+async def _(data: ListResult, event: Message):
     content = ""
     image = None
     for seg in data:
@@ -60,12 +55,13 @@ async def _(data: list[Result], event: Message):
             case "image":
                 image = seg.data
     if not image:
-        return await event.reply(content=content)
-    return await event.reply(content=content, media={"file_type": 1, "url": image})
+        await event.reply(content=content)
+    else:
+        await event.reply(content=content, **image_kwargs(image))
 
 
 @adapter.send_method("segmented")
-async def _(data: AsyncGenerator[Result, None]):
+async def _(data: SegmentedResult):
     """发送分段信息"""
     async for seg in data:
         await adapter.sends_lib[seg.send_method](seg.data)

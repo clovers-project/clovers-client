@@ -2,11 +2,37 @@ from pathlib import Path
 from io import BytesIO
 from botpy.message import GroupMessage
 from clovers import Adapter
-from .typing import ListMessage, SegmentedMessage, FileLike
+from enum import IntEnum
+from .typing import ListResult, SegmentedResult, FileLike
 from ..config import __config__
 
 Bot_Nickname = __config__.Bot_Nickname
 superusers = __config__.superusers
+
+
+class FileType(IntEnum):
+    image = 1
+    video = 2
+    voice = 3
+    file = 4
+
+
+def media_kwargs(data: FileLike, file_type: FileType):
+    kwargs: dict = {"file_type": file_type}
+    if isinstance(data, str):
+        kwargs["url"] = data
+    else:
+        if isinstance(data, Path):
+            img_bytes = data.read_bytes()
+        elif isinstance(data, BytesIO):
+            img_bytes = data.getvalue()
+        elif isinstance(data, bytes):
+            img_bytes = data
+        else:
+            raise TypeError("Unsupported type")
+        kwargs["file_data"] = img_bytes
+    return {"media": kwargs}
+
 
 adapter = Adapter()
 
@@ -22,37 +48,18 @@ async def _(data: str, event: GroupMessage):
     await event.reply(content=data)
 
 
-def to_image(data: FileLike):
-    kwargs = {}
-    if isinstance(data, str):
-        kwargs["media"] = {"file_type": 1, "url": data}
-        return kwargs
-    if isinstance(data, Path):
-        img_bytes = data.read_bytes()
-    elif isinstance(data, BytesIO):
-        img_bytes = data.getvalue()
-    elif isinstance(data, bytes):
-        img_bytes = data
-    else:
-        raise TypeError("Unsupported type")
-    kwargs["file_image"] = img_bytes
-    return kwargs
-
-
 @adapter.send_method("image")
 async def _(data: FileLike, event: GroupMessage):
-    await event.reply(**to_image(data))
+    await event.reply(**media_kwargs(data, FileType.image))
 
 
 @adapter.send_method("voice")
 async def _(data: str, event: GroupMessage):
-    """发送音频消息"""
-    await event.reply(media={"file_type": 3, "url": data})
+    await event.reply(**media_kwargs(data, FileType.voice))
 
 
 @adapter.send_method("list")
-async def _(data: ListMessage, event: GroupMessage):
-    """发送图片文本混合信息"""
+async def _(data: ListResult, event: GroupMessage):
     content = ""
     image = None
     for seg in data:
@@ -64,12 +71,11 @@ async def _(data: ListMessage, event: GroupMessage):
     if not image:
         await event.reply(content=content)
     else:
-        await event.reply(content=content, **to_image(image))
+        await event.reply(content=content, **media_kwargs(image, FileType.image))
 
 
 @adapter.send_method("segmented")
-async def _(data: SegmentedMessage):
-    """发送分段信息"""
+async def _(data: SegmentedResult):
     async for seg in data:
         await adapter.sends_lib[seg.send_method](seg.data)
 
