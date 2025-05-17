@@ -3,7 +3,7 @@ from pathlib import Path
 import asyncio
 import httpx
 import websockets
-from clovers import Leaf, Client as CloversClient
+from clovers import LeafClient
 from clovers.utils import list_modules
 from clovers.logger import logger
 from .adapter import __adapter__
@@ -14,7 +14,7 @@ ws_url = __config__.ws_url
 Bot_Nickname = __config__.Bot_Nickname
 
 
-class Client(Leaf, CloversClient):
+class Client(LeafClient):
     def __init__(self, name="OneBot V11"):
         super().__init__(name)
         # 下面是获取配置

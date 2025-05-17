@@ -1,7 +1,7 @@
 from pathlib import Path
 import botpy
 from botpy.message import Message, GroupMessage
-from clovers import Client as CloversClient, Leaf
+from clovers import Leaf, Client as CloversClient
 from clovers.utils import list_modules
 from .adapters.group import __adapter__ as group_adapter
 from .adapters.guild import __adapter__ as guild_adapter
