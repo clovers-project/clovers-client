@@ -6,7 +6,7 @@ sys.path.insert(0, Path(__file__).parent.parent.as_posix())
 import asyncio
 import logging
 from clovers.logger import logger
-
+from clovers.config import Config
 from clovers_client.qq import Client as Client
 
 logger.setLevel(level=logging.INFO)
@@ -16,5 +16,7 @@ logging.basicConfig(
     format="[%(asctime)s][%(levelname)s]%(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+Config.environ().save()
 
 asyncio.run(Client().run())

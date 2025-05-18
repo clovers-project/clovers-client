@@ -14,7 +14,9 @@ class Config(BaseModel):
     superusers: set[str] = set()
 
 
-from clovers.config import config as clovers_config
+from clovers.config import Config as CloversConfig
+
+clovers_config = CloversConfig.environ()
 
 __config__ = Config.model_validate(clovers_config.get("clovers", {}))
 clovers_config["clovers"] = __config__.model_dump()
