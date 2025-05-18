@@ -61,7 +61,7 @@ class QQBotClient(botpy.Client):
 
 
 class Client(CloversClient):
-    def __init__(self, name="QQBotSDK"):
+    def __init__(self, name="QQBotSDK", appid=appid, secret=secret):
         self.name = name
         super().__init__()
         self.client = QQBotClient()
@@ -75,6 +75,8 @@ class Client(CloversClient):
                 continue
             for plugin in list_modules(plugin_dir):
                 self.load_plugin(plugin)
+        self.appid = appid
+        self.secret = secret
 
     def plugins_ready(self):
         self.client.leaf_group.plugins.extend(self.plugins)
@@ -83,6 +85,6 @@ class Client(CloversClient):
         self.client.leaf_guild.plugins_ready()
 
     async def run(self):
-        async with self:
-            async with self.client:
-                await self.client.start(appid=appid, secret=secret)
+        async with self.client:
+            async with self:
+                await self.client.start(appid=self.appid, secret=self.secret)

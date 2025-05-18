@@ -12,9 +12,6 @@ dependencies = ["pydantic (>=2.10.6,<3.0.0)", "clovers (>=0.4,<0.5)"]
 console = ["pillow (>=11.1.0,<12.0.0)"]
 onebot_v11 = ["httpx (>=0.28.1,<0.29.0)", "websockets (>=15.0.1,<16.0.0)"]
 qq = ["qq-botpy (>=1.2.1,<2.0.0)"]
-nonebot_adapter_onebot = ["nonebot-adapter-onebot (>=2.4.6,<3.0.0)"]
-nonebot_adapter_qq = ["nonebot-adapter-qq (>=1.6.1,<2.0.0)"]
-nonebot_adapter_satori = ["nonebot-adapter-satori (>=0.13.3,<0.14.0)"]
 
 all = [
     "pillow (>=11.1.0,<12.0.0)",
@@ -25,12 +22,3 @@ all = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.group.dev.dependencies]
-clovers-apscheduler = "^0.2.1"
-clovers-utils = { extras = ["all"], version = "^0.2.4" }
-httpx = "^0.28.1"
-matplotlib = "^3.10.3"
-mplfinance = "^0.12.10b0"
-pillow = "^11.2.1"
-openai = "^1.78.1"

@@ -15,9 +15,10 @@ Bot_Nickname = __config__.Bot_Nickname
 
 
 class Client(LeafClient):
-    def __init__(self, name="OneBot V11"):
+    def __init__(self, name="OneBot V11", url=url, ws_url=ws_url):
         super().__init__(name)
         # 下面是获取配置
+        self.url = url
         self.client = httpx.AsyncClient()
         self.ws_connect = websockets.connect(ws_url)
 
@@ -55,7 +56,7 @@ class Client(LeafClient):
         return message
 
     async def post(self, endpoint: str, **kwargs) -> dict:
-        resp = await self.client.post(url=f"{url}/{endpoint}", **kwargs)
+        resp = await self.client.post(url=f"{self.url}/{endpoint}", **kwargs)
         resp = resp.json()
         logger.info(resp.get("message", "No Message"))
         return resp
@@ -71,26 +72,30 @@ class Client(LeafClient):
         raw_message = recv.get("raw_message", "None")
         logger.info(f"[用户:{user_id}][群组：{group_id}]{raw_message}")
 
-    async def run(self):
-        async with self:
-            ws = None
-            err = None
-            while self.running:
-                try:
-                    ws = await self.ws_connect
-                    logger.info("websockets connected")
-                    async for recv in ws:
-                        recv = json.loads(recv)
-                        self.recv_log(recv)
-                        asyncio.create_task(self.response(post=self.post, recv=recv))
-                except websockets.exceptions.ConnectionClosedError:
-                    logger.exception("websockets reconnecting...")
-                    await asyncio.sleep(5)
-                except Exception as e:
-                    err = e
-                    break
+    async def main_loop(self):
+        err = None
+        ws = None
+        while self.running:
+            try:
+                ws = await self.ws_connect
+                logger.info("websockets connected")
+                async for recv in ws:
+                    recv = json.loads(recv)
+                    self.recv_log(recv)
+                    asyncio.create_task(self.response(post=self.post, recv=recv))
+            except websockets.exceptions.ConnectionClosedError:
+                logger.exception("websockets reconnecting...")
+                await asyncio.sleep(5)
+            except Exception as e:
+                err = e
+                break
         if ws is not None:
             await ws.close()
             logger.info("websockets closed")
-        if err is not None:
-            raise err
+        return err
+
+    async def run(self):
+        async with self.client:
+            async with self:
+                if (err := await self.main_loop()) is not None:
+                    raise err
