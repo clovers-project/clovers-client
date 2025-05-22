@@ -55,8 +55,11 @@ class Client(LeafClient):
 
     async def main_loop(self, ws_connect: websockets.connect):
         while self.running:
-            async for recv in await ws_connect:
-                asyncio.create_task(self.response(inputs=recv, event=Event(user=master)))
+            try:
+                async for recv in await ws_connect:
+                    asyncio.create_task(self.response(inputs=recv, event=Event(user=master)))
+            except websockets.exceptions.ConnectionClosedError:
+                break
 
     async def run(self):
         self.inputs_console()
