@@ -19,9 +19,7 @@ class Client(LeafClient):
         super().__init__(name)
         # 下面是获取配置
         self.url = url
-        self.client = httpx.AsyncClient()
-        self.ws_connect = websockets.connect(ws_url)
-
+        self.ws_url = ws_url
         self.adapter.update(__adapter__)
 
         for adapter in __config__.adapters:
@@ -72,30 +70,33 @@ class Client(LeafClient):
         raw_message = recv.get("raw_message", "None")
         logger.info(f"[用户:{user_id}][群组：{group_id}]{raw_message}")
 
-    async def main_loop(self):
-        err = None
-        ws = None
+    def startup(self):
+        self.client = httpx.AsyncClient()
+        return super().startup()
+
+    async def shutdown(self):
+        await self.client.aclose()
+        return super().shutdown()
+
+    async def main_loop(self, ws_connect: websockets.connect):
         while self.running:
-            try:
-                ws = await self.ws_connect
-                logger.info("websockets connected")
-                async for recv in ws:
-                    recv = json.loads(recv)
-                    self.recv_log(recv)
-                    asyncio.create_task(self.response(post=self.post, recv=recv))
-            except websockets.exceptions.ConnectionClosedError:
-                logger.exception("websockets reconnecting...")
-                await asyncio.sleep(5)
-            except Exception as e:
-                err = e
-                break
-        if ws is not None:
-            await ws.close()
-            logger.info("websockets closed")
-        return err
+            async for recv in await ws_connect:
+                recv = json.loads(recv)
+                self.recv_log(recv)
+                asyncio.create_task(self.response(post=self.post, recv=recv))
+        logger.info("client closed")
 
     async def run(self):
-        async with self.client:
-            async with self:
-                if (err := await self.main_loop()) is not None:
-                    raise err
+        async with self:
+            while True:
+                try:
+                    ws_connect = websockets.connect(self.ws_url)
+                    logger.info("websockets connected")
+                    await self.main_loop(ws_connect)
+                    return
+                except websockets.exceptions.ConnectionClosedError:
+                    logger.error("websockets reconnecting...")
+                    await asyncio.sleep(5)
+                except Exception:
+                    logger.exception("something error")
+                    return

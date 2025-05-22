@@ -26,7 +26,7 @@ adapter = Adapter("OneBot V11")
 def list2message(message: ListMessage):
     msg = []
     for seg in message:
-        match seg.send_method:
+        match seg.key:
             case "text":
                 msg.append({"type": "text", "data": {"text": seg.data}})
             case "image":
@@ -86,7 +86,7 @@ async def _(message: SegmentedMessage, /, post: Post, recv: dict):
 async def _(message: GroupMessage, /, post: Post):
     result = message["data"]
     data: dict = {"group_id": int(message["group_id"])}
-    if result.send_method == "segmented":
+    if result.key == "segmented":
         async for seg in result.data:
             if not (msg := list2message([seg])):
                 continue
@@ -103,7 +103,7 @@ async def _(message: PrivateMessage, post: Post, recv: dict):
     data: dict = {"user_id": int(message["user_id"])}
     if group_id := recv.get("group_id"):
         data["group_id"] = group_id
-    if result.send_method == "segmented":
+    if result.key == "segmented":
         async for seg in result.data:
             if not (msg := list2message([seg])):
                 continue

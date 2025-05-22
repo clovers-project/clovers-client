@@ -10,6 +10,11 @@ Bot_Nickname = __config__.Bot_Nickname
 adapter = Adapter("CONSOLE")
 
 
+@adapter.send_method("at")
+async def send_at(message):
+    print(f"[AT] {message}")
+
+
 @adapter.send_method("text")
 async def send_text(message: str):
     print(f"[TEXT]{"\n" if "\n" in message else " "}{message}")
@@ -21,32 +26,30 @@ async def send_image(message: BytesIO | bytes):
     Image.open(BytesIO(message) if isinstance(message, bytes) else message).show()
 
 
+async def send_result(result: Result):
+    match result.key:
+        case "at":
+            await send_at(result.data)
+        case "text":
+            await send_text(result.data)
+        case "image":
+            await send_image(result.data)
+        case "list":
+            await send_list(result.data)
+        case _:
+            print(f"Unknown send_method: {result.key}")
+
+
 @adapter.send_method("list")
 async def send_list(message: list[Result]):
     for item in message:
-        match item.send_method:
-            case "text":
-                await send_text(item.data)
-            case "image":
-                await send_image(item.data)
-            case "list":
-                await send_list(item.data)
-            case _:
-                print(f"Unknown send_method: {item.send_method}")
+        await send_result(item)
 
 
 @adapter.send_method("segmented")
 async def send_segmented(message: AsyncGenerator[Result]):
     async for item in message:
-        match item.send_method:
-            case "text":
-                await send_text(item.data)
-            case "image":
-                await send_image(item.data)
-            case "list":
-                await send_list(item.data)
-            case _:
-                print(f"Unknown send_method: {item.send_method}")
+        await send_result(item)
 
 
 @adapter.property_method("Bot_Nickname")

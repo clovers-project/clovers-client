@@ -23,6 +23,7 @@ class Config(BaseModel):
     plugins: list[str] = []
     plugin_dirs: list[str] = []
     master: User = User()
+    ws_port: int = 11000
 
 
 from clovers.config import Config as CloversConfig

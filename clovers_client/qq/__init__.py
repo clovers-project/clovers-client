@@ -7,7 +7,6 @@ from .adapters.group import __adapter__ as group_adapter
 from .adapters.guild import __adapter__ as guild_adapter
 from .config import __config__
 
-
 appid = __config__.appid
 secret = __config__.secret
 Bot_Nickname = __config__.Bot_Nickname
@@ -78,11 +77,11 @@ class Client(CloversClient):
         self.appid = appid
         self.secret = secret
 
-    def plugins_ready(self):
-        self.client.leaf_group.plugins.extend(self.plugins)
-        self.client.leaf_group.plugins_ready()
-        self.client.leaf_guild.plugins.extend(self.plugins)
-        self.client.leaf_guild.plugins_ready()
+    def initialize_plugins(self):
+        self.client.leaf_group.plugins = self.plugins
+        self.client.leaf_group.initialize_plugins()
+        self.client.leaf_guild.plugins = self.plugins
+        self.client.leaf_guild.initialize_plugins()
 
     async def run(self):
         async with self.client:

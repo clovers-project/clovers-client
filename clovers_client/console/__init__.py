@@ -1,4 +1,7 @@
+import sys
+import subprocess
 import asyncio
+import websockets
 from pathlib import Path
 from clovers import LeafClient
 from clovers.utils import list_modules
@@ -7,13 +10,14 @@ from .config import Event, __config__
 
 Bot_Nickname = __config__.Bot_Nickname
 master = __config__.master
+ws_port = __config__.ws_port
 
 
 class Client(LeafClient):
-    def __init__(self, name="CONSOLE"):
+    def __init__(self, name="CONSOLE", ws_port=ws_port):
         super().__init__(name)
+        self.ws_port = ws_port
         self.adapter.update(__adapter__)
-
         for plugin in __config__.plugins:
             self.load_plugin(plugin)
         for plugin_dir in __config__.plugin_dirs:
@@ -43,8 +47,19 @@ class Client(LeafClient):
                     event.is_private = True
         return inputs
 
+    def inputs_console(self):
+        subprocess.Popen(
+            [sys.executable, (Path(__file__).parent / "console.py").as_posix(), str(self.ws_port)],
+            creationflags=subprocess.CREATE_NEW_CONSOLE,
+        )
+
+    async def main_loop(self, ws_connect: websockets.connect):
+        while self.running:
+            async for recv in await ws_connect:
+                asyncio.create_task(self.response(inputs=recv, event=Event(user=master)))
+
     async def run(self):
+        self.inputs_console()
         async with self:
-            while self.running:
-                inputs = input("Enter Message:")
-                await asyncio.create_task(self.response(inputs=inputs, event=Event(user=master)))
+            ws_connect = websockets.connect(f"ws://127.0.0.1:{self.ws_port}")
+            await self.main_loop(ws_connect)
