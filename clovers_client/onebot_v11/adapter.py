@@ -1,7 +1,7 @@
 from pathlib import Path
 from io import BytesIO
 from base64 import b64encode
-from clovers import Adapter
+from clovers import Adapter, Result
 from .typing import Post, FileLike, ListMessage, SegmentedMessage, GroupMessage, PrivateMessage
 from .config import __config__
 
@@ -75,7 +75,11 @@ async def _(message: SegmentedMessage, /, post: Post, recv: dict):
         case _:
             raise ValueError("unknown message type")
     async for seg in message:
-        if not (msg := list2message([seg])):
+        if seg.key == "list":
+            result_data = seg.data
+        else:
+            result_data = [seg]
+        if not (msg := list2message(result_data)):
             continue
         data["message"] = msg
         await post("send_msg", json=data)
@@ -86,8 +90,13 @@ async def _(message: GroupMessage, /, post: Post):
     result = message["data"]
     data: dict = {"group_id": int(message["group_id"])}
     if result.key == "segmented":
+        seg: Result
         async for seg in result.data:
-            if not (msg := list2message([seg])):
+            if seg.key == "list":
+                result_data = seg.data
+            else:
+                result_data = [seg]
+            if not (msg := list2message(result_data)):
                 continue
             data["message"] = msg
             await post("send_group_msg", json=data)
@@ -103,8 +112,13 @@ async def _(message: PrivateMessage, post: Post, recv: dict):
     if group_id := recv.get("group_id"):
         data["group_id"] = group_id
     if result.key == "segmented":
+        seg: Result
         async for seg in result.data:
-            if not (msg := list2message([seg])):
+            if seg.key == "list":
+                result_data = seg.data
+            else:
+                result_data = [seg]
+            if not (msg := list2message(result_data)):
                 continue
             data["message"] = msg
             await post("send_private_msg", json=data)
@@ -133,7 +147,7 @@ async def _(recv: dict) -> str | None:
 async def _(recv: dict) -> bool:
     if "to_me" in recv:
         return True
-    self_id = recv["self_id"]
+    self_id = str(recv["self_id"])
     return any(seg["type"] == "at" and seg["data"]["qq"] == self_id for seg in recv["message"])
 
 
