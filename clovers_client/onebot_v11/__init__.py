@@ -52,7 +52,7 @@ class Client(LeafClient):
         if message.startswith(Bot_Nickname):
             recv["to_me"] = True
             return message.lstrip(Bot_Nickname)
-        return message
+        return message.lstrip()
 
     async def post(self, endpoint: str, **kwargs) -> dict:
         resp = await self.client.post(url=f"{self.url}/{endpoint}", **kwargs)

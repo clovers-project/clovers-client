@@ -1,7 +1,6 @@
 from pathlib import Path
 from io import BytesIO
 from base64 import b64encode
-import httpx
 from clovers import Adapter
 from .typing import Post, FileLike, ListMessage, SegmentedMessage, GroupMessage, PrivateMessage
 from .config import __config__
@@ -115,43 +114,41 @@ async def _(message: PrivateMessage, post: Post, recv: dict):
 
 
 @adapter.property_method("Bot_Nickname")
-async def _():
+async def _() -> str:
     return Bot_Nickname
 
 
 @adapter.property_method("user_id")
-async def _(recv: dict):
+async def _(recv: dict) -> str:
     return str(recv["user_id"])
 
 
 @adapter.property_method("group_id")
-async def _(recv: dict):
+async def _(recv: dict) -> str | None:
     if "group_id" in recv:
         return str(recv["group_id"])
 
 
 @adapter.property_method("to_me")
-async def _(recv: dict):
+async def _(recv: dict) -> bool:
     if "to_me" in recv:
         return True
-    for seg in recv["message"]:
-        if seg["type"] == "at":
-            return seg["data"]["qq"] == recv["user_id"]
-    return False
+    self_id = recv["self_id"]
+    return any(seg["type"] == "at" and seg["data"]["qq"] == self_id for seg in recv["message"])
 
 
 @adapter.property_method("nickname")
-async def _(recv: dict):
+async def _(recv: dict) -> str:
     return recv["sender"]["card"] or recv["sender"]["nickname"]
 
 
 @adapter.property_method("avatar")
-async def _(recv: dict):
+async def _(recv: dict) -> str:
     return f"https://q1.qlogo.cn/g?b=qq&nk={recv["user_id"]}&s=640"
 
 
 @adapter.property_method("group_avatar")
-async def _(recv: dict):
+async def _(recv: dict) -> str | None:
     if "group_id" not in recv:
         return
     group_id = recv["group_id"]
@@ -159,7 +156,7 @@ async def _(recv: dict):
 
 
 @adapter.property_method("image_list")
-async def _(post: Post, recv: dict):
+async def _(post: Post, recv: dict) -> list[str]:
     reply_id = None
     url = []
     for msg in recv["message"]:
@@ -174,7 +171,7 @@ async def _(post: Post, recv: dict):
 
 
 @adapter.property_method("permission")
-async def _(recv: dict):
+async def _(recv: dict) -> int:
     if str(recv["user_id"]) in superusers:
         return 3
     if role := recv["sender"].get("role"):
@@ -186,7 +183,7 @@ async def _(recv: dict):
 
 
 @adapter.property_method("at")
-async def _(recv: dict):
+async def _(recv: dict) -> list[str]:
     return [str(seg["data"]["qq"]) for seg in recv["message"] if seg["type"] == "at"]
 
 

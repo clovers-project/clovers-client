@@ -5,7 +5,7 @@ except ImportError:
 import asyncio
 import logging
 from clovers.logger import logger
-from clovers_client.console import Client as Client
+from clovers_client.onebot_v11 import Client as Client
 
 
 class ColoredFormatter(logging.Formatter):
