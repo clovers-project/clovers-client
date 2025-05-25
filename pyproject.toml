@@ -25,3 +25,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
 linecard = "^0.1.0"
+openai = '^1.82.0'

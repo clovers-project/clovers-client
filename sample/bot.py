@@ -5,7 +5,7 @@ except ImportError:
 import asyncio
 import logging
 from clovers.logger import logger
-from clovers_client.onebot_v11 import Client as Client
+from clovers_client.console import Client as Client
 
 
 class ColoredFormatter(logging.Formatter):
@@ -19,13 +19,13 @@ class ColoredFormatter(logging.Formatter):
     }
 
     def __init__(self) -> None:
-        super().__init__("{color}[%(asctime)s][%(levelname)s]{color_reset}%(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+        super().__init__(f"[%(asctime)s][%(levelname)s]{self.COLORS["RESET"]}%(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
     def format(self, record):
         # 添加颜色
         color = self.COLORS.get(record.levelname, self.COLORS["RESET"])
         message = super().format(record)
-        return message.format(color=color, color_reset=self.COLORS["RESET"])
+        return color + message
 
 
 (console_handler := logging.StreamHandler()).setFormatter(ColoredFormatter())

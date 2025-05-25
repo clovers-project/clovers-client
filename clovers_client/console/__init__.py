@@ -4,6 +4,7 @@ import asyncio
 import websockets
 from pathlib import Path
 from clovers import LeafClient
+from clovers.logger import logger
 from clovers.utils import list_modules
 from .adapter import __adapter__
 from .config import Event, __config__
@@ -27,10 +28,12 @@ class Client(LeafClient):
                 continue
             for plugin in list_modules(plugin_dir):
                 self.load_plugin(plugin)
+        self.keep_to_me = False
 
     def extract_message(self, inputs: str, event: Event, **ignore):
-        if inputs == "exit":
-            self.running = False
+        if inputs == "keep_to_me":
+            self.keep_to_me = not self.keep_to_me
+            logger.info(f"Keep to me mode: {self.keep_to_me}")
             return
         if inputs.startswith(Bot_Nickname):
             inputs = inputs.lstrip(Bot_Nickname)
@@ -45,6 +48,7 @@ class Client(LeafClient):
                     event.at.append(arg[3:])
                 elif arg == "private":
                     event.is_private = True
+        event.to_me = event.to_me or self.keep_to_me
         return inputs
 
     def console(self):
