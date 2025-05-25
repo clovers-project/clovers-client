@@ -169,7 +169,7 @@ async def _(post: Post, recv: dict):
             reply_id = msg["data"]["id"]
     if reply_id is not None:
         reply = await post("get_msg", data={"message_id": reply_id})
-        url.extend(msg["data"]["url"] for msg in reply.json()["data"]["message"] if msg["type"] == "image")
+        url.extend(msg["data"]["url"] for msg in reply["data"]["message"] if msg["type"] == "image")
     return url
 
 
@@ -192,8 +192,8 @@ async def _(recv: dict):
 
 @adapter.call_method("group_member_list")
 async def _(group_id: str, /, post: Post):
-    resp: httpx.Response = await post("get_group_member_list", data={"group_id": int(group_id)})
-    info_list = resp.json()["data"]
+    resp = await post("get_group_member_list", data={"group_id": int(group_id)})
+    info_list = resp["data"]
     for user_info in info_list:
         user_id = str(user_info["user_id"])
         user_info["group_id"] = str(user_info["group_id"])
@@ -205,7 +205,7 @@ async def _(group_id: str, /, post: Post):
 @adapter.call_method("group_member_info")
 async def _(group_id: str, user_id: str, /, post: Post):
     resp = await post("get_group_member_info", data={"group_id": int(group_id), "user_id": int(user_id)})
-    user_info = resp.json()["data"]
+    user_info = resp["data"]
     member_user_id = str(user_info["user_id"])
     user_info["group_id"] = str(user_info["group_id"])
     user_info["user_id"] = member_user_id

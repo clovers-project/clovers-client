@@ -1,24 +1,35 @@
-import sys
-from pathlib import Path
-
-sys.path.insert(0, Path(__file__).parent.parent.as_posix())
-sys.path.insert(1, r"D:\CLOVERS\clovers")
-sys.path.insert(2, r"D:\CLOVERS_PLUGINS\clovers-apscheduler")
-sys.path.insert(2, r"D:\CLOVERS_PLUGINS\clovers-tabletop-helper")
-sys.path.insert(2, r"D:\CLOVERS_PLUGINS\clovers-setu-collection")
-sys.path.insert(2, r"D:\CLOVERS_PLUGINS\clovers-groupmate-waifu")
-
-
+try:
+    import bot_init
+except ImportError:
+    pass
 import asyncio
 import logging
 from clovers.logger import logger
-from clovers_client.onebot_v11 import Client as Client
+from clovers_client.console import Client as Client
 
-logger.setLevel(level=logging.INFO)
-# 配置日志记录器
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s][%(levelname)s]%(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+
+class ColoredFormatter(logging.Formatter):
+    COLORS = {
+        "INFO": "\033[92m",  # 绿色
+        "WARNING": "\033[93m",  # 黄色
+        "ERROR": "\033[91m",  # 红色
+        "CRITICAL": "\033[91m",  # 红色
+        "DEBUG": "\033[96m",  # 青色
+        "RESET": "\033[0m",  # 重置颜色
+    }
+
+    def __init__(self) -> None:
+        super().__init__("{color}[%(asctime)s][%(levelname)s]{color_reset}%(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+    def format(self, record):
+        # 添加颜色
+        color = self.COLORS.get(record.levelname, self.COLORS["RESET"])
+        message = super().format(record)
+        return message.format(color=color, color_reset=self.COLORS["RESET"])
+
+
+(console_handler := logging.StreamHandler()).setFormatter(ColoredFormatter())
+logger.setLevel(level=logging.DEBUG)
+logger.addHandler(console_handler)
+
 asyncio.run(Client().run())

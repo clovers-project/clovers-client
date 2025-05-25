@@ -1,4 +1,3 @@
-import httpx
 from pathlib import Path
 from collections.abc import AsyncGenerator
 from clovers import Result
@@ -22,4 +21,4 @@ class PrivateMessage(TypedDict):
 
 
 class Post(Protocol):
-    async def __call__(self, endpoint: str, **kwargs) -> httpx.Response: ...
+    async def __call__(self, endpoint: str, **kwargs) -> dict: ...

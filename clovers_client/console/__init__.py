@@ -47,7 +47,7 @@ class Client(LeafClient):
                     event.is_private = True
         return inputs
 
-    def inputs_console(self):
+    def console(self):
         subprocess.Popen(
             [sys.executable, (Path(__file__).parent / "console.py").as_posix(), str(self.ws_port)],
             creationflags=subprocess.CREATE_NEW_CONSOLE,
@@ -56,13 +56,13 @@ class Client(LeafClient):
     async def main_loop(self, ws_connect: websockets.connect):
         while self.running:
             try:
-                async for recv in await ws_connect:
-                    asyncio.create_task(self.response(inputs=recv, event=Event(user=master)))
+                async for recv in (ws := await ws_connect):
+                    asyncio.create_task(self.response(inputs=recv, event=Event(user=master), ws_connect=ws))
             except websockets.exceptions.ConnectionClosedError:
                 break
 
     async def run(self):
-        self.inputs_console()
+        self.console()
         async with self:
             ws_connect = websockets.connect(f"ws://127.0.0.1:{self.ws_port}")
             await self.main_loop(ws_connect)

@@ -2,9 +2,7 @@ __pycache__/
 .vs
 .vscode
 .venv
-dist
+/dist
 *.log
-clovers_library
-clovers.toml
-data
-nonebot_plugin
+/sample/
+!/sample/bot.py

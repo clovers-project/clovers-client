@@ -46,6 +46,7 @@ class Client(LeafClient):
         if not recv.get("post_type") == "message":
             return
         message = "".join(seg["data"]["text"] for seg in recv["message"] if seg["type"] == "text")
+        message = message.lstrip()
         if recv.get("message_type") == "private":
             recv["to_me"] = True
         if message.startswith(Bot_Nickname):
