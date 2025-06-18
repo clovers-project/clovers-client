@@ -106,7 +106,7 @@ async def _(message: GroupMessage, /, post: Post):
 
 
 @adapter.send_method("private_message")
-async def _(message: PrivateMessage, post: Post, recv: dict):
+async def _(message: PrivateMessage, /, post: Post, recv: dict):
     result = message["data"]
     data: dict = {"user_id": int(message["user_id"])}
     if group_id := recv.get("group_id"):
@@ -125,6 +125,28 @@ async def _(message: PrivateMessage, post: Post, recv: dict):
     elif msg := list2message([result]):
         data["message"] = msg
         await post("send_private_msg", json=data)
+
+
+@adapter.send_method("merge_forward")
+async def _(message: ListMessage, /, post: Post, recv: dict):
+    messages = []
+    for seg in message:
+        if seg.key == "list":
+            result_data = seg.data
+        else:
+            result_data = [seg]
+        if not (msg := list2message(result_data)):
+            continue
+        messages.append({"type": "node", "data": {"name": Bot_Nickname, "uin": recv["self_id"], "content": msg}})
+    if not messages:
+        return
+    match recv["message_type"]:
+        case "group":
+            await post("send_group_forward_msg", json={"group_id": recv["group_id"], "messages": messages})
+        case "private":
+            await post("send_private_forward_msg", json={"user_id": recv["user_id"], "messages": messages})
+        case _:
+            raise ValueError("unknown message type")
 
 
 @adapter.property_method("Bot_Nickname")

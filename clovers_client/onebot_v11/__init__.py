@@ -72,7 +72,7 @@ class Client(LeafClient):
         logger.info(f"[用户:{user_id}][群组：{group_id}]{raw_message}")
 
     def startup(self):
-        self.client = httpx.AsyncClient()
+        self.client = httpx.AsyncClient(timeout=30)
         return super().startup()
 
     async def shutdown(self):

@@ -28,7 +28,7 @@ class Client(LeafClient):
                 continue
             for plugin in list_modules(plugin_dir):
                 self.load_plugin(plugin)
-        self.keep_to_me = False
+        self.keep_to_me = True
 
     def extract_message(self, inputs: str, event: Event, **ignore):
         if inputs == "keep_to_me":

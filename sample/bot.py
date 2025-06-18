@@ -1,7 +1,3 @@
-try:
-    import bot_init
-except ImportError:
-    pass
 import asyncio
 import logging
 from clovers.logger import logger
