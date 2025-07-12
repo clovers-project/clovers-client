@@ -3,10 +3,12 @@ from io import BytesIO
 from base64 import b64encode
 from clovers import Adapter, Result
 from .typing import Post, FileLike, ListMessage, SegmentedMessage, GroupMessage, PrivateMessage
-from .config import __config__
+from .. import __config__
 
-Bot_Nickname = __config__.Bot_Nickname
-superusers = __config__.superusers
+BOT_NICKNAME = __config__.Bot_Nickname
+SUPERUSERS = __config__.superusers
+
+__adapter__ = adapter = Adapter("OneBot V11")
 
 
 def f2s(file: FileLike) -> str:
@@ -17,9 +19,6 @@ def f2s(file: FileLike) -> str:
     elif isinstance(file, BytesIO):
         file = file.getvalue()
     return f"base64://{b64encode(file).decode()}"
-
-
-adapter = Adapter("OneBot V11")
 
 
 def list2message(message: ListMessage):
@@ -137,7 +136,7 @@ async def _(message: ListMessage, /, post: Post, recv: dict):
             result_data = [seg]
         if not (msg := list2message(result_data)):
             continue
-        messages.append({"type": "node", "data": {"name": Bot_Nickname, "uin": recv["self_id"], "content": msg}})
+        messages.append({"type": "node", "data": {"name": BOT_NICKNAME, "uin": recv["self_id"], "content": msg}})
     if not messages:
         return
     match recv["message_type"]:
@@ -151,7 +150,7 @@ async def _(message: ListMessage, /, post: Post, recv: dict):
 
 @adapter.property_method("Bot_Nickname")
 async def _() -> str:
-    return Bot_Nickname
+    return BOT_NICKNAME
 
 
 @adapter.property_method("user_id")
@@ -208,7 +207,7 @@ async def _(post: Post, recv: dict) -> list[str]:
 
 @adapter.property_method("permission")
 async def _(recv: dict) -> int:
-    if str(recv["user_id"]) in superusers:
+    if str(recv["user_id"]) in SUPERUSERS:
         return 3
     if role := recv["sender"].get("role"):
         if role == "owner":
@@ -246,4 +245,4 @@ async def _(group_id: str, user_id: str, /, post: Post):
     return user_info
 
 
-__adapter__ = adapter
+__all__ = ["__adapter__"]

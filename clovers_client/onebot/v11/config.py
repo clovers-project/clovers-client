@@ -3,23 +3,15 @@ from clovers.config import Config as CloversConfig
 from functools import cache
 
 
-class User(BaseModel):
-    user_id: str = "0"
-    group_id: str = "0"
-    nickname: str = "Master"
-    avatar: str = "https://localhost:8080/avatar/0.png"
-    group_avatar: str = "https://localhost:8080/group_avatar/0.png"
-    permission: int = 3
-
-
 class Config(BaseModel):
     Bot_Nickname: str = "Bot酱"
+    superusers: set[str] = set()
+    url: str = "http://127.0.0.1:3000"
+    ws_url: str = "ws://127.0.0.1:3001"
     adapters: list[str] = ["~adapter"]
     adapter_dirs: list[str] = []
     plugins: list[str] = []
     plugin_dirs: list[str] = []
-    master: User = User()
-    ws_port: int = 11000
 
     @classmethod
     @cache

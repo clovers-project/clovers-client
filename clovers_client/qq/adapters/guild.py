@@ -4,12 +4,12 @@ from botpy.message import Message
 from botpy import Client
 from clovers import Adapter
 from .typing import ListResult, SegmentedResult, FileLike
-from ..config import __config__
+from .. import __config__
 
-Bot_Nickname = __config__.Bot_Nickname
-superusers = __config__.superusers
+BOT_NICKNAME = __config__.Bot_Nickname
+SUPERUSERS = __config__.superusers
 
-adapter = Adapter()
+__adapter__ = adapter = Adapter("QQ Guild")
 
 
 def image_kwargs(data: FileLike):
@@ -47,7 +47,7 @@ async def _(data: ListResult, event: Message):
     content = ""
     image = None
     for seg in data:
-        match seg.send_method:
+        match seg.key:
             case "at":
                 content += f"<@{seg.data}>"
             case "text":
@@ -64,7 +64,7 @@ async def _(data: ListResult, event: Message):
 async def _(data: SegmentedResult):
     """发送分段信息"""
     async for seg in data:
-        await adapter.sends_lib[seg.send_method](seg.data)
+        await adapter.sends_lib[seg.key](seg.data)
 
 
 # @adapter.property_method("send_group_message")
@@ -74,7 +74,7 @@ async def _(data: SegmentedResult):
 
 @adapter.property_method("Bot_Nickname")
 async def _():
-    return Bot_Nickname
+    return BOT_NICKNAME
 
 
 @adapter.property_method("user_id")
@@ -119,7 +119,7 @@ async def _(event: Message):
 async def _(client: Client, event: Message):
     user_id = event.author.id
     channel_id = event.channel_id
-    if user_id in superusers:
+    if user_id in SUPERUSERS:
         return 3
     data = await client.api.get_channel_user_permissions(channel_id=channel_id, user_id=user_id)
     match data["role_id"]:
@@ -140,5 +140,3 @@ async def _(event: Message) -> list[str]:
 # @adapter.property_method("group_member_list")
 # async def _(client: Client, event: Message) -> None | list[dict]:
 #     return None
-
-__adapter__ = adapter

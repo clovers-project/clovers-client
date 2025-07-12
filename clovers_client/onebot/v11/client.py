@@ -1,46 +1,30 @@
-import json
-from pathlib import Path
 import asyncio
+import json
 import httpx
 import websockets
-from clovers import LeafClient
-from clovers.utils import list_modules
 from clovers.logger import logger
-from .adapter import __adapter__
-from .config import __config__
+from clovers import Client as CloversClient
+from clovers_client import init_logger, Leaf
+from .config import Config
 
-url = __config__.url
-ws_url = __config__.ws_url
-Bot_Nickname = __config__.Bot_Nickname
+init_logger()
+
+__config__ = Config.sync_config()
+
+BOT_NICKNAME = __config__.Bot_Nickname
+LEN_BOT_NICKNAME = len(BOT_NICKNAME)
 
 
-class Client(LeafClient):
-    def __init__(self, name="OneBot V11", url=url, ws_url=ws_url):
-        super().__init__(name)
+class Client(Leaf, CloversClient):
+    def __init__(self):
+        super().__init__("OneBot V11")
         # 下面是获取配置
-        self.url = url
-        self.ws_url = ws_url
-        self.adapter.update(__adapter__)
-
-        for adapter in __config__.adapters:
-            self.load_adapter(adapter)
-        for adapter_dir in __config__.adapter_dirs:
-            adapter_dir = Path(adapter_dir)
-            if not adapter_dir.exists():
-                adapter_dir.mkdir(parents=True, exist_ok=True)
-                continue
-            for adapter in list_modules(adapter_dir):
-                self.load_adapter(adapter)
-
-        for plugin in __config__.plugins:
-            self.load_plugin(plugin)
-        for plugin_dir in __config__.plugin_dirs:
-            plugin_dir = Path(plugin_dir)
-            if not plugin_dir.exists():
-                plugin_dir.mkdir(parents=True, exist_ok=True)
-                continue
-            for plugin in list_modules(plugin_dir):
-                self.load_plugin(plugin)
+        self.url = __config__.url
+        self.ws_url = __config__.ws_url
+        self.load_adapters_from_list(__config__.adapters)
+        self.load_adapters_from_dirs(__config__.adapter_dirs)
+        self.load_plugins_from_list(__config__.plugins)
+        self.load_plugins_from_dirs(__config__.plugin_dirs)
 
     def extract_message(self, recv: dict, **ignore) -> str | None:
         if not recv.get("post_type") == "message":
@@ -49,10 +33,10 @@ class Client(LeafClient):
         message = message.lstrip()
         if recv.get("message_type") == "private":
             recv["to_me"] = True
-        if message.startswith(Bot_Nickname):
+        if message.startswith(BOT_NICKNAME):
             recv["to_me"] = True
-            return message.lstrip(Bot_Nickname)
-        return message.lstrip()
+            return message[LEN_BOT_NICKNAME:].lstrip()
+        return message
 
     async def post(self, endpoint: str, **kwargs) -> dict:
         resp = await self.client.post(url=f"{self.url}/{endpoint}", **kwargs)
@@ -81,9 +65,8 @@ class Client(LeafClient):
 
     async def main_loop(self, ws_connect: websockets.connect):
         while self.running:
-            async for recv in await ws_connect:
-                recv = json.loads(recv)
-                self.recv_log(recv)
+            async for recv_data in await ws_connect:
+                self.recv_log(recv := json.loads(recv_data))
                 asyncio.create_task(self.response(post=self.post, recv=recv))
         logger.info("client closed")
 

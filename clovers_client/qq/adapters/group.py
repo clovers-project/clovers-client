@@ -5,10 +5,12 @@ from botpy.message import GroupMessage
 from clovers import Adapter
 from enum import IntEnum
 from .typing import ListResult, SegmentedResult, FileLike
-from ..config import __config__
+from .. import __config__
 
-Bot_Nickname = __config__.Bot_Nickname
-superusers = __config__.superusers
+BOT_NICKNAME = __config__.Bot_Nickname
+SUPERUSERS = __config__.superusers
+
+__adapter__ = adapter = Adapter("QQ Group")
 
 
 class FileType(IntEnum):
@@ -33,9 +35,6 @@ def media_kwargs(data: FileLike, file_type: FileType):
             raise TypeError("Unsupported type")
         kwargs["file_data"] = b64encode(img_bytes).decode()
     return {"media": kwargs}
-
-
-adapter = Adapter()
 
 
 @adapter.send_method("at")
@@ -64,7 +63,7 @@ async def _(data: ListResult, event: GroupMessage):
     content = ""
     image = None
     for seg in data:
-        match seg.send_method:
+        match seg.key:
             case "text":
                 content += seg.data
             case "image":
@@ -78,7 +77,7 @@ async def _(data: ListResult, event: GroupMessage):
 @adapter.send_method("segmented")
 async def _(data: SegmentedResult):
     async for seg in data:
-        await adapter.sends_lib[seg.send_method](seg.data)
+        await adapter.sends_lib[seg.key](seg.data)
 
 
 # @adapter.property_method("send_group_message")
@@ -88,7 +87,7 @@ async def _(data: SegmentedResult):
 
 @adapter.property_method("Bot_Nickname")
 async def _():
-    return Bot_Nickname
+    return BOT_NICKNAME
 
 
 @adapter.property_method("user_id")
@@ -131,7 +130,7 @@ async def _(event: GroupMessage):
 @adapter.property_method("permission")
 async def _(event: GroupMessage):
     user_id = event.author.member_openid
-    if user_id in superusers:
+    if user_id in SUPERUSERS:
         return 3
     return 0
 
@@ -144,6 +143,3 @@ async def _(event: GroupMessage):
 # @adapter.property_method("group_member_list")
 # async def _(client: Client, event: GroupMessage) -> None | list[dict]:
 #     return None
-
-
-__adapter__ = adapter

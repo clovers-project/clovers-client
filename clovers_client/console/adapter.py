@@ -3,12 +3,11 @@ from clovers import Adapter, Result
 from collections.abc import AsyncGenerator
 from io import BytesIO
 from PIL import Image
-from .config import Event, __config__
+from . import Event, __config__
 
-Bot_Nickname = __config__.Bot_Nickname
+__adapter__ = adapter = Adapter("CONSOLE")
 
-
-adapter = Adapter("CONSOLE")
+BOT_NICKNAME = __config__.Bot_Nickname
 
 
 @adapter.send_method("at")
@@ -55,7 +54,7 @@ async def send_segmented(message: AsyncGenerator[Result], ws_connect):
 
 @adapter.property_method("Bot_Nickname")
 async def _() -> str:
-    return Bot_Nickname
+    return BOT_NICKNAME
 
 
 @adapter.property_method("user_id")
