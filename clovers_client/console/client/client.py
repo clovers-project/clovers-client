@@ -3,12 +3,10 @@ import subprocess
 import asyncio
 import websockets
 from pathlib import Path
-from clovers.logger import logger
-from clovers import Client as CloversClient
-from clovers_client import init_logger, Leaf
-from .config import Config, User
-
-init_logger()
+from clovers import Leaf, Client
+from clovers_client.logger import logger
+from ..event import Event
+from .config import Config
 
 __config__ = Config.sync_config()
 
@@ -16,15 +14,7 @@ BOT_NICKNAME = __config__.Bot_Nickname
 LEN_BOT_NICKNAME = len(BOT_NICKNAME)
 
 
-class Event:
-    user: User = __config__.master
-    to_me: bool = False
-    at: list[str] = []
-    image_list: list[str] = []
-    is_private: bool = False
-
-
-class Client(Leaf, CloversClient):
+class ConsoleClient(Leaf, Client):
     def __init__(self):
         super().__init__("CONSOLE")
         self.ws_port = __config__.ws_port
@@ -71,3 +61,6 @@ class Client(Leaf, CloversClient):
         async with self:
             ws_connect = websockets.connect(f"ws://127.0.0.1:{self.ws_port}")
             await self.main_loop(ws_connect)
+
+
+__client__ = ConsoleClient()

@@ -1,6 +1,5 @@
 from pydantic import BaseModel
-from clovers.config import Config as CloversConfig
-from functools import cache
+from clovers_client.config import Config as BaseConfig
 
 
 class Intents(BaseModel):
@@ -28,26 +27,18 @@ class Intents(BaseModel):
     """音频事件"""
 
 
-class LeafConfig(BaseModel):
+class AdapterConfig(BaseModel):
     enabled: bool = True
     adapters: list[str] = []
     adapter_dirs: list[str] = []
-    plugins: list[str] = []
-    plugin_dirs: list[str] = []
 
 
-class Config(BaseModel):
+class Config(BaseConfig):
     Bot_Nickname: str = "Bot酱"
-    superusers: set[str] = set()
     appid: str = ""
     secret: str = ""
-    group_config: LeafConfig = LeafConfig(adapters=["~adapters.group"])
-    guild_config: LeafConfig = LeafConfig(adapters=["~adapters.guild"])
     intents: Intents = Intents()
-
-    @classmethod
-    @cache
-    def sync_config(cls):
-        __config_dict__: dict = CloversConfig.environ().setdefault("clovers", {})
-        __config_dict__.update((__config__ := cls.model_validate(__config_dict__)).model_dump())
-        return __config__
+    group_config: AdapterConfig = AdapterConfig(adapters=["clovers_client.qq.adapters.group"])
+    guild_config: AdapterConfig = AdapterConfig(adapters=["clovers_client.qq.adapters.guild"])
+    plugins: list[str] = []
+    plugin_dirs: list[str] = []

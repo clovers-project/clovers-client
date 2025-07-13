@@ -24,7 +24,6 @@ class ColoredFormatter(logging.Formatter):
         return color + message
 
 
-def init_logger() -> None:
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(ColoredFormatter())
-    logger.addHandler(console_handler)
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(ColoredFormatter())
+logger.addHandler(console_handler)

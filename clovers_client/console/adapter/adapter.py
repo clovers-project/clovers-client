@@ -3,11 +3,14 @@ from clovers import Adapter, Result
 from collections.abc import AsyncGenerator
 from io import BytesIO
 from PIL import Image
-from . import Event, __config__
+from ..event import Event
+from .config import Config
 
-__adapter__ = adapter = Adapter("CONSOLE")
+__config__ = Config.sync_config()
 
 BOT_NICKNAME = __config__.Bot_Nickname
+
+__adapter__ = adapter = Adapter("CONSOLE")
 
 
 @adapter.send_method("at")

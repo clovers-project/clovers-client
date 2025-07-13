@@ -4,7 +4,9 @@ from botpy.message import Message
 from botpy import Client
 from clovers import Adapter
 from .typing import ListResult, SegmentedResult, FileLike
-from .. import __config__
+from .config import Config
+
+__config__ = Config.sync_config()
 
 BOT_NICKNAME = __config__.Bot_Nickname
 SUPERUSERS = __config__.superusers

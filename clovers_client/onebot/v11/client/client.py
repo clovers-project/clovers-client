@@ -2,12 +2,9 @@ import asyncio
 import json
 import httpx
 import websockets
-from clovers.logger import logger
-from clovers import Client as CloversClient
-from clovers_client import init_logger, Leaf
+from clovers import Leaf, Client
+from clovers_client.logger import logger
 from .config import Config
-
-init_logger()
 
 __config__ = Config.sync_config()
 
@@ -15,7 +12,7 @@ BOT_NICKNAME = __config__.Bot_Nickname
 LEN_BOT_NICKNAME = len(BOT_NICKNAME)
 
 
-class Client(Leaf, CloversClient):
+class OneBotV11Client(Leaf, Client):
     def __init__(self):
         super().__init__("OneBot V11")
         # 下面是获取配置
@@ -84,3 +81,6 @@ class Client(Leaf, CloversClient):
                 except Exception:
                     logger.exception("something error")
                     return
+
+
+__client__ = OneBotV11Client()

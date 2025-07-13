@@ -5,7 +5,9 @@ from botpy.message import GroupMessage
 from clovers import Adapter
 from enum import IntEnum
 from .typing import ListResult, SegmentedResult, FileLike
-from .. import __config__
+from .config import Config
+
+__config__ = Config.sync_config()
 
 BOT_NICKNAME = __config__.Bot_Nickname
 SUPERUSERS = __config__.superusers
