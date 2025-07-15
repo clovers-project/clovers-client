@@ -58,24 +58,21 @@ class OneBotV11Client(Leaf, Client):
 
     async def shutdown(self):
         await self.client.aclose()
-        return super().shutdown()
-
-    async def main_loop(self, ws_connect: websockets.connect):
-        while self.running:
-            async for recv_data in await ws_connect:
-                self.recv_log(recv := json.loads(recv_data))
-                asyncio.create_task(self.response(post=self.post, recv=recv))
-        logger.info("client closed")
+        return await super().shutdown()
 
     async def run(self):
         async with self:
-            while True:
+            while self.running:
                 try:
-                    ws_connect = websockets.connect(self.ws_url)
+                    ws_connect = await websockets.connect(self.ws_url)
                     logger.info("websockets connected")
-                    await self.main_loop(ws_connect)
+                    async for recv_data in ws_connect:
+                        recv = json.loads(recv_data)
+                        self.recv_log(recv)
+                        asyncio.create_task(self.response(post=self.post, recv=recv))
+                    logger.info("client closed")
                     return
-                except websockets.exceptions.ConnectionClosedError:
+                except (websockets.exceptions.ConnectionClosedError, TimeoutError):
                     logger.error("websockets reconnecting...")
                     await asyncio.sleep(5)
                 except Exception:
