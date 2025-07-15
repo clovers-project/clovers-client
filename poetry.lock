@@ -1469,4 +1469,4 @@ qq = ["pydantic", "qq-botpy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0.0"
-content-hash = "7a046d36422f4ec49b60ba40f89dc2ce78506f5cf37b5218b1f3e1c8eebfea62"
+content-hash = "40f50ab34eba48c77fb3d49d3a9d7e8c7279798727a131c533994eddfdea3888"
