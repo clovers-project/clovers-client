@@ -2,10 +2,10 @@ import sys
 import subprocess
 import asyncio
 import websockets
-from pathlib import Path
 from clovers import Leaf, Client
 from clovers_client.logger import logger
 from ..event import Event
+from .script import SCRIPT_PATH
 from .config import Config
 
 
@@ -14,7 +14,6 @@ __config__ = Config.sync_config()
 BOT_NICKNAME = __config__.Bot_Nickname
 LEN_BOT_NICKNAME = len(BOT_NICKNAME)
 MASTER = __config__.master
-SCRIPT_PATH = (Path(__file__).parent / "script.py").as_posix()
 
 
 class ConsoleClient(Leaf, Client):
@@ -52,7 +51,7 @@ class ConsoleClient(Leaf, Client):
         return inputs
 
     def run_server(self):
-        logger.info("Starting local console server ...")
+        logger.info(f"Starting local console server ...")
 
         return subprocess.Popen(
             [
