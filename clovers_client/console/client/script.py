@@ -189,7 +189,7 @@ if __name__ == "__main__":
         def print_type(self, message_type: SingleMessageType, message: str, end: str = "\n"):
             match message_type:
                 case "at":
-                    self.print_message("link", f"@{message} ", end)
+                    self.print_message("link", f"@{message}", end)
                 case "text":
                     self.print_message("other", message, end)
                 case "image":
