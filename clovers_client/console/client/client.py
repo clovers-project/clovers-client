@@ -2,16 +2,19 @@ import sys
 import subprocess
 import asyncio
 import websockets
+from pathlib import Path
 from clovers import Leaf, Client
 from clovers_client.logger import logger
 from ..event import Event
 from .config import Config
+
 
 __config__ = Config.sync_config()
 
 BOT_NICKNAME = __config__.Bot_Nickname
 LEN_BOT_NICKNAME = len(BOT_NICKNAME)
 MASTER = __config__.master
+SCRIPT_PATH = (Path(__file__).parent / "script.py").as_posix()
 
 
 class ConsoleClient(Leaf, Client):
@@ -20,7 +23,6 @@ class ConsoleClient(Leaf, Client):
         self.ws_host = __config__.ws_host
         self.ws_port = __config__.ws_port
         self.is_local = self.ws_host.startswith("127.") or self.ws_host == "localhost"
-
         self.keep_to_me = True
         self.load_adapters_from_list(__config__.adapters)
         self.load_adapters_from_dirs(__config__.adapter_dirs)
@@ -51,11 +53,11 @@ class ConsoleClient(Leaf, Client):
 
     def run_server(self):
         logger.info("Starting local console server ...")
+
         return subprocess.Popen(
             [
                 sys.executable,
-                "-m",
-                f"{__package__}.console",
+                SCRIPT_PATH,
                 str(self.ws_port),
                 MASTER.nickname,
             ],
@@ -78,13 +80,9 @@ class ConsoleClient(Leaf, Client):
                     logger.error("WebSocket reconnecting...")
                     await asyncio.sleep(3)
                 except ConnectionRefusedError:
-                    if (
-                        self.is_local
-                        and process is not None
-                        and process.returncode is not None
-                        and input("Do you want to start the local server? [Y/N]") in "yY"
-                    ):
-                        process = self.run_server()
+                    if self.is_local:
+                        if process is None or input("Do you want to start the local server? [Y/N]") in "yY":
+                            process = self.run_server()
                 except Exception:
                     logger.exception("Error")
                     return

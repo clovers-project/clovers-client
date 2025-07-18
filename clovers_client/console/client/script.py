@@ -1,11 +1,11 @@
 import logging
 import json
+import base64
 import asyncio
 import websockets
 from datetime import datetime
 from collections import deque
-
-
+from io import BytesIO
 from prompt_toolkit import Application
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.layout.containers import VSplit, Window, HSplit, FloatContainer, Float
@@ -16,34 +16,27 @@ from prompt_toolkit.layout.dimension import Dimension as D
 from prompt_toolkit.layout.menus import CompletionsMenu
 from prompt_toolkit.styles import Style
 
-from typing import TypedDict, Literal
+from typing import TYPE_CHECKING
 
-type SingleMessageType = Literal["text", "image", "file"]
+if TYPE_CHECKING:
+    from typing import TypedDict, Literal
 
+    type SingleMessageType = Literal["text", "image", "file"]
 
-class SingleMessage(TypedDict):
-    nickname: str
-    type: SingleMessageType
-    message: str
+    class SingleMessage(TypedDict):
+        nickname: str
+        type: SingleMessageType
+        message: str
 
+    class ListMessage(TypedDict):
+        nickname: str
+        type: Literal["list"]
+        message: list[tuple[SingleMessageType, str]]
 
-class ListMessage(TypedDict):
-    nickname: str
-    type: Literal["list"]
-    message: list[tuple[SingleMessageType, str]]
-
-
-type Message = SingleMessage | ListMessage
+    type Message = SingleMessage | ListMessage
 
 
 class ConsoleServer:
-    """控制台 ws chat 终端
-
-    客户端为聊天机器人，聊天机器人需要接入 chat 服务器，
-    本服务端提供 bot 接入接口，但服务端产生的消息是终端输入。
-    用户视角下本服务端为客户端。
-    """
-
     def quit_console(self, event: KeyPressEvent):
         event.app.exit()
 
@@ -63,12 +56,9 @@ class ConsoleServer:
         # 这里处理输入的消息
         self.message_queue: asyncio.Queue[str] = asyncio.Queue()
         self.current_message: str = ""
-        self.ws_connections: set[websockets.ServerConnection] = set()
+        self.ws_connections: set[int] = set()
         self.message_update_flag: bool = False
         self.message_update_event = asyncio.Event()
-        # 这里是图片服务器
-        self.image_server_port = port + 1
-
         self.input_buffer = Buffer()
         # 样式定义
         self.style = Style.from_dict(
@@ -126,8 +116,6 @@ class ConsoleServer:
             style=self.style,
         )
 
-        self.images: deque[str] = deque(maxlen=20)
-
     def print_message(self, role: str, message: str, end: str = "\n"):
         message = message + end
         self.messages.appendleft((role, message, message.count("\n")))
@@ -166,7 +154,8 @@ class ConsoleServer:
           当一个协程正在从 `message_queue` 等待新消息时，`message_update_flag` 会被设置为 `True`。
           这会阻止其他协程也去 `message_queue` 中等待。相反，它们会等待 `message_update_event` 被设置，直到 `current_message` 更新完毕后直接获取更新后的消息。
         """
-        if websocket in self.ws_connections:
+        websocket_hash = hash(websocket)
+        if websocket_hash in self.ws_connections:
             if self.message_update_flag:
                 await self.message_update_event.wait()
             else:
@@ -176,7 +165,7 @@ class ConsoleServer:
                 self.ws_connections.clear()
                 self.message_update_flag = False
                 self.message_update_event.set()
-        self.ws_connections.add(websocket)
+        self.ws_connections.add(websocket_hash)
         return self.current_message
 
     async def send_message(self, websocket: websockets.ServerConnection):
@@ -200,8 +189,10 @@ class ConsoleServer:
             case "text":
                 self.print_message("other", message, end)
             case "image":
-                self.images.append(message)
-                self.print_message("link", "[图片]", end)
+                self.print_message("link", f"[图片]", end)
+                from PIL import Image
+
+                Image.open(BytesIO(base64.b64decode(message))).show()
 
     async def receive_message(self, websocket: websockets.ServerConnection):
         while True:
@@ -221,6 +212,7 @@ class ConsoleServer:
                 self.print_message("warning", f"接收到的消息无法解析为JSON：{recv}")
 
     async def handler(self, websocket: websockets.ServerConnection):
+        self.ws_connections.add(hash(websocket))
         host, port = websocket.remote_address
         self.print_message("system", f"客户端 {host}:{port} 已连接。")
         try:
@@ -228,7 +220,7 @@ class ConsoleServer:
         except websockets.exceptions.ConnectionClosedError:
             self.print_message("system", f"与 {host}:{port} 通信被拒绝，客户端可能已关闭。")
         except Exception as e:
-            self.print_message("system", f"接收消息时发生错误: {e}")
+            self.print_message("system", f"接收消息时发生错误: \n{e}")
 
     async def run_server(self):
         server = await websockets.serve(self.handler, "127.0.0.1", self.port, max_size=10 * 2**20)
@@ -236,10 +228,13 @@ class ConsoleServer:
         await server.wait_closed()
 
     async def run(self):
-        await asyncio.gather(self.application.run_async(), self.run_server())
+        await asyncio.gather(
+            self.application.run_async(),
+            self.run_server(),
+        )
 
 
-class LogHandler(logging.Handler):
+class ConsoleServerLogHandler(logging.Handler):
     def __init__(self, console: ConsoleServer):
         super().__init__()
         self.console = console
@@ -255,8 +250,11 @@ class LogHandler(logging.Handler):
 
 if __name__ == "__main__":
     import sys
+    import logging
+    import asyncio
 
     _, port, nickname = sys.argv
-    console = ConsoleServer(port=int(port), nickname=nickname)
-    logging.basicConfig(handlers=[LogHandler(console)], level=logging.WARNING)
-    asyncio.run(console.run())
+    server = ConsoleServer(port=int(port), nickname=nickname)
+    handler = ConsoleServerLogHandler(server)
+    logging.basicConfig(handlers=[handler], level=logging.WARNING)
+    asyncio.run(server.run())
