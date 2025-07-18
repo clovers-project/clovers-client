@@ -1,8 +1,9 @@
+import json
 import websockets
+from io import BytesIO
+from base64 import b64encode
 from clovers import Adapter, Result
 from collections.abc import AsyncGenerator
-from io import BytesIO
-from PIL import Image
 from ..event import Event
 from .config import Config
 
@@ -13,20 +14,41 @@ BOT_NICKNAME = __config__.Bot_Nickname
 __adapter__ = adapter = Adapter("CONSOLE")
 
 
+def build_message(key: str, message) -> str:
+    return json.dumps({"nickname": BOT_NICKNAME, "type": key, "message": message})
+
+
 @adapter.send_method("at")
 async def send_at(message, ws_connect: websockets.ClientConnection):
-    await ws_connect.send(f"[AT] {message}")
+    await ws_connect.send(build_message("at", message))
 
 
 @adapter.send_method("text")
 async def send_text(message: str, ws_connect: websockets.ClientConnection):
-    await ws_connect.send(f"[TEXT]{"\n" if "\n" in message else " "}{message}")
+    await ws_connect.send(build_message("text", message))
 
 
 @adapter.send_method("image")
 async def send_image(message: BytesIO | bytes, ws_connect: websockets.ClientConnection):
-    await ws_connect.send("[IMAGE]")
-    Image.open(BytesIO(message) if isinstance(message, bytes) else message).show()
+    b64 = b64encode(message.getvalue() if isinstance(message, BytesIO) else message).decode()
+    await ws_connect.send(build_message("image", b64))
+    # await ws_connect.send(build_message("image", "[IMAGE]"))
+
+
+@adapter.send_method("list")
+async def send_list(message: list[Result], ws_connect):
+    data = []
+    for item in message:
+        if item.key in ("text", "at"):
+            data.append((item.key, item.data))
+        elif item.key == "image":
+            msg = item.data
+            b64 = b64encode(msg.getvalue() if isinstance(msg, BytesIO) else msg).decode()
+            data.append((item.key, b64))
+            # data.append((item.key, "[IMAGE]"))
+        else:
+            print(f"Unknown send_method: {item.key}")
+    await ws_connect.send(build_message("list", data))
 
 
 async def send_result(result: Result, ws_connect: websockets.ClientConnection):
@@ -41,12 +63,6 @@ async def send_result(result: Result, ws_connect: websockets.ClientConnection):
             await send_list(result.data, ws_connect)
         case _:
             print(f"Unknown send_method: {result.key}")
-
-
-@adapter.send_method("list")
-async def send_list(message: list[Result], ws_connect):
-    for item in message:
-        await send_result(item, ws_connect)
 
 
 @adapter.send_method("segmented")

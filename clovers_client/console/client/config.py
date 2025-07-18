@@ -1,4 +1,5 @@
 from clovers_client.config import Config as BaseConfig
+from ..event import User
 
 
 class Config(BaseConfig):
@@ -7,4 +8,6 @@ class Config(BaseConfig):
     adapter_dirs: list[str] = []
     plugins: list[str] = []
     plugin_dirs: list[str] = []
+    ws_host: str = "127.0.0.1"
     ws_port: int = 11000
+    master: User = User()

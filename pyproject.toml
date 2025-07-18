@@ -11,9 +11,8 @@ dependencies = ["clovers (>=0.4.8,<1.0.0)"]
 [project.optional-dependencies]
 console = [
     "pydantic (>=2.10.6,<3.0.0)",
-    "pillow (>=11.1.0,<12.0.0)",
+    "prompt-toolkit (>=3.0.51,<4.0.0)",
     "websockets (>=15.0.0,<16.0.0)",
-
 ]
 onebot = [
     "pydantic (>=2.10.6,<3.0.0)",
@@ -30,4 +29,5 @@ build-backend = "poetry.core.masonry.api"
 clovers = { path = "D:/CLOVERS/clovers", develop = true }
 clovers-apscheduler = { path = "D:/CLOVERS_PLUGINS/clovers-apscheduler", develop = true }
 clovers-groupmate-waifu = { path = "D:/CLOVERS_PLUGINS/clovers-groupmate-waifu", develop = true }
+clovers-divine = { path = "D:/CLOVERS_PLUGINS/clovers-divine", develop = true }
 clovers-aichat = { path = "D:/CLOVERS_PLUGINS/clovers-aichat", develop = true }

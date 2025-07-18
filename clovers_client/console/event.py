@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from clovers_client.config import Config as BaseConfig
 
 
 class User(BaseModel):
@@ -11,13 +10,10 @@ class User(BaseModel):
     permission: int = 3
 
 
-class Config(BaseConfig):
-    master = User()
-
-
 class Event:
-    user: User = Config.sync_config().master
-    to_me: bool = False
-    at: list[str] = []
-    image_list: list[str] = []
-    is_private: bool = False
+    def __init__(self, user: User):
+        self.user: User = user
+        self.to_me: bool = False
+        self.at: list[str] = []
+        self.image_list: list[str] = []
+        self.is_private: bool = False

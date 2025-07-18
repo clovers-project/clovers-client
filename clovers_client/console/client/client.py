@@ -2,7 +2,6 @@ import sys
 import subprocess
 import asyncio
 import websockets
-from pathlib import Path
 from clovers import Leaf, Client
 from clovers_client.logger import logger
 from ..event import Event
@@ -12,12 +11,16 @@ __config__ = Config.sync_config()
 
 BOT_NICKNAME = __config__.Bot_Nickname
 LEN_BOT_NICKNAME = len(BOT_NICKNAME)
+MASTER = __config__.master
 
 
 class ConsoleClient(Leaf, Client):
     def __init__(self):
         super().__init__("CONSOLE")
+        self.ws_host = __config__.ws_host
         self.ws_port = __config__.ws_port
+        self.is_local = self.ws_host.startswith("127.") or self.ws_host == "localhost"
+
         self.keep_to_me = True
         self.load_adapters_from_list(__config__.adapters)
         self.load_adapters_from_dirs(__config__.adapter_dirs)
@@ -25,7 +28,8 @@ class ConsoleClient(Leaf, Client):
         self.load_plugins_from_dirs(__config__.plugin_dirs)
 
     def extract_message(self, inputs: str, event: Event, **ignore):
-        if inputs == "/":
+        logger.info(f"Receive: {inputs}")
+        if inputs == "/tome":
             self.keep_to_me = not self.keep_to_me
             logger.info(f"Keep to me mode: {self.keep_to_me}")
             return
@@ -45,22 +49,45 @@ class ConsoleClient(Leaf, Client):
         event.to_me = event.to_me or self.keep_to_me
         return inputs
 
-    async def main_loop(self, ws_connect: websockets.connect):
-        while self.running:
-            try:
-                async for recv in (ws := await ws_connect):
-                    asyncio.create_task(self.response(inputs=recv, event=Event(), ws_connect=ws))
-            except websockets.exceptions.ConnectionClosedError:
-                break
-
-    async def run(self):
-        subprocess.Popen(
-            [sys.executable, (Path(__file__).parent / "console.py").as_posix(), str(self.ws_port)],
+    def run_server(self):
+        logger.info("Starting local console server ...")
+        return subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                f"{__package__}.console",
+                str(self.ws_port),
+                MASTER.nickname,
+            ],
             creationflags=subprocess.CREATE_NEW_CONSOLE,
         )
+
+    async def run(self):
+        ws_url = f"ws://{self.ws_host}:{self.ws_port}"
+        process = None
         async with self:
-            ws_connect = websockets.connect(f"ws://127.0.0.1:{self.ws_port}")
-            await self.main_loop(ws_connect)
+            while self.running:
+                try:
+                    ws_connect = await websockets.connect(ws_url)
+                    logger.info("WebSocket connected")
+                    async for recv_data in ws_connect:
+                        asyncio.create_task(self.response(inputs=recv_data, event=Event(MASTER), ws_connect=ws_connect))
+                    logger.info("Client closed")
+                    return
+                except (websockets.exceptions.ConnectionClosedError, TimeoutError):
+                    logger.error("WebSocket reconnecting...")
+                    await asyncio.sleep(3)
+                except ConnectionRefusedError:
+                    if (
+                        self.is_local
+                        and process is not None
+                        and process.returncode is not None
+                        and input("Do you want to start the local server? [Y/N]") in "yY"
+                    ):
+                        process = self.run_server()
+                except Exception:
+                    logger.exception("Error")
+                    return
 
 
 __client__ = ConsoleClient()
