@@ -2,4 +2,4 @@
 @echo off
 cd /d "%~dp0sample"
 @echo on
-poetry run bot.py
+poetry run python bot.py
