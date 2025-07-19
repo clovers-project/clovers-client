@@ -7,8 +7,6 @@ from clovers_client.logger import logger
 from ..event import Event
 from .script import SCRIPT_PATH
 from .config import Config
-from typing import IO
-
 
 __config__ = Config.sync_config()
 
@@ -58,22 +56,10 @@ class ConsoleClient(Leaf, Client):
             "stderr": subprocess.PIPE,
         }
         if sys.platform == "win32":
-            kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
+            kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP
         else:
             kwargs["start_new_session"] = True
-
-        if stderr := subprocess.Popen(**kwargs).stderr:
-
-            async def log_err(stderr: IO):
-                try:
-                    err = await asyncio.get_event_loop().run_in_executor(None, stderr.readlines)
-                    lines = ["stderr:\n"]
-                    lines.extend(line.decode("utf-8") if isinstance(line, bytes) else line for line in err)
-                    logger.error("".join(lines))
-                finally:
-                    stderr.close()
-
-            asyncio.create_task(log_err(stderr))
+        return subprocess.Popen(**kwargs)
 
     async def run(self):
         ws_url = f"ws://{self.ws_host}:{self.ws_port}"
@@ -82,7 +68,7 @@ class ConsoleClient(Leaf, Client):
         async with self:
             while self.running:
                 try:
-                    ws_connect = await websockets.connect(ws_url)
+                    ws_connect = await websockets.connect(ws_url, ping_interval=30, ping_timeout=10)
                     logger.info("WebSocket connected")
                     async for recv_data in ws_connect:
                         asyncio.create_task(self.response(inputs=recv_data, event=Event(MASTER), ws_connect=ws_connect))
@@ -90,8 +76,7 @@ class ConsoleClient(Leaf, Client):
                     return
                 except (websockets.exceptions.ConnectionClosedError, TimeoutError):
                     logger.error("WebSocket reconnecting...")
-                    await asyncio.sleep(3)
-                except ConnectionRefusedError:
+                except (websockets.exceptions.ConnectionClosed, ConnectionRefusedError):
                     if self.is_local and input("Do you want to start the local server? [Y/N]") in "yY":
                         self.run_server()
                 except Exception:
