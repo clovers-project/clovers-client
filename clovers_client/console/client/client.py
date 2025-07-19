@@ -65,7 +65,8 @@ class ConsoleClient(Leaf, Client):
 
     async def run(self):
         ws_url = f"ws://{self.ws_host}:{self.ws_port}"
-        process = None
+        if self.is_local:
+            self.run_server()
         async with self:
             while self.running:
                 try:
@@ -79,9 +80,8 @@ class ConsoleClient(Leaf, Client):
                     logger.error("WebSocket reconnecting...")
                     await asyncio.sleep(3)
                 except ConnectionRefusedError:
-                    if self.is_local:
-                        if process is None or input("Do you want to start the local server? [Y/N]") in "yY":
-                            process = self.run_server()
+                    if self.is_local and input("Do you want to start the local server? [Y/N]") in "yY":
+                        self.run_server()
                 except Exception:
                     logger.exception("Error")
                     return

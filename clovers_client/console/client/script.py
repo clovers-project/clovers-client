@@ -45,24 +45,15 @@ if __name__ == "__main__":
         def press_enter(self, event: KeyPressEvent):
             message = self.input_buffer.text.strip()
             self.input_buffer.reset()
-            if not message:
-                self.print_message("system", "不能发送空消息。")
-            else:
-                asyncio.create_task(self.message_queue.put(message))
+            asyncio.create_task(self.broadcast_message(message))
 
         def __init__(self, port: int, nickname: str):
 
             self.port = port
             self.nickname = nickname
             self.messages: deque[tuple[str, str, int]] = deque(maxlen=1000)
-            # 这里处理输入的消息
-            self.message_queue: asyncio.Queue[str] = asyncio.Queue()
-            self.current_message: str = ""
-            self.ws_connections: set[int] = set()
-            self.message_update_flag: bool = False
-            self.message_update_event = asyncio.Event()
+            self.clients: set[websockets.ServerConnection] = set()
             self.input_buffer = Buffer()
-            # 样式定义
             self.style = Style.from_dict(
                 {
                     "output-area": "#ffffff bg:#2b2b2b",
@@ -120,71 +111,26 @@ if __name__ == "__main__":
                 style=self.style,
             )
 
+            self.log_handler = self.LogHandler(self)
+
+        class LogHandler(logging.Handler):
+            def __init__(self, console: "ConsoleServer"):
+                super().__init__()
+                self.console = console
+
+            def emit(self, record):
+                if record.levelno >= logging.ERROR:
+                    self.console.print_message("error", self.format(record))
+                elif record.levelno >= logging.WARNING:
+                    self.console.print_message("warning", self.format(record))
+                else:
+                    self.console.print_message("system", self.format(record))
+
         def print_message(self, role: str, message: str, end: str = "\n"):
             message = message + end
             self.messages.appendleft((role, message, message.count("\n")))
             if self.application.is_running:
                 self.application.invalidate()
-
-        def formatted_messages(self):
-            # 获取当前 Application 实例
-            if render_info := self.output_window.render_info:
-                window_height = render_info.window_height
-                messages = []
-                totle_line_count = 0
-                for msg_type, msg_text, line_count in self.messages:
-                    totle_line_count += line_count
-                    if totle_line_count > window_height:
-                        break
-                    messages.append((f"class:{msg_type}", msg_text))
-                messages.reverse()
-                return messages
-            else:
-                return []
-
-        async def input(self, websocket: websockets.ServerConnection) -> str:
-            """获取服务器输入
-
-            这个方法用于获取服务器的输入消息。它的逻辑如下：
-
-            - **对于首次连接的客户端：**
-            如果当前 WebSocket 连接 (`websocket`) 不在 `ws_connections`（表示它还没有获取当前消息），它会立即返回 `current_message` 并将该连接添加到 `ws_connections` 中，标记为已获取。
-
-            - **对于已连接的客户端：**
-            如果连接已经在 `ws_connections` 中（表示它已经获取过当前消息），它会从 `message_queue` 中等待并获取新的服务器输入，然后更新 `current_message`。
-            一旦 `current_message` 被更新，所有已获取过消息的连接记录（即 `ws_connections`）都会被清除，以便它们可以重新获取最新的消息。
-
-            - **消息更新标志 (`message_update_flag`) 的作用：**
-            当一个协程正在从 `message_queue` 等待新消息时，`message_update_flag` 会被设置为 `True`。
-            这会阻止其他协程也去 `message_queue` 中等待。相反，它们会等待 `message_update_event` 被设置，直到 `current_message` 更新完毕后直接获取更新后的消息。
-            """
-            websocket_hash = hash(websocket)
-            if websocket_hash in self.ws_connections:
-                if self.message_update_flag:
-                    await self.message_update_event.wait()
-                else:
-                    self.message_update_flag = True
-                    self.message_update_event.clear()
-                    self.current_message = await self.message_queue.get()
-                    self.ws_connections.clear()
-                    self.message_update_flag = False
-                    self.message_update_event.set()
-            self.ws_connections.add(websocket_hash)
-            return self.current_message
-
-        async def send_message(self, websocket: websockets.ServerConnection):
-            while True:
-                message = await self.input(websocket)
-                if not message:
-                    continue
-                try:
-                    await websocket.send(message)
-                    self.print_message("prompt", f"{self.nickname}[{datetime.now().strftime("%H:%M:%S")}]")
-                    self.print_message("self", message)
-                except websockets.exceptions.ConnectionClosedOK:
-                    self.print_message("system", "错误：连接已关闭，无法发送消息。")
-                except Exception as e:
-                    self.print_message("system", f"错误：发送消息时出错：{e}")
 
         def print_type(self, message_type: SingleMessageType, message: str, end: str = "\n"):
             match message_type:
@@ -195,6 +141,49 @@ if __name__ == "__main__":
                 case "image":
                     self.print_message("link", f"[图片]", end)
                     Image.open(BytesIO(base64.b64decode(message))).show()
+
+        def formatted_messages(self) -> list[tuple[str, str]]:
+            render_info = self.output_window.render_info
+            if render_info is None or (window_width := render_info.window_width - 1) <= 0:
+                return []
+            window_height = render_info.window_height
+            messages = []
+            totle_line_height = 0
+            nowrapline_width = 0
+            for msg_type, msg_text, line_height in self.messages:
+                if line_height == 0:
+                    nowrapline_width += len(msg_text)
+                    if nowrapline_width >= window_width:
+                        totle_line_height += nowrapline_width // window_width
+                        nowrapline_width = nowrapline_width % window_width
+                else:
+                    if nowrapline_width:
+                        totle_line_height += 1
+                    *seglist, last_seg = msg_text.split("\n")
+                    totle_line_height += sum((len(seg) + window_width - 1) // window_width for seg in seglist)
+                    nowrapline_width = len(last_seg)
+                if totle_line_height >= window_height:
+                    break
+                messages.append((f"class:{msg_type}", msg_text))
+            messages.reverse()
+            return messages
+
+        async def broadcast_message(self, message: str):
+            if not message:
+                self.print_message("system", "不能发送空消息。")
+            else:
+                self.print_message("prompt", f"{self.nickname}[{datetime.now().strftime("%H:%M:%S")}]")
+                self.print_message("self", message)
+                await asyncio.gather(*(asyncio.create_task(self.send_message(client, message)) for client in self.clients))
+
+        async def send_message(self, client: websockets.ServerConnection, message: str):
+            try:
+                await client.send(message)
+            except websockets.exceptions.ConnectionClosedOK:
+                host, port = client.remote_address
+                self.print_message("system", f"客户端 {host}:{port} 连接已关闭，无法发送消息。")
+            except Exception as e:
+                self.print_message("system", f"错误：发送消息时出错：{e}")
 
         async def receive_message(self, websocket: websockets.ServerConnection):
             while True:
@@ -213,42 +202,27 @@ if __name__ == "__main__":
                 except json.JSONDecodeError:
                     self.print_message("warning", f"接收到的消息无法解析为JSON：{recv}")
 
-        async def handler(self, websocket: websockets.ServerConnection):
-            self.ws_connections.add(hash(websocket))
-            host, port = websocket.remote_address
+        async def websocket_handler(self, client: websockets.ServerConnection):
+            host, port = client.remote_address
+            self.clients.add(client)
             self.print_message("system", f"客户端 {host}:{port} 已连接。")
             try:
-                await asyncio.gather(self.receive_message(websocket), self.send_message(websocket))
+                await self.receive_message(client)
             except websockets.exceptions.ConnectionClosedError:
                 self.print_message("system", f"与 {host}:{port} 通信被拒绝，客户端可能已关闭。")
             except Exception as e:
                 self.print_message("system", f"接收消息时发生错误: \n{e}")
-
-        async def run_server(self):
-            server = await websockets.serve(self.handler, "127.0.0.1", self.port, max_size=10 * 2**20)
-            await server.serve_forever()
-            await server.wait_closed()
+            self.clients.remove(client)
+            self.print_message("system", f"客户端 {host}:{port} 的连接已断开。")
 
         async def run(self):
+            server = await websockets.serve(self.websocket_handler, "127.0.0.1", self.port, max_size=10 * 2**20)
             await asyncio.gather(
                 self.application.run_async(),
-                self.run_server(),
+                server.serve_forever(),
             )
-
-    class ConsoleServerLogHandler(logging.Handler):
-        def __init__(self, console: ConsoleServer):
-            super().__init__()
-            self.console = console
-
-        def emit(self, record):
-            if record.levelno >= logging.ERROR:
-                self.console.print_message("error", self.format(record))
-            elif record.levelno >= logging.WARNING:
-                self.console.print_message("warning", self.format(record))
-            else:
-                self.console.print_message("system", self.format(record))
 
     _, port, nickname = sys.argv
     server = ConsoleServer(port=int(port), nickname=nickname)
-    logging.basicConfig(handlers=[ConsoleServerLogHandler(server)], level=logging.WARNING)
+    logging.basicConfig(handlers=[server.log_handler], level=logging.WARNING)
     asyncio.run(server.run())
