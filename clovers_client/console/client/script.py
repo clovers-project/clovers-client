@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
         def formatted_messages(self) -> list[tuple[str, str]]:
             render_info = self.output_window.render_info
-            if render_info is None or (window_width := render_info.window_width - 1) <= 0:
+            if render_info is None or (window_width := render_info.window_width - 4) <= 0:
                 return []
             window_height = render_info.window_height
             messages = []

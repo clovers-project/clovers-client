@@ -7,6 +7,7 @@ from clovers_client.logger import logger
 from ..event import Event
 from .script import SCRIPT_PATH
 from .config import Config
+from typing import IO
 
 
 __config__ = Config.sync_config()
@@ -52,16 +53,27 @@ class ConsoleClient(Leaf, Client):
 
     def run_server(self):
         logger.info(f"Starting local console server ...")
+        kwargs = {
+            "args": [sys.executable, SCRIPT_PATH, str(self.ws_port), MASTER.nickname],
+            "stderr": subprocess.PIPE,
+        }
+        if sys.platform == "win32":
+            kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
+        else:
+            kwargs["start_new_session"] = True
 
-        return subprocess.Popen(
-            [
-                sys.executable,
-                SCRIPT_PATH,
-                str(self.ws_port),
-                MASTER.nickname,
-            ],
-            creationflags=subprocess.CREATE_NEW_CONSOLE,
-        )
+        if stderr := subprocess.Popen(**kwargs).stderr:
+
+            async def log_err(stderr: IO):
+                try:
+                    err = await asyncio.get_event_loop().run_in_executor(None, stderr.readlines)
+                    lines = ["stderr:\n"]
+                    lines.extend(line.decode("utf-8") if isinstance(line, bytes) else line for line in err)
+                    logger.error("".join(lines))
+                finally:
+                    stderr.close()
+
+            asyncio.create_task(log_err(stderr))
 
     async def run(self):
         ws_url = f"ws://{self.ws_host}:{self.ws_port}"
