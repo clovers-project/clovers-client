@@ -747,7 +747,7 @@ version = "11.3.0"
 description = "Python Imaging Library (Fork)"
 optional = false
 python-versions = ">=3.9"
-groups = ["dev"]
+groups = ["main", "dev"]
 files = [
     {file = "pillow-11.3.0-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:1b9c17fd4ace828b3003dfd1e30bff24863e0eb59b535e8f80194d9cc7ecf860"},
     {file = "pillow-11.3.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:65dc69160114cdd0ca0f35cb434633c75e8e7fad4cf855177a05bf38678f73ad"},
@@ -856,6 +856,7 @@ files = [
     {file = "pillow-11.3.0-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:c84d689db21a1c397d001aa08241044aa2069e7587b398c8cc63020390b1c1b8"},
     {file = "pillow-11.3.0.tar.gz", hash = "sha256:3828ee7586cd0b2091b6209e5ad53e20d0649bbe87164a459d0676e035e8f523"},
 ]
+markers = {main = "extra == \"console\""}
 
 [package.extras]
 docs = ["furo", "olefile", "sphinx (>=8.2)", "sphinx-autobuild", "sphinx-copybutton", "sphinx-inline-tabs", "sphinxext-opengraph"]
@@ -1509,11 +1510,11 @@ multidict = ">=4.0"
 propcache = ">=0.2.1"
 
 [extras]
-console = ["prompt-toolkit", "pydantic", "websockets"]
+console = ["pillow", "prompt-toolkit", "pydantic", "websockets"]
 onebot = ["httpx", "pydantic", "websockets"]
 qq = ["pydantic", "qq-botpy"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0.0"
-content-hash = "270877844ea12c8f51167c3c32bd5af9108ab724899299037b53b854adef6860"
+content-hash = "64e0ab81f2594290a9510d7b878ea587f21e2fd052bfc3c014c7d0c5cef4ccfb"
