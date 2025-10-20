@@ -1,0 +1,348 @@
+:root {
+    --main-bg: #f5f5f5;
+    --chat-bg: #ffffff;
+    --input-bg: #eeeeee;
+    --send-btn-color: #007bff;
+    --send-btn-hover: #0056b3;
+    --system-msg-color: #888888;
+    --user-msg-bg: #e1f5fe; /* 蓝色系 */
+    --self-msg-bg: #dcf8c6; /* 绿色系 */
+    --border-color: #ccc;
+    --toolbar-height: 40px;
+    --preview-height: 60px;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+    background-color: var(--main-bg);
+}
+
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 800px;
+    margin: 0 auto;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 聊天窗口 (上半部分) */
+.chat-window {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: var(--chat-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column; /* 确保消息从上往下排列 */
+}
+
+/* 消息元素通用样式 */
+.message {
+    margin-bottom: 10px;
+    display: flex;
+    max-width: 80%;
+}
+
+/* 自己的消息 (右侧对齐) */
+.message.self {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+/* 其他用户的消息 (左侧对齐) */
+.message.other {
+    align-self: flex-start;
+    flex-direction: row;
+}
+
+/* 系统消息 */
+.message.system {
+    align-self: center;
+    text-align: center;
+    width: 100%;
+}
+
+.system-text {
+    font-size: 0.85em;
+    color: var(--system-msg-color);
+    background: none;
+    display: inline-block;
+    margin: 0 auto;
+}
+
+/* 消息内容容器 */
+.message-content {
+    padding: 8px 12px;
+    border-radius: 12px;
+    position: relative;
+    word-wrap: break-word;
+    white-space: pre-wrap; /* 保留换行和空格 */
+    max-width: 100%; /* 限制内容最大宽度 */
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+/* 自己的消息气泡 */
+.message.self .message-content {
+    background-color: var(--self-msg-bg);
+    margin-right: 5px; /* 留出一点空间 */
+}
+
+/* 其他用户的消息气泡 */
+.message.other .message-content {
+    background-color: var(--user-msg-bg);
+    margin-left: 5px; /* 留出一点空间 */
+}
+
+/* 用户名 */
+.username {
+    font-size: 0.75em;
+    color: #333;
+    margin-bottom: 3px;
+    white-space: nowrap;
+}
+
+.message.self .username {
+    text-align: right;
+}
+
+.message-text {
+    margin: 0;
+}
+
+/* 消息中的图片 */
+.message-image {
+    max-width: 100%;
+    max-height: 200px;
+    display: block;
+    border-radius: 8px;
+    margin-top: 5px;
+}
+.image-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px; /* 图片间的间距 */
+    margin-top: 5px;
+}
+.message-image-item {
+    max-width: 100px; /* 限制缩略图大小 */
+    height: auto;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+/* 输入区域 (下半部分) */
+.input-area {
+    padding: 10px;
+    background-color: var(--input-bg);
+}
+
+/* 工具栏 */
+.toolbar {
+    height: var(--toolbar-height);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.tool-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #555;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.tool-btn:hover {
+    color: var(--send-btn-color);
+}
+
+/* 图片预览区 */
+.image-preview-area {
+    min-height: 0; /* 默认不占空间 */
+    max-height: var(--preview-height);
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    margin-bottom: 5px;
+    display: flex;
+    gap: 5px;
+    border-top: 1px dashed transparent; /* 占位，防止抖动 */
+    padding-top: 0;
+    transition: all 0.2s ease-in-out;
+}
+
+.image-preview-area.active {
+    min-height: var(--preview-height);
+    border-top-color: var(--border-color);
+    padding-top: 5px;
+}
+
+.preview-item {
+    position: relative;
+    display: inline-block;
+    height: 50px;
+}
+
+.preview-image {
+    height: 100%;
+    width: auto;
+    border-radius: 5px;
+    object-fit: cover;
+}
+
+.remove-image-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 0.7em;
+    width: 15px;
+    height: 15px;
+    line-height: 15px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+
+/* 输入框和发送按钮行 */
+.input-send-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#messageInput {
+    flex-grow: 1;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px;
+    resize: none; /* 禁止用户调整大小 */
+    font-size: 1em;
+    line-height: 1.4;
+    box-sizing: border-box;
+}
+
+#sendBtn {
+    background-color: var(--send-btn-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 1em;
+    align-self: center; /* 确保垂直居中于输入框 */
+    height: 100%; /* 占满高度 */
+    min-height: 40px;
+    transition: background-color 0.2s;
+}
+
+#sendBtn:hover {
+    background-color: var(--send-btn-hover);
+}
+/* --- 模态框 (Modal) 样式 --- */
+
+/* 覆盖整个页面的黑色半透明背景 */
+.modal {
+    position: fixed;
+    z-index: 1000; /* 确保它在所有其他内容之上 */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4); /* 40% 黑色透明背景 */
+    display: flex; /* 使用 flexbox 来居中内容 */
+    justify-content: center;
+    align-items: center;
+}
+
+/* 模态框主体内容 */
+.modal-content {
+    background-color: #fefefe;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* 适当的宽度 */
+    max-width: 400px; /* 最大宽度 */
+    border-radius: 10px;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+    animation-name: animatetop;
+    animation-duration: 0.4s;
+}
+
+/* 模态框进入动画 */
+@keyframes animatetop {
+    from {top: -300px; opacity: 0}
+    to {top: 0; opacity: 1}
+}
+
+.modal-content h3 {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+.form-actions {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.form-actions button {
+    padding: 10px 15px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#confirmBtn {
+    background-color: #007bff;
+    color: white;
+}
+
+#confirmBtn:hover {
+    background-color: #0056b3;
+}
+
+#cancelBtn {
+    background-color: #ccc;
+    color: #333;
+}
+
+#cancelBtn:hover {
+    background-color: #bbb;
+}

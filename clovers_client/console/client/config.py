@@ -1,5 +1,5 @@
 from clovers_client.config import Config as BaseConfig
-from ..event import User
+from ..typing import User
 
 
 class Config(BaseConfig):
