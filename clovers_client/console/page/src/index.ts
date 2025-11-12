@@ -32,14 +32,17 @@ interface UserInfo {
 }
 
 // 全局状态
-let currentUserInfo: UserInfo = {
-    userId: '1048827424',
-    groupId: '744751179',
-    nickname: '文文',
-    avatar: "https://q1.qlogo.cn/g?b=qq&nk=1048827424&s=640",
-    groupAvatar: "https://p.qlogo.cn/gh/744751179/744751179/640",
+const defaultUser: UserInfo = {
+    userId: '1',
+    groupId: '1',
+    nickname: '用户',
+    avatar: "",
+    groupAvatar: "",
     permission: 'SuperUser'
 };
+let currentUserInfo: UserInfo = { ...defaultUser };
+let userList: UserInfo[] = [currentUserInfo];
+userList.push();
 let currentCloversServer: string = 'ws://localhost:11000';
 let ws: WebSocket | null = null;
 let currentMessageId = 0;
@@ -167,20 +170,13 @@ function receiveAndDisplayMessage(message: ChatMessage): void {
         // 用户消息
         const isSelf = message.senderName === currentUserInfo.nickname;
         messageElement.classList.add(isSelf ? 'self' : 'other');
-
-        // 用户头像/容器 (这里简化，只用一个div包裹)
-        const contentContainer = document.createElement('div');
-        contentContainer.className = 'content-container';
-
         // 用户名
         const usernameEl = document.createElement('p');
         usernameEl.className = 'username';
         usernameEl.textContent = message.senderName;
-
         // 消息内容气泡
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
-
         // 文本内容
         if (message.text) {
             const textEl = document.createElement('p');
@@ -188,7 +184,6 @@ function receiveAndDisplayMessage(message: ChatMessage): void {
             textEl.textContent = message.text;
             messageContent.appendChild(textEl);
         }
-
         // 图片内容
         if (message.images && message.images.length > 0) {
             const imageGroup = document.createElement('div');
@@ -204,98 +199,159 @@ function receiveAndDisplayMessage(message: ChatMessage): void {
             });
             messageContent.appendChild(imageGroup);
         }
-
         // 组织结构: [用户名] -> [消息内容气泡]
-        contentContainer.appendChild(usernameEl);
-        contentContainer.appendChild(messageContent);
-        messageElement.appendChild(contentContainer);
+        messageElement.appendChild(usernameEl);
+        messageElement.appendChild(messageContent);
     }
-
     chatWindow.appendChild(messageElement);
     scrollToBottom();
 }
 
-
-userinfoBtn.addEventListener('click', () => {
-    // 创建一个简单的模态框来替代多个prompt
+// 替换原有的 userinfoBtn 点击事件处理函数
+function renderUserList() {
     const modal = document.createElement('div');
     modal.className = 'modal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>请输入用户信息</h3>
-            <div class="form-group">
-                <label for="userId">用户ID:</label>
-                <input type="text" id="userId" value="${currentUserInfo.userId}">
+    const modalHTML = document.createElement('div');
+    modalHTML.className = 'modal-content';
+    const title = document.createElement('div');
+    title.className = 'user-list-title';
+    title.textContent = '用户列表';
+    modalHTML.appendChild(title);
+    const addUserBtn = document.createElement('button');
+    addUserBtn.id = 'addUserBtn';
+    addUserBtn.textContent = '+';
+    title.appendChild(addUserBtn);
+    function renderUserItem(user: UserInfo) {
+        const userItem = document.createElement('div');
+        userItem.className = 'user-item';
+        userItem.innerHTML = `
+            <div>
+                <strong>${user.nickname}</strong>
+                <span>ID: ${user.userId}</span>
             </div>
-            <div class="form-group">
-                <label for="nickname">昵称:</label>
-                <input type="text" id="nickname" value="${currentUserInfo.nickname}">
-            </div>
-            <div class="form-group">
-                <label for="groupId">群组ID:</label>
-                <input type="text" id="groupId" value="${currentUserInfo.groupId}">
-            </div>
-            <div class="form-group">
-                <label for="avatarUrl">用户头像URL:</label>
-                <input type="text" id="avatarUrl" value="${currentUserInfo.avatar}">
-            </div>
-            <div class="form-group">
-                <label for="permission">用户权限:</label>
-                <select id="permission">
-                    <option value="SuperUser" ${currentUserInfo.permission === 'SuperUser' ? 'selected' : ''}>超级用户</option>
-                    <option value="Owner" ${currentUserInfo.permission === 'Owner' ? 'selected' : ''}>群主</option>
-                    <option value="Admin" ${currentUserInfo.permission === 'Admin' ? 'selected' : ''}>管理员</option>
-                    <option value="Member" ${currentUserInfo.permission === 'Member' ? 'selected' : ''}>成员</option>
-                </select>
-            </div>
-            <div class="form-actions">
-                <button id="confirmBtn">确认</button>
-                <button id="cancelBtn">取消</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-    const confirmBtn = modal.querySelector('#confirmBtn') as HTMLButtonElement;
-    const cancelBtn = modal.querySelector('#cancelBtn') as HTMLButtonElement;
-    confirmBtn.addEventListener('click', () => {
-        const userId = (modal.querySelector('#userId') as HTMLInputElement).value.trim();
-        const nickname = (modal.querySelector('#nickname') as HTMLInputElement).value.trim();
-        const groupId = (modal.querySelector('#groupId') as HTMLInputElement).value.trim();
-        const avatarUrl = (modal.querySelector('#avatarUrl') as HTMLInputElement).value.trim();
-        const permission = (modal.querySelector('#permission') as HTMLSelectElement).value as UserInfo['permission'];
-
-        if (!userId || !nickname || !groupId || !permission) {
-            alert('请填写所有必填项');
-            return;
-        }
-
-        currentUserInfo = {
-            userId,
-            groupId,
-            nickname,
-            avatar: avatarUrl || currentUserInfo.avatar,
-            groupAvatar: currentUserInfo.groupAvatar,
-            permission
-        };
-
-        // 发送系统消息通知更改
-        receiveAndDisplayMessage({
-            id: currentMessageId++,
-            senderId: '',
-            type: 'system',
-            senderName: '系统',
-            text: "已更新用户信息。",
-            timestamp: Date.now()
+          `;
+        const setting = document.createElement('button');
+        setting.className = 'tool-btn';
+        setting.innerHTML = '<i class="fa-solid fa-gear"></i>';
+        userItem.appendChild(setting);
+        userItem.addEventListener('click', () => {
+            document.body.removeChild(modal)
+            currentUserInfo = user
+            receiveAndDisplayMessage({
+                id: currentMessageId++,
+                type: 'system',
+                senderId: '',
+                senderName: '系统',
+                text: `已切换用户为「${user.nickname}」`,
+                timestamp: Date.now()
+            });
         });
-        // 移除模态框
-        document.body.removeChild(modal);
-    });
-    cancelBtn.addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
-});
+        setting.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.body.removeChild(modal)
+            renderUserInfoPage(user)
+        });
+        return userItem;
+    }
+    userList.forEach(user => {
+        modalHTML.appendChild(renderUserItem(user));
 
+    });
+    addUserBtn.onclick = () => {
+        let user = { ...defaultUser };
+        userList.push(user);
+        modalHTML.appendChild(renderUserItem(user));
+    };
+    modal.appendChild(modalHTML);
+    document.body.appendChild(modal);
+
+};
+
+function renderUserInfoPage(user: UserInfo) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    const modalHTML = document.createElement('div');
+    modalHTML.className = 'modal-content';
+    modalHTML.innerHTML = `
+        <h3>请输入用户信息</h3>
+        <div class="form-group">
+            <label for="userId">用户ID:</label>
+            <input type="text" id="userId" value="${user.userId}">
+        </div>
+        <div class="form-group">
+            <label for="nickname">昵称:</label>
+            <input type="text" id="nickname" value="${user.nickname}">
+        </div>
+        <div class="form-group">
+            <label for="groupId">群组ID:</label>
+            <input type="text" id="groupId" value="${user.groupId}">
+        </div>
+        <div class="form-group">
+            <label for="avatarUrl">用户头像URL:</label>
+            <input type="text" id="avatarUrl" value="${user.avatar}">
+        </div>
+        <div class="form-group">
+            <label for="groupAvatarUrl">群组头像URL:</label>
+            <input type="text" id="groupAvatarUrl" value="${user.groupAvatar}">
+        </div>
+        <div class="form-group">
+            <label for="permission">用户权限:</label>
+            <select id="permission">
+                <option value="SuperUser" ${user.permission === 'SuperUser' ? 'selected' : ''}>超级用户</option>
+                <option value="Owner" ${user.permission === 'Owner' ? 'selected' : ''}>群主</option>
+                <option value="Admin" ${user.permission === 'Admin' ? 'selected' : ''}>管理员</option>
+                <option value="Member" ${user.permission === 'Member' ? 'selected' : ''}>成员</option>
+            </select>
+        </div>
+        `;
+    const btns = document.createElement('div');
+    btns.className = 'form-actions';
+    const confirmBtn = document.createElement('button');
+    confirmBtn.id = 'confirmBtn';
+    confirmBtn.textContent = '确认';
+    btns.appendChild(confirmBtn);
+    const cancelBtn = document.createElement('button');
+    cancelBtn.id = 'cancelBtn';
+    cancelBtn.textContent = '取消';
+    btns.appendChild(cancelBtn);
+    const deleteBtn = document.createElement('button');
+    deleteBtn.id = 'deleteBtn';
+    deleteBtn.textContent = '删除';
+    btns.appendChild(deleteBtn);
+    modalHTML.appendChild(btns);
+    modal.appendChild(modalHTML);
+    document.body.appendChild(modal);
+    confirmBtn.onclick = () => {
+        const userId = (modalHTML.querySelector('#userId') as HTMLInputElement).value.trim();
+        const nickname = (modalHTML.querySelector('#nickname') as HTMLInputElement).value.trim();
+        const groupId = (modalHTML.querySelector('#groupId') as HTMLInputElement).value.trim();
+        const avatarUrl = (modalHTML.querySelector('#avatarUrl') as HTMLInputElement).value.trim();
+        const groupAvatarUrl = (modalHTML.querySelector('#groupAvatarUrl') as HTMLInputElement).value.trim();
+        const permission = (modalHTML.querySelector('#permission') as HTMLSelectElement).value as UserInfo['permission'];
+        user.userId = userId;
+        user.nickname = nickname;
+        user.groupId = groupId;
+        user.avatar = avatarUrl;
+        user.groupAvatar = groupAvatarUrl;
+        user.permission = permission;
+        document.body.removeChild(modal);
+        renderUserList();
+    }
+    cancelBtn.onclick = () => {
+        document.body.removeChild(modal);
+        renderUserList();
+    }
+    deleteBtn.onclick = () => {
+        const index = userList.indexOf(user);
+        if (index !== -1) {
+            userList.splice(index, 1);
+        }
+        document.body.removeChild(modal);
+        renderUserList();
+    }
+}
+
+userinfoBtn.addEventListener('click', renderUserList);
 function handleIncomingMessage(messageData: string): void {
     try {
         const message: ChatMessage = JSON.parse(messageData);
@@ -372,16 +428,7 @@ function connectCloversServer(): void {
                 timestamp: Date.now()
             });
         };
-
         ws.onerror = (event) => {
-            receiveAndDisplayMessage({
-                id: currentMessageId++,
-                type: 'system',
-                senderId: '',
-                senderName: '系统',
-                text: 'WebSocket 错误: 无法连接或连接中断。',
-                timestamp: Date.now()
-            });
             console.error("WebSocket Error:", event);
         };
 

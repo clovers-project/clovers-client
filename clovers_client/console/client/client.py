@@ -39,26 +39,6 @@ class ConsoleClient(Leaf, Client):
         return text
 
     async def websocket_handler(self, websocket: websockets.ServerConnection):
-        # request = websocket.request
-        # if request is None:
-        #     logger.warning("Connection rejected: No request found.")
-        #     return
-        # user_info = {}
-        # user_info["user_id"] = request.headers.get("UserInfo-User-ID", "0")
-        # user_info["group_id"] = request.headers.get("UserInfo-Group-ID", "0")
-        # user_info["nickname"] = request.headers.get("UserInfo-Nickname", "ConsoleUser")
-        # user_info["avatar"] = request.headers.get("UserInfo-Avatar", "https://localhost:8080/avatar/0.png")
-        # user_info["group_avatar"] = request.headers.get("UserInfo-Group-Avatar", "https://localhost:8080/group_avatar/0.png")
-        # match request.headers.get("UserInfo-Permission"):
-        #     case "SuperUser":
-        #         user_info["permission"] = 3
-        #     case "Owner":
-        #         user_info["permission"] = 2
-        #     case "Admin":
-        #         user_info["permission"] = 1
-        #     case _:
-        #         user_info["permission"] = 0
-        # user = User(**user_info)
         self.ws_connects.add(websocket)
         logger.info(f"New client connected. Total connections: {len(self.ws_connects)}")
         try:
@@ -74,7 +54,7 @@ class ConsoleClient(Leaf, Client):
 
     async def run(self):
         async with self:
-            server = await websockets.serve(self.websocket_handler, self.ws_host, self.ws_port, ping_interval=30, ping_timeout=10)
+            server = await websockets.serve(self.websocket_handler, self.ws_host, self.ws_port, max_size=50 * 2**20)
             logger.info(f"WebSocket server started at ws://{self.ws_host}:{self.ws_port}")
             await server.wait_closed()
             logger.info("WebSocket server stopped.")
