@@ -114,7 +114,7 @@ html {
   position: relative;
   word-wrap: break-word;
   white-space: pre-wrap;
-  max-width: 100%;
+  max-width: 60%;
   box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   color: var(--message-text-color);

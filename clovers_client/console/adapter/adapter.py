@@ -63,24 +63,24 @@ async def send_list(message: list[Result], ws_connects: set[websockets.ServerCon
     await asyncio.gather(*broadcast(chat_message, ws_connects))
 
 
-async def send_result(result: Result, ws_connect: websockets.ClientConnection):
+async def send_result(result: Result, ws_connects: set[websockets.ServerConnection]):
     match result.key:
         case "at":
-            await send_at(result.data, ws_connect)
+            await send_at(result.data, ws_connects)
         case "text":
-            await send_text(result.data, ws_connect)
+            await send_text(result.data, ws_connects)
         case "image":
-            await send_image(result.data, ws_connect)
+            await send_image(result.data, ws_connects)
         case "list":
-            await send_list(result.data, ws_connect)
+            await send_list(result.data, ws_connects)
         case _:
             logger.warning(f"Unknown send_method: {result.key}")
 
 
 @adapter.send_method("segmented")
-async def send_segmented(message: AsyncGenerator[Result], ws_connect):
+async def send_segmented(message: AsyncGenerator[Result], ws_connects: set[websockets.ServerConnection]):
     async for item in message:
-        await send_result(item, ws_connect)
+        await send_result(item, ws_connects)
 
 
 @adapter.property_method("Bot_Nickname")

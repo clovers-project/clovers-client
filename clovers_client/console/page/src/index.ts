@@ -74,7 +74,6 @@ function clearInput(): void {
 function sendMessage(): void {
     const text = messageInput.value.trim();
     if (!text && pendingImages.length === 0) {
-        // alert('不能发送空消息！'); // 避免在回车时频繁弹出
         return;
     }
 
@@ -82,7 +81,7 @@ function sendMessage(): void {
         return new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target?.result as string);
-            reader.readAsDataURL(file); // 转换为 base64
+            reader.readAsDataURL(file);
         });
     });
 
@@ -103,10 +102,21 @@ function sendMessage(): void {
         receiveAndDisplayMessage(newMessage);
         clearInput();
         messageInput.focus();
-        if (ws && ws.readyState === WebSocket.OPEN) {
+
+        let flag = false;
+        if (ws?.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(newMessage));
-        } else {
+            flag = false;
+        }
+        else {
             connectCloversServer();
+            flag = true;
+            ws?.addEventListener('open', () => {
+                if (flag) {
+                    ws!.send(JSON.stringify(newMessage));
+                    flag = false;
+                }
+            }, { once: true });
         }
     });
 }
@@ -476,7 +486,7 @@ cloversBtn.addEventListener('click', () => {
     if (!newCloversServer) {
         newCloversServer = defaultCloversServer;
     }
-    if (currentCloversServer === newCloversServer) {
+    if (ws && (currentCloversServer === newCloversServer)) {
         return;
     } else {
         currentCloversServer = newCloversServer;
