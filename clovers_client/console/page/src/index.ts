@@ -40,10 +40,10 @@ const defaultUser: UserInfo = {
     groupAvatar: "",
     permission: 'SuperUser'
 };
-let currentUserInfo: UserInfo = { ...defaultUser };
-let userList: UserInfo[] = [currentUserInfo];
-userList.push();
-let currentCloversServer: string = 'ws://localhost:11000';
+const defaultCloversServer = 'ws://localhost:11000';
+let currentUserInfo: UserInfo;
+let userList: UserInfo[];
+let currentCloversServer: string;
 let ws: WebSocket | null = null;
 let currentMessageId = 0;
 
@@ -138,11 +138,6 @@ function renderImagePreview(file: File, index: number): void {
     };
     reader.readAsDataURL(file);
 }
-
-/**
- * 移除待发送图片
- * @param index 待移除图片在 `pendingImages` 中的索引
- */
 function removeImage(index: number): void {
     pendingImages.splice(index, 1);
 
@@ -188,18 +183,26 @@ function receiveAndDisplayMessage(message: ChatMessage): void {
         if (message.images && message.images.length > 0) {
             const imageGroup = document.createElement('div');
             imageGroup.className = 'image-group';
-
             message.images.forEach(imgUrl => {
                 const img = document.createElement('img');
                 img.className = 'message-image-item';
                 img.src = imgUrl;
                 img.alt = '聊天图片';
-                // 实际应用中可以给图片添加点击查看大图的事件
+                img.loading = 'lazy'
+                // 添加点击查看大图的事件
+                img.onclick = () => {
+                    const modal = document.createElement('div');
+                    modal.className = 'modal';
+                    modal.onclick = () => {
+                        document.body.removeChild(modal);
+                    };
+                    modal.innerHTML = `<img src="${imgUrl}">`;
+                    document.body.appendChild(modal);
+                }
                 imageGroup.appendChild(img);
             });
             messageContent.appendChild(imageGroup);
         }
-        // 组织结构: [用户名] -> [消息内容气泡]
         messageElement.appendChild(usernameEl);
         messageElement.appendChild(messageContent);
     }
@@ -211,8 +214,14 @@ function receiveAndDisplayMessage(message: ChatMessage): void {
 function renderUserList() {
     const modal = document.createElement('div');
     modal.className = 'modal';
+    modal.onclick = () => {
+        document.body.removeChild(modal);
+    };
     const modalHTML = document.createElement('div');
     modalHTML.className = 'modal-content';
+    modalHTML.onclick = (e) => {
+        e.stopPropagation();
+    };
     const title = document.createElement('div');
     title.className = 'user-list-title';
     title.textContent = '用户列表';
@@ -245,6 +254,7 @@ function renderUserList() {
                 text: `已切换用户为「${user.nickname}」`,
                 timestamp: Date.now()
             });
+            localStorage.setItem('currentUserInfo', JSON.stringify(user))
         });
         setting.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -253,6 +263,9 @@ function renderUserList() {
         });
         return userItem;
     }
+    // if (!userList.length) {
+    //     userList.push(currentUserInfo);
+    // }
     userList.forEach(user => {
         modalHTML.appendChild(renderUserItem(user));
 
@@ -261,6 +274,7 @@ function renderUserList() {
         let user = { ...defaultUser };
         userList.push(user);
         modalHTML.appendChild(renderUserItem(user));
+        localStorage.setItem('userList', JSON.stringify(userList));
     };
     modal.appendChild(modalHTML);
     document.body.appendChild(modal);
@@ -270,8 +284,14 @@ function renderUserList() {
 function renderUserInfoPage(user: UserInfo) {
     const modal = document.createElement('div');
     modal.className = 'modal';
+    modal.onclick = (e) => {
+        document.body.removeChild(modal);
+    };
     const modalHTML = document.createElement('div');
     modalHTML.className = 'modal-content';
+    modalHTML.onclick = (e) => {
+        e.stopPropagation();
+    };
     modalHTML.innerHTML = `
         <h3>请输入用户信息</h3>
         <div class="form-group">
@@ -336,6 +356,7 @@ function renderUserInfoPage(user: UserInfo) {
         user.permission = permission;
         document.body.removeChild(modal);
         renderUserList();
+        localStorage.setItem('userList', JSON.stringify(userList));
     }
     cancelBtn.onclick = () => {
         document.body.removeChild(modal);
@@ -348,6 +369,7 @@ function renderUserInfoPage(user: UserInfo) {
         }
         document.body.removeChild(modal);
         renderUserList();
+        localStorage.setItem('userList', JSON.stringify(userList));
     }
 }
 
@@ -446,10 +468,21 @@ function connectCloversServer(): void {
 
 
 cloversBtn.addEventListener('click', () => {
-    const newCloversServer = prompt('请输入 clovers 服务器地址:', currentCloversServer);
-    if (newCloversServer && newCloversServer.trim()) {
-        connectCloversServer();
+    let newCloversServer = prompt('请输入 clovers 服务器地址:', currentCloversServer);
+    if (newCloversServer === null) {
+        return;
     }
+    newCloversServer = newCloversServer.trim()
+    if (!newCloversServer) {
+        newCloversServer = defaultCloversServer;
+    }
+    if (currentCloversServer === newCloversServer) {
+        return;
+    } else {
+        currentCloversServer = newCloversServer;
+    }
+    localStorage.setItem('currentCloversServer', currentCloversServer);
+    connectCloversServer();
 });
 
 
@@ -490,6 +523,27 @@ messageInput.addEventListener('keydown', (event: KeyboardEvent) => {
 
 // 初始化加载时添加一条系统消息
 document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const savedCurrentUserInfo = localStorage.getItem('currentUserInfo');
+        if (!savedCurrentUserInfo) { throw new Error('Default'); }
+        currentUserInfo = JSON.parse(savedCurrentUserInfo);
+    } catch (e) {
+        currentUserInfo = { ...defaultUser };
+    }
+    try {
+        const savedUserList = localStorage.getItem('userList');
+        if (!savedUserList) { throw new Error('Default'); }
+        userList = JSON.parse(savedUserList);
+    } catch (e) {
+        userList = [currentUserInfo];
+    }
+    try {
+        const savedCurrentCloversServer = localStorage.getItem('currentCloversServer');
+        if (!savedCurrentCloversServer) { throw new Error('Default'); }
+        currentCloversServer = savedCurrentCloversServer;
+    } catch (e) {
+        currentCloversServer = defaultCloversServer;
+    }
     receiveAndDisplayMessage({
         id: currentMessageId++,
         type: 'system',
