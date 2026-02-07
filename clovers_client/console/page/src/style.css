@@ -119,6 +119,23 @@ body::after {
   padding: 20px;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+}
+/* 自定义滚动条样式 */
+.chat-window::-webkit-scrollbar {
+  width: 8px; /* 滚动条宽度 */
+}
+
+.chat-window::-webkit-scrollbar-track {
+  background: transparent; /* 滚动轨道背景透明 */
+}
+
+.chat-window::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2); /* 滚动条滑块颜色（半透明黑色） */
+}
+
+.chat-window::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4); /* 悬停时加深颜色 */
 }
 
 @keyframes fadeIn {
