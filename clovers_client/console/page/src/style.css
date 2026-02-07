@@ -37,7 +37,11 @@ html {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
   background: var(--main-bg);
   color: var(--text-primary);
 }
@@ -114,19 +118,24 @@ html {
   position: relative;
   word-wrap: break-word;
   white-space: pre-wrap;
-  max-width: 60%;
+  max-width: 80%;
+  width: fit-content;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   color: var(--message-text-color);
 }
 
 /* 自己的消息气泡 */
 .message.self .message-content {
+  align-self: flex-end;
   background: linear-gradient(135deg, var(--self-msg-bg) 0%, var(--self-msg-bg2) 100%);
 }
 
 /* 其他用户的消息气泡 */
 .message.other .message-content {
+  align-self: flex-start;
   background: linear-gradient(135deg, var(--user-msg-bg) 0%, var(--user-msg-bg2) 100%);
 }
 
