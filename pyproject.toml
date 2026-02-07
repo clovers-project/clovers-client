@@ -28,6 +28,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.group.dev.dependencies]
 clovers = { path = "D:/CLOVERS/clovers", develop = true }
 clovers-aichat = { path = "D:/CLOVERS/CLOVERS_PLUGINS/clovers-aichat", develop = true }
+clovers-divine = { path = "D:/CLOVERS/CLOVERS_PLUGINS/clovers-divine", develop = true }
 # clovers-apscheduler = { path = "D:/CLOVERS_PLUGINS/clovers-apscheduler", develop = true }
 # clovers-groupmate-waifu = { path = "D:/CLOVERS_PLUGINS/clovers-groupmate-waifu", develop = true }
-# clovers-divine = { path = "D:/CLOVERS_PLUGINS/clovers-divine", develop = true }
