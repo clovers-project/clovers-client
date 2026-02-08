@@ -1,6 +1,10 @@
+import threading
+from socketserver import TCPServer
+from http.server import SimpleHTTPRequestHandler
 import json
 import asyncio
 import websockets
+from pathlib import Path
 from clovers import Leaf, Client
 from clovers_client.logger import logger
 from .config import Config
@@ -53,11 +57,36 @@ class ConsoleClient(Leaf, Client):
             logger.info(f"Client disconnected. Total connections: {len(self.ws_connects)}")
 
     async def run(self):
+        def http_server(host: str, port: int, dir: Path):
+            """线程运行函数"""
+
+            # 自定义 Handler 以指定服务目录
+            class CustomHandler(SimpleHTTPRequestHandler):
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, directory=dir.as_posix(), **kwargs)
+
+                def log_message(self, format, *args):
+                    pass
+
+            TCPServer.allow_reuse_address = True
+            try:
+                with TCPServer((host, port), CustomHandler) as httpd:
+                    logger.info(f"Console UI Server running at http://{host}:{port}")
+                    httpd.serve_forever()
+            except Exception as e:
+                logger.error(f"Console UI Server failed: {e}")
+
+        web_thread = threading.Thread(
+            target=http_server,
+            args=(self.ws_host, self.ws_port + 1, Path(__file__).parent / "page"),
+            daemon=True,
+        )
+        web_thread.start()
         async with self:
             server = await websockets.serve(self.websocket_handler, self.ws_host, self.ws_port, max_size=50 * 2**20)
-            logger.info(f"WebSocket server started at ws://{self.ws_host}:{self.ws_port}")
+            logger.info(f"Clovers Console Server running at ws://{self.ws_host}:{self.ws_port}")
             await server.wait_closed()
-            logger.info("WebSocket server stopped.")
+            logger.info("Clovers Console Server stopped.")
 
 
 __client__ = ConsoleClient()
