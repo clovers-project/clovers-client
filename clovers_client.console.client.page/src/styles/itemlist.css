@@ -1,0 +1,100 @@
+@import url("./base.css");
+:root {
+  --item-padding: 12px 12px;
+  --item-select-color: rgba(0, 0, 0, 0.2);
+}
+
+.itemlist-title,
+.itemlist-item {
+  display: flex;
+  height: 48px;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--item-padding);
+  padding-right: 12px;
+  color: var(--text-primary);
+}
+.itemlist-title {
+  min-height: 48px;
+}
+.itemlist-item {
+  min-height: 0;
+}
+
+.itemlist-item {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.itemlist-item-avatar {
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+  background-color: #ccc;
+}
+
+.itemlist-item:hover {
+  background: var(--item-select-color);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.95em;
+  color: var(--text-primary);
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px 15px;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-small);
+  font-size: 1em;
+  background-color: #f8f9fa;
+  color: var(--text-primary);
+  transition: all 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-small);
+}
+
+.form-actions {
+  margin-top: 25px;
+  text-align: right;
+}
+
+.form-actions button {
+  padding: 12px 20px;
+  margin-left: 12px;
+  border: none;
+  border-radius: var(--radius-normal);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.delete-all-button {
+  width: 100%;
+  height: 60px;
+  min-height: 60px;
+  margin: 0, 0;
+  border: none;
+  font-size: 1.8em;
+  color: var(--text-secondary);
+  background: var(--standard-bg);
+  color: #ccc;
+}
+.delete-all-button:hover {
+  color: #dc3545;
+  background: var(--item-select-color);
+}
