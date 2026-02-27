@@ -62,12 +62,11 @@ function userInfoTemplate({ backdrop, modal } = creatModal(), user: UserInfo) {
         renderUserList({ backdrop, modal });
     };
     deleteBtn.onclick = () => {
-        if (currentUser.userId === user.userId) {
-            setCurrentUser('1');
-            localStorage.setItem("userId", currentUser.userId);
-        };
         const index = userList.indexOf(user);
         if (index !== -1) userList.splice(index, 1);
+        if (currentUser.userId === user.userId) {
+            setCurrentUser('1');
+        };
         document.body.removeChild(backdrop);
         renderUserList();
         localStorage.setItem("userList", JSON.stringify(userList));
@@ -89,7 +88,6 @@ export function renderUserList({ backdrop, modal } = creatModal()) {
             if (currentUser.userId === user.userId) return;
             setCurrentUser(user.userId);
             sendSystemMessage(`已切换用户为「${user.userName}」`);
-            localStorage.setItem("userId", user.userId);
         });
         setting.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -108,7 +106,7 @@ export function renderUserList({ backdrop, modal } = creatModal()) {
     addUserBtn.className = "confirm-button";
     addUserBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
     addUserBtn.onclick = () => {
-        let user = { ...defaultUserInfo, groupId: Date.now().toString() };
+        let user = { ...defaultUserInfo, userId: Date.now().toString() };
         userList.push(user);
         content.appendChild(renderUserItem(user));
         localStorage.setItem("userList", JSON.stringify(userList));

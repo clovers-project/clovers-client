@@ -53,7 +53,6 @@ function renderGroupItem(group: GroupInfo) {
         await chatHistoryStorage.set(currentGroup.groupId, chatHistory.innerHTML);
         chatWindow.innerHTML = await chatHistoryStorage.get(group.groupId);
         setCurrentGroup(group.groupId);
-        localStorage.setItem("groupId", group.groupId);
     });
     setting.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -76,21 +75,21 @@ export function renderGroupList() {
         sideBarContent.appendChild(renderGroupItem(group));
         localStorage.setItem("groupList", JSON.stringify(groupList));
     };
-    const deleteAllBtn = document.createElement("button");
-    deleteAllBtn.className = "delete-all-button";
-    deleteAllBtn.innerHTML = '<i class="fa-solid fa-trash"></i>'
-    deleteAllBtn.onclick = async () => {
-        groupList.length = 0;
-        setCurrentGroup("1");
-        localStorage.setItem("groupList", JSON.stringify(groupList));
-        sideBarContent.innerHTML = ""
-        groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(group)));
-        await chatHistoryStorage.clearAll();
-    };
-    const grow = document.createElement("div");
-    grow.className = "grow-flex";
-    sideBarArea.appendChild(grow);
-    sideBarArea.appendChild(deleteAllBtn);
+    // const deleteAllBtn = document.createElement("button");
+    // deleteAllBtn.className = "delete-all-button";
+    // deleteAllBtn.innerHTML = '<i class="fa-solid fa-trash"></i>'
+    // deleteAllBtn.onclick = async () => {
+    //     groupList.length = 0;
+    //     setCurrentGroup("1");
+    //     localStorage.setItem("groupList", JSON.stringify(groupList));
+    //     sideBarContent.innerHTML = ""
+    //     groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(group)));
+    //     await chatHistoryStorage.clearAll();
+    // };
+    // const grow = document.createElement("div");
+    // grow.className = "grow-flex";
+    // sideBarArea.appendChild(grow);
+    // sideBarArea.appendChild(deleteAllBtn);
 }
 function groupInfoTemplate({ backdrop, modal } = creatModal(), group: GroupInfo) {
     const content = document.createElement("div");
@@ -136,19 +135,18 @@ function groupInfoTemplate({ backdrop, modal } = creatModal(), group: GroupInfo)
     };
     cancelBtn.onclick = () => document.body.removeChild(backdrop);
     deleteBtn.onclick = async () => {
-        if (currentGroup.groupId === group.groupId) {
-            setCurrentGroup('1');
-            localStorage.setItem("groupId", currentGroup.groupId);
-            chatWindow.innerHTML = await chatHistoryStorage.get(currentGroup.groupId);
-
-        };
         const index = groupList.indexOf(group);
         if (index !== -1) groupList.splice(index, 1);
+        chatHistoryStorage.delete(group.groupId);
+        if (currentGroup.groupId === group.groupId) {
+            setCurrentGroup('1');
+            chatWindow.innerHTML = await chatHistoryStorage.get(currentGroup.groupId);
+        };
         sideBarContent.innerHTML = ""
         groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(group)));
         document.body.removeChild(backdrop);
         localStorage.setItem("groupList", JSON.stringify(groupList));
-        chatHistoryStorage.delete(group.groupId);
+
     };
 }
 
