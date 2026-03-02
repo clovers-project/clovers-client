@@ -1,9 +1,9 @@
 import "./style.css";
-import { userList, setCurrentUser, groupList, setCurrentGroup } from "./code/core";
+import { userList, setCurrentUser, groupList, setCurrentGroup, currentGroup } from "./code/core";
 import { connectCloversServer } from "./code/chat";
 import { renderUserList } from "./code/user";
 import { sideBarArea } from "./code/sidebar";
-import { renderGroupList } from "./code/sidebar/group";
+import { renderGroupList, showGroupChatHistory } from "./code/sidebar/group";
 
 let showGroupListFlag = false;
 function showSideBar(e: PointerEvent) {
@@ -47,6 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     setCurrentGroup(localStorage.getItem("groupId") || '1');
     renderGroupList();
+    showGroupChatHistory(currentGroup.groupId);
     let url = localStorage.getItem("CloversClientConsoleUrl") || "ws://localhost:11000";
     connectCloversServer(url);
 });

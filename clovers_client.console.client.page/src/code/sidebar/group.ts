@@ -1,6 +1,6 @@
 import type { GroupInfo, } from '../types';
 import { groupList, setCurrentGroup, defaultGroupInfo, currentGroup } from "../core";
-import { chatWindow } from "../chat";
+import { chatWindow, sendSystemMessage } from "../chat";
 import { creatModal } from "../modal";
 import { openDB } from 'idb';
 import { sideBarContent, sideBarTitle } from ".";
@@ -33,6 +33,15 @@ const chatHistoryStorage = {
     }
 
 };
+
+export function showGroupChatHistory(groupId: string) {
+    chatHistoryStorage.get(groupId).then((history) => {
+        chatWindow.innerHTML = history;
+        sendSystemMessage(`当前会话「${currentGroup.groupName}」`);
+    });
+}
+
+
 function renderGroupItem(group: GroupInfo) {
     const groupItem = document.createElement("div");
     groupItem.className = "itemlist-item";
@@ -42,12 +51,12 @@ function renderGroupItem(group: GroupInfo) {
     setting.className = "tool-btn";
     setting.innerHTML = '<i class="fa-solid fa-ellipsis-vertical"></i>';
     groupItem.appendChild(setting);
-    groupItem.addEventListener("click", async () => {
+    groupItem.addEventListener("click", () => {
         if (currentGroup.groupId === group.groupId) return;
         const chatHistory = chatWindow.cloneNode(true) as HTMLDivElement;
         chatHistory.querySelectorAll('div.message.system').forEach(el => el.remove());
-        await chatHistoryStorage.set(currentGroup.groupId, chatHistory.innerHTML);
-        chatWindow.innerHTML = await chatHistoryStorage.get(group.groupId);
+        chatHistoryStorage.set(currentGroup.groupId, chatHistory.innerHTML);
+        showGroupChatHistory(group.groupId);
         setCurrentGroup(group.groupId);
     });
     setting.addEventListener("click", (e) => {
@@ -56,7 +65,6 @@ function renderGroupItem(group: GroupInfo) {
     });
     return groupItem;
 }
-
 
 
 export function renderGroupList() {
@@ -133,13 +141,13 @@ function groupInfoTemplate({ backdrop, modal } = creatModal(), group: GroupInfo)
         localStorage.setItem("groupList", JSON.stringify(groupList));
     };
     cancelBtn.onclick = () => document.body.removeChild(backdrop);
-    deleteBtn.onclick = async () => {
+    deleteBtn.onclick = () => {
         const index = groupList.indexOf(group);
         if (index !== -1) groupList.splice(index, 1);
         chatHistoryStorage.delete(group.groupId);
         if (currentGroup.groupId === group.groupId) {
             setCurrentGroup('1');
-            chatWindow.innerHTML = await chatHistoryStorage.get(currentGroup.groupId);
+            showGroupChatHistory(currentGroup.groupId);
         };
         sideBarContent.innerHTML = ""
         groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(group)));

@@ -87,7 +87,7 @@ export function renderUserList({ backdrop, modal } = creatModal()) {
             document.body.removeChild(backdrop);
             if (currentUser.userId === user.userId) return;
             setCurrentUser(user.userId);
-            sendSystemMessage(`已切换用户为「${user.userName}」`);
+            sendSystemMessage(`已切换到用户「${user.userName}」`);
         });
         setting.addEventListener("click", (e) => {
             e.stopPropagation();

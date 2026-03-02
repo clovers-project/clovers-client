@@ -7,6 +7,7 @@ const sendBtn = document.getElementById("sendBtn") as HTMLButtonElement;
 const imageUpload = document.getElementById("imageUpload") as HTMLInputElement;
 const imagePreviewArea = document.getElementById("imagePreviewArea") as HTMLDivElement;
 const cloversBtn = document.getElementById("cloversBtn") as HTMLButtonElement;
+const clearBtn = document.getElementById("clearBtn") as HTMLButtonElement;
 
 export interface ChatMessage {
     id: number; // 消息唯一ID
@@ -313,4 +314,9 @@ cloversBtn.addEventListener("click", () => {
     }
     localStorage.setItem("CloversClientConsoleUrl", url);
     connectCloversServer(url);
+});
+
+clearBtn.addEventListener("click", () => {
+    chatWindow.innerHTML = "";
+    sendSystemMessage(`聊天记录已清空`);
 });
