@@ -2,11 +2,8 @@ import "./style.css";
 import { userList, setCurrentUser, groupList, setCurrentGroup } from "./code/core";
 import { connectCloversServer } from "./code/chat";
 import { renderUserList } from "./code/user";
-import { renderGroupList } from "./code/group";
-
-// 获取DOM元素
-
-const sideBarArea = document.getElementById("sideBarArea") as HTMLDivElement;
+import { sideBarArea } from "./code/sidebar";
+import { renderGroupList } from "./code/sidebar/group";
 
 let showGroupListFlag = false;
 function showSideBar(e: PointerEvent) {

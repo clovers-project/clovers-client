@@ -1,4 +1,4 @@
-import "./core"
+
 import { currentUser, currentGroup } from "./core"
 
 export const chatWindow = document.getElementById("chatWindow") as HTMLDivElement;
@@ -7,6 +7,28 @@ const sendBtn = document.getElementById("sendBtn") as HTMLButtonElement;
 const imageUpload = document.getElementById("imageUpload") as HTMLInputElement;
 const imagePreviewArea = document.getElementById("imagePreviewArea") as HTMLDivElement;
 const cloversBtn = document.getElementById("cloversBtn") as HTMLButtonElement;
+
+export interface ChatMessage {
+    id: number; // 消息唯一ID
+    type: "system" | "user"; // 消息类型
+    senderId: string; // 发送者ID (系统消息可为空)
+    senderName: string; // 发送者用户名
+    groupId?: string; // 群组ID (可选)
+    avatar?: string;
+    groupAvatar?: string;
+    permission?: "SuperUser" | "Owner" | "Admin" | "Member";
+    text: string; // 文本内容
+    images?: string[]; // 图片URLs (base64或实际URL)
+    timestamp: number;
+}
+
+// class User(BaseModel):
+//     user_id: str = "0"
+//     group_id: str = "0"
+//     nickname: str = "Master"
+//     avatar: str = "https://localhost:8080/avatar/0.png"
+//     group_avatar: str = "https://localhost:8080/group_avatar/0.png"
+//     permission: int = 3
 
 let currentMessageId = 0;
 let pendingImages: File[] = [];
@@ -123,7 +145,7 @@ function websocketConnection(ws: WebSocket): void {
         }
     }
 
-    ws.onopen = (event) => {
+    ws.onopen = () => {
         receiveAndDisplayMessage({
             id: currentMessageId++,
             type: "system",

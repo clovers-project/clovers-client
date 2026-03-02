@@ -1,4 +1,4 @@
-import './types'
+import type { UserInfo, } from './types';
 import { userList, setCurrentUser, defaultUserInfo, currentUser } from "./core";
 import { sendSystemMessage } from './chat'
 import { creatModal } from "./modal";

@@ -1,8 +1,9 @@
-import './types'
-import { groupList, setCurrentGroup, defaultGroupInfo, currentGroup } from "./core";
-import { chatWindow } from "./chat";
-import { creatModal } from "./modal";
+import type { GroupInfo, } from '../types';
+import { groupList, setCurrentGroup, defaultGroupInfo, currentGroup } from "../core";
+import { chatWindow } from "../chat";
+import { creatModal } from "../modal";
 import { openDB } from 'idb';
+import { sideBarContent, sideBarTitle } from ".";
 
 const dbPromise = openDB('ChatAppDB', 1, {
     upgrade(db) {
@@ -32,11 +33,6 @@ const chatHistoryStorage = {
     }
 
 };
-
-const sideBarArea = document.getElementById("sideBarArea") as HTMLDivElement;
-const sideBarContent = document.getElementById("sideBarContent") as HTMLDivElement;
-const sideBarTitle = document.getElementById("sideBarTitle") as HTMLDivElement;
-
 function renderGroupItem(group: GroupInfo) {
     const groupItem = document.createElement("div");
     groupItem.className = "itemlist-item";
@@ -60,6 +56,9 @@ function renderGroupItem(group: GroupInfo) {
     });
     return groupItem;
 }
+
+
+
 export function renderGroupList() {
     if (groupList.length === 0) setCurrentGroup('1');
     sideBarContent.innerHTML = "";

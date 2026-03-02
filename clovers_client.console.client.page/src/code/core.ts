@@ -1,4 +1,4 @@
-import "./types";
+import type { UserInfo, GroupInfo, } from './types';
 
 export const defaultUserInfo: UserInfo = {
     userId: "1",
