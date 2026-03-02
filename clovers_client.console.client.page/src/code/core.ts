@@ -8,7 +8,7 @@ export const defaultUserInfo: UserInfo = {
 };
 export const defaultGroupInfo: GroupInfo = {
     groupId: "1",
-    groupName: "群组",
+    groupName: "会话",
     avatar: "",
 };
 
