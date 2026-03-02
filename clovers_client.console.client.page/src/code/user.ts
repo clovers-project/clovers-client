@@ -77,11 +77,11 @@ export function renderUserList({ backdrop, modal } = creatModal()) {
     function renderUserItem(user: UserInfo) {
         const userItem = document.createElement("div");
         userItem.className = "itemlist-item";
-        const avatar = user.avatar ? `<img src="${user.avatar}" class="itemlist-item-avatar">` : '<div class="itemlist-item-avatar"></div>';
+        const avatar = user.avatar ? `<img src="${user.avatar}" class="avatar left">` : '<div class="avatar left"></div>';
         userItem.innerHTML = `<div class="grow-flex">${avatar}<strong>${user.userName}:</strong><span>${user.userId}</span></div>`;
         const setting = document.createElement("button");
         setting.className = "tool-btn";
-        setting.innerHTML = '<i class="fa-solid fa-gear"></i>';
+        setting.innerHTML = '<i class="fa-solid fa-ellipsis-vertical"></i>';
         userItem.appendChild(setting);
         userItem.addEventListener("click", () => {
             document.body.removeChild(backdrop);

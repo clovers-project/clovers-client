@@ -22,17 +22,31 @@ function clearInput(): void {
     imagePreviewArea.classList.remove("active");
 }
 function receiveAndDisplayMessage(message: ChatMessage): void {
-    const messageElement = document.createElement("div");
-    messageElement.className = "message";
-    messageElement.dataset.id = message.id.toString();
+    const chat = document.createElement("div");
+    chat.className = "message";
+    chat.dataset.id = message.id.toString();
     if (message.type === "system") {
         // 系统消息
-        messageElement.classList.add("system");
-        messageElement.innerHTML = `<p class="system-text">${message.text}</p>`;
+        chat.classList.add("system");
+        chat.innerHTML = `<p class="system-text">${message.text}</p>`;
     } else if (message.type === "user") {
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        const messageElement = document.createElement("div");
+        chat.appendChild(messageElement);
+        messageElement.className = "message-column";
         // 用户消息
-        const isSelf = message.senderName === currentUser.userName;
-        messageElement.classList.add(isSelf ? "self" : "other");
+        if (message.senderName === currentUser.userName) {
+            chat.classList.add("self");
+            avatar.innerHTML = currentUser.avatar ? `<img src="${currentUser.avatar}" class="avatar">` : '<div class="avatar"></div>';
+            chat.appendChild(messageElement);
+            chat.appendChild(avatar);
+        } else {
+            chat.classList.add("other");
+            avatar.innerHTML = currentGroup.avatar ? `<img src="${currentGroup.avatar}" class="avatar">` : '<div class="avatar"></div>';
+            chat.appendChild(avatar);
+            chat.appendChild(messageElement);
+        }
         // 用户名
         const sender = document.createElement("p");
         sender.className = "username";
@@ -69,7 +83,7 @@ function receiveAndDisplayMessage(message: ChatMessage): void {
         messageElement.appendChild(sender);
         messageElement.appendChild(content);
     }
-    chatWindow.appendChild(messageElement);
+    chatWindow.appendChild(chat);
     localStorage.setItem("lastMessage", JSON.stringify(message));
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }

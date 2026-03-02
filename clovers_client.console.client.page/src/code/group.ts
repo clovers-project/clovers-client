@@ -40,11 +40,11 @@ const sideBarTitle = document.getElementById("sideBarTitle") as HTMLDivElement;
 function renderGroupItem(group: GroupInfo) {
     const groupItem = document.createElement("div");
     groupItem.className = "itemlist-item";
-    const avatar = group.avatar ? `<img src="${group.avatar}" class="itemlist-item-avatar">` : '<div class="itemlist-item-avatar"></div>';
+    const avatar = group.avatar ? `<img src="${group.avatar}" class="avatar left">` : '<div class="avatar left"></div>';
     groupItem.innerHTML = `<div class="grow-flex">${avatar}<strong>${group.groupName}</strong></div>`;
     const setting = document.createElement("button");
     setting.className = "tool-btn";
-    setting.innerHTML = '<i class="fa-solid fa-gear"></i>';
+    setting.innerHTML = '<i class="fa-solid fa-ellipsis-vertical"></i>';
     groupItem.appendChild(setting);
     groupItem.addEventListener("click", async () => {
         if (currentGroup.groupId === group.groupId) return;

@@ -35,10 +35,6 @@
   background-color: rgba(67, 97, 238, 0.1);
 }
 
-.hidden {
-  display: none;
-}
-
 /* 图片预览区 */
 .image-preview-area {
   overflow-x: auto;

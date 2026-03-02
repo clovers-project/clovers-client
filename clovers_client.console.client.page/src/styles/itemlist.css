@@ -1,7 +1,7 @@
 @import url("./base.css");
 :root {
   --item-padding: 12px 12px;
-  --item-select-color: rgba(0, 0, 0, 0.2);
+  --item-select-color: rgba(0, 0, 0, 0.1);
 }
 
 .itemlist-title,
@@ -25,16 +25,16 @@
   animation: fadeIn 0.3s ease-out;
 }
 
-.itemlist-item-avatar {
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  margin-right: 12px;
-  background-color: #ccc;
-}
-
 .itemlist-item:hover {
   background: var(--item-select-color);
+}
+
+.itemlist-item .tool-btn {
+  display: none;
+}
+
+.itemlist-item:hover .tool-btn {
+  display: block;
 }
 
 .form-group {
