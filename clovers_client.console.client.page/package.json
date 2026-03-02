@@ -1,23 +1,16 @@
 {
-  "name": "page",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "clovers_client.console.client.page",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "build": "webpack",
-    "start": "webpack server --open"
+    "start": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
-    "css-loader": "^7.1.2",
-    "html-webpack-plugin": "^5.6.4",
-    "style-loader": "^4.0.0",
-    "ts-loader": "^9.5.4",
-    "typescript": "^5.9.3",
-    "webpack": "^5.102.1",
-    "webpack-cli": "^6.0.1",
-    "webpack-dev-server": "^5.2.2"
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
   },
   "dependencies": {
     "idb": "^8.0.3"

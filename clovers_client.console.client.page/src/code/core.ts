@@ -13,8 +13,7 @@ export const defaultGroupInfo: GroupInfo = {
 };
 
 export let currentUser: UserInfo;
-export declare let userList: UserInfo[];
-userList = [];
+export let userList: UserInfo[] = [];
 export function setCurrentUser(userId: string) {
     if (userList.length < 1) {
         userList.push({ ...defaultUserInfo });
@@ -26,8 +25,7 @@ export function setCurrentUser(userId: string) {
 }
 
 export let currentGroup: GroupInfo;
-export declare let groupList: GroupInfo[];
-groupList = [];
+export let groupList: GroupInfo[] = [];
 export function setCurrentGroup(groupId: string) {
     if (groupList.length < 1) {
         groupList.push({ ...defaultGroupInfo });
