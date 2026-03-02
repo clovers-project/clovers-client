@@ -76,12 +76,11 @@ class ConsoleClient(Leaf, Client):
             except Exception as e:
                 logger.error(f"Console UI Server failed: {e}")
 
-        web_thread = threading.Thread(
+        threading.Thread(
             target=http_server,
             args=(self.ws_host, self.ws_port + 1, Path(__file__).parent / "page"),
             daemon=True,
-        )
-        web_thread.start()
+        ).start()
         async with self:
             server = await websockets.serve(self.websocket_handler, self.ws_host, self.ws_port, max_size=50 * 2**20)
             logger.info(f"Clovers Console Server running at ws://{self.ws_host}:{self.ws_port}")
