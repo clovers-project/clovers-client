@@ -1,4 +1,3 @@
-import "./style.css";
 import { userList, setCurrentUser, groupList, setCurrentGroup, currentGroup } from "./code/core";
 import { connectCloversServer } from "./code/chat";
 import { renderUserList } from "./code/user";

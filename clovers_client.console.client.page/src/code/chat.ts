@@ -10,7 +10,6 @@ const cloversBtn = document.getElementById("cloversBtn") as HTMLButtonElement;
 const clearBtn = document.getElementById("clearBtn") as HTMLButtonElement;
 
 export interface ChatMessage {
-    id: number; // 消息唯一ID
     type: "system" | "user"; // 消息类型
     senderId: string; // 发送者ID (系统消息可为空)
     senderName: string; // 发送者用户名
@@ -31,7 +30,6 @@ export interface ChatMessage {
 //     group_avatar: str = "https://localhost:8080/group_avatar/0.png"
 //     permission: int = 3
 
-let currentMessageId = 0;
 let pendingImages: File[] = [];
 // let messageQueue: ChatMessage[] = [];
 let messageQueue: ChatMessage | null = null; //决定 messageQueue 长度为 1
@@ -47,7 +45,6 @@ function clearInput(): void {
 function receiveAndDisplayMessage(message: ChatMessage): void {
     const chat = document.createElement("div");
     chat.className = "message";
-    chat.dataset.id = message.id.toString();
     if (message.type === "system") {
         // 系统消息
         chat.classList.add("system");
@@ -113,7 +110,6 @@ function receiveAndDisplayMessage(message: ChatMessage): void {
 
 export function sendSystemMessage(text: string): void {
     receiveAndDisplayMessage({
-        id: currentMessageId++,
         type: "system",
         senderId: "",
         senderName: "系统",
@@ -130,12 +126,10 @@ function websocketConnection(ws: WebSocket): void {
                 console.warn("Received malformed message:", message);
                 return;
             }
-            message.id = currentMessageId++;
             if (!message.timestamp) message.timestamp = Date.now();
             receiveAndDisplayMessage(message);
         } catch (e) {
             receiveAndDisplayMessage({
-                id: currentMessageId++,
                 type: "system",
                 senderId: "",
                 senderName: "server",
@@ -148,7 +142,6 @@ function websocketConnection(ws: WebSocket): void {
 
     ws.onopen = () => {
         receiveAndDisplayMessage({
-            id: currentMessageId++,
             type: "system",
             senderId: "",
             senderName: "系统",
@@ -171,7 +164,6 @@ function websocketConnection(ws: WebSocket): void {
             reason = `连接异常关闭 (代码: ${event.code})`;
         }
         receiveAndDisplayMessage({
-            id: currentMessageId++,
             type: "system",
             senderId: "",
             senderName: "系统",
@@ -207,7 +199,6 @@ function sendMessage(): void {
     });
     Promise.all(imagePromises).then((imageUrls) => {
         const newMessage: ChatMessage = {
-            id: currentMessageId++,
             type: "user",
             senderId: currentUser.userId,
             senderName: currentUser.userName,
@@ -231,7 +222,6 @@ function sendMessage(): void {
             }
         } else {
             receiveAndDisplayMessage({
-                id: currentMessageId++,
                 type: "system",
                 senderId: "",
                 senderName: "系统",

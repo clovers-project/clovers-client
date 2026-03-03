@@ -36,8 +36,9 @@ const chatHistoryStorage = {
 
 export function showGroupChatHistory(groupId: string) {
     chatHistoryStorage.get(groupId).then((history) => {
-        chatWindow.innerHTML = history;
+        chatWindow.innerHTML = "";
         sendSystemMessage(`当前会话「${currentGroup.groupName}」`);
+        chatWindow.innerHTML += history;
     });
 }
 
