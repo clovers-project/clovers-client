@@ -2,24 +2,29 @@ import type { UserInfo, } from './types';
 import { userList, setCurrentUser, defaultUserInfo, currentUser } from "./core";
 import { sendSystemMessage } from './chat'
 import { creatModal } from "./modal";
+import { cropImageToSquare } from "./tools";
 function userInfoTemplate({ backdrop, modal } = creatModal(), user: UserInfo) {
     const content = document.createElement("div");
     content.className = "modal-content";
     content.innerHTML = `
 <h3>请输入用户信息</h3>
-<div class="form-group">
+<div class="modal-item">
     <label for="nickname">用户名称:</label>
     <input type="text" id="nickname" value="${user.userName}">
 </div>
-<div class="form-group">
+<div class="modal-item">
     <label for="userId">用户ID:</label>
     <input type="text" id="userId" value="${user.userId}">
 </div>
-<div class="form-group">
-    <label for="avatarUrl">用户头像URL:</label>
-    <input type="text" id="avatarUrl" value="${user.avatar}">
+<div class="modal-item">
+    <label for="userAvatarUrl">会话头像:</label>
+    <div class="avatar-input">
+        <input type="text" id="userAvatarUrl" value="${user.avatar}" placeholder="输入图片 URL 或点击右侧按钮上传">
+        <label for="userAvatarUpload" class="cancle-button" title="上传图片">选择</label>
+        <input type="file" id="userAvatarUpload" accept="image/*" class="hidden" />
+    </div>
 </div>
-<div class="form-group">
+<div class="modal-item">
     <label for="permission">用户权限:</label>
     <select id="permission">
         <option value="SuperUser" ${user.permission === "SuperUser" ? "selected" : ""}>超级用户</option>
@@ -38,7 +43,7 @@ function userInfoTemplate({ backdrop, modal } = creatModal(), user: UserInfo) {
     deleteBtn.className = "delete-button";
     deleteBtn.textContent = "删除";
     const btns = document.createElement("div");
-    btns.className = "form-actions";
+    btns.className = "modal-buttons";
     btns.appendChild(confirmBtn);
     btns.appendChild(cancelBtn);
     btns.appendChild(deleteBtn);
@@ -71,6 +76,16 @@ function userInfoTemplate({ backdrop, modal } = creatModal(), user: UserInfo) {
         renderUserList();
         localStorage.setItem("userList", JSON.stringify(userList));
     };
+    const userAvatarUpload = content.querySelector("#userAvatarUpload") as HTMLInputElement;
+    userAvatarUpload.onchange = async (event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        const croppedBlob = await cropImageToSquare(file);
+        const blobUrl = URL.createObjectURL(croppedBlob);
+        user.avatar = blobUrl;
+        (content.querySelector("#userAvatarUrl") as HTMLInputElement).value = blobUrl;
+    };
+
 }
 
 export function renderUserList({ backdrop, modal } = creatModal()) {

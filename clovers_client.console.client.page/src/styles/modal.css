@@ -1,4 +1,8 @@
 @import url("./base.css");
+:root {
+  --modal-content-line-height: 44px;
+  --modal-content-button-width: 66px;
+}
 
 .backdrop {
   position: fixed;
@@ -48,4 +52,79 @@
   transition: all 0.2s;
   font-size: 1.17em;
   font-weight: bold;
+}
+
+.modal-item label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.95em;
+  color: var(--text-primary);
+}
+
+.modal-item input,
+.modal-item select {
+  margin-bottom: 20px;
+  width: 100%;
+  height: var(--modal-content-line-height);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-small);
+  font-size: 1em;
+  background-color: #f8f9fa;
+  color: var(--text-primary);
+  transition: all 0.3s;
+}
+
+.modal-item input:focus,
+.modal-item select:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-small);
+}
+
+.avatar-input,
+.modal-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.avatar-input input {
+  width: auto;
+  flex-grow: 1;
+}
+
+.avatar-input label,
+.modal-buttons button {
+  height: var(--modal-content-line-height);
+  width: var(--modal-content-button-width);
+  border: none;
+  border-radius: var(--radius-normal);
+  cursor: pointer;
+  /* 关键：统一使用 Flex 居中 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* 关键：统一文字样式 */
+  font-size: 0.95em;
+  font-weight: 600;
+  text-align: center;
+}
+
+.delete-all-button {
+  width: 100%;
+  height: 60px;
+  min-height: 60px;
+  margin: 0, 0;
+  border: none;
+  font-size: 1.8em;
+  color: var(--text-secondary);
+  background: var(--standard-bg);
+  color: #ccc;
+}
+.delete-all-button:hover {
+  color: #dc3545;
+  background: var(--item-select-color);
 }

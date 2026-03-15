@@ -1,6 +1,6 @@
 [project]
 name = "clovers-client"
-version = "0.1.2"
+version = "0.1.3"
 description = ""
 authors = [{ name = "KarisAya", email = "karisaya@foxmail.com" }]
 readme = "README.md"
@@ -26,8 +26,7 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
-clovers = { path = "D:/CLOVERS/clovers", develop = true }
 clovers-aichat = { path = "D:/CLOVERS/CLOVERS_PLUGINS/clovers-aichat", develop = true }
 clovers-divine = { path = "D:/CLOVERS/CLOVERS_PLUGINS/clovers-divine", develop = true }
-# clovers-apscheduler = { path = "D:/CLOVERS_PLUGINS/clovers-apscheduler", develop = true }
-# clovers-groupmate-waifu = { path = "D:/CLOVERS_PLUGINS/clovers-groupmate-waifu", develop = true }
+clovers-agent = { path = "D:/CLOVERS/clovers-agent", develop = true }
+chardet = ">=7.1.0,<8.0.0"

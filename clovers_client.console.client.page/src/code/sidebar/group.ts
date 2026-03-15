@@ -2,37 +2,10 @@ import type { GroupInfo, } from '../types';
 import { groupList, setCurrentGroup, defaultGroupInfo, currentGroup } from "../core";
 import { chatWindow, sendSystemMessage } from "../chat";
 import { creatModal } from "../modal";
-import { openDB } from 'idb';
 import { sideBarContent, sideBarTitle } from ".";
+import { cropImageToSquare, chatHistoryStorage } from "../tools";
 
-const dbPromise = openDB('ChatAppDB', 1, {
-    upgrade(db) {
-        // 创建一个名为 "histories" 的表，以 groupId 作为键
-        if (!db.objectStoreNames.contains('histories')) {
-            db.createObjectStore('histories');
-        }
-    },
-});
 
-const chatHistoryStorage = {
-    async set(groupId: string, html: string) {
-        const db = await dbPromise;
-        await db.put('histories', html, groupId);
-    },
-    async get(groupId: string): Promise<string> {
-        const db = await dbPromise;
-        return (await db.get('histories', groupId)) || '';
-    },
-    async delete(groupId: string) {
-        const db = await dbPromise;
-        await db.delete('histories', groupId);
-    },
-    async clearAll() {
-        const db = await dbPromise;
-        await db.clear('histories');
-    }
-
-};
 
 export function showGroupChatHistory(groupId: string) {
     chatHistoryStorage.get(groupId).then((history) => {
@@ -56,7 +29,6 @@ function renderGroupItem(group: GroupInfo) {
         if (currentGroup.groupId === group.groupId) return;
         const chatHistory = chatWindow.cloneNode(true) as HTMLDivElement;
         chatHistory.querySelectorAll('div.message.system').forEach(el => el.remove());
-        chatHistoryStorage.set(currentGroup.groupId, chatHistory.innerHTML);
         showGroupChatHistory(group.groupId);
         setCurrentGroup(group.groupId);
     });
@@ -104,17 +76,21 @@ function groupInfoTemplate({ backdrop, modal } = creatModal(), group: GroupInfo)
     content.className = "modal-content";
     content.innerHTML = `
 <h3>请输入会话信息</h3>
-<div class="form-group">
+<div class="modal-item">
     <label for="nickname">会话名称:</label>
     <input type="text" id="groupName" value="${group.groupName}">
 </div>
-<div class="form-group">
+<div class="modal-item">
     <label for="groupId">会话ID:</label>
     <input type="text" id="groupId" value="${group.groupId}">
 </div>
-<div class="form-group">
-    <label for="avatarUrl">会话头像URL:</label>
-    <input type="text" id="groupAvatarUrl" value="${group.avatar}">
+<div class="modal-item">
+    <label for="groupAvatarUrl">会话头像:</label>
+    <div class="avatar-input">
+        <input type="text" id="groupAvatarUrl" value="${group.avatar}" placeholder="输入图片 URL 或点击右侧按钮上传">
+        <label for="groupAvatarUpload" class="cancle-button" title="上传图片">选择</label>
+        <input type="file" id="groupAvatarUpload" accept="image/*" class="hidden" />
+    </div>
 </div>`;
     const confirmBtn = document.createElement("button");
     confirmBtn.className = "confirm-button";
@@ -126,7 +102,7 @@ function groupInfoTemplate({ backdrop, modal } = creatModal(), group: GroupInfo)
     deleteBtn.className = "delete-button";
     deleteBtn.textContent = "删除";
     const btns = document.createElement("div");
-    btns.className = "form-actions";
+    btns.className = "modal-buttons";
     btns.appendChild(confirmBtn);
     btns.appendChild(cancelBtn);
     btns.appendChild(deleteBtn);
@@ -155,6 +131,15 @@ function groupInfoTemplate({ backdrop, modal } = creatModal(), group: GroupInfo)
         document.body.removeChild(backdrop);
         localStorage.setItem("groupList", JSON.stringify(groupList));
 
+    };
+    const groupAvatarUpload = content.querySelector("#groupAvatarUpload") as HTMLInputElement;
+    groupAvatarUpload.onchange = async (event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        const croppedBlob = await cropImageToSquare(file);
+        const blobUrl = URL.createObjectURL(croppedBlob);
+        group.avatar = blobUrl;
+        (content.querySelector("#groupAvatarUrl") as HTMLInputElement).value = blobUrl;
     };
 }
 

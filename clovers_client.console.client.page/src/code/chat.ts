@@ -1,5 +1,6 @@
 
 import { currentUser, currentGroup } from "./core"
+import { chatHistoryStorage } from "./tools"
 
 export const chatWindow = document.getElementById("chatWindow") as HTMLDivElement;
 const messageInput = document.getElementById("messageInput") as HTMLTextAreaElement;
@@ -42,6 +43,19 @@ function clearInput(): void {
     imagePreviewArea.innerHTML = "";
     imagePreviewArea.classList.remove("active");
 }
+function createAvatar(url: string) {
+    if (url) {
+        const avatar = document.createElement("img");
+        avatar.src = url;
+        avatar.className = "avatar";
+        return avatar;
+    } else {
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        return avatar;
+    }
+}
+
 function receiveAndDisplayMessage(message: ChatMessage): void {
     const chat = document.createElement("div");
     chat.className = "message";
@@ -50,21 +64,17 @@ function receiveAndDisplayMessage(message: ChatMessage): void {
         chat.classList.add("system");
         chat.innerHTML = `<p class="system-text">${message.text}</p>`;
     } else if (message.type === "user") {
-        const avatar = document.createElement("div");
-        avatar.className = "avatar";
         const messageElement = document.createElement("div");
         chat.appendChild(messageElement);
         messageElement.className = "message-column";
         // 用户消息
         if (message.senderName === currentUser.userName) {
             chat.classList.add("self");
-            avatar.innerHTML = currentUser.avatar ? `<img src="${currentUser.avatar}" class="avatar">` : '<div class="avatar"></div>';
             chat.appendChild(messageElement);
-            chat.appendChild(avatar);
+            chat.appendChild(createAvatar(currentUser.avatar));
         } else {
             chat.classList.add("other");
-            avatar.innerHTML = currentGroup.avatar ? `<img src="${currentGroup.avatar}" class="avatar">` : '<div class="avatar"></div>';
-            chat.appendChild(avatar);
+            chat.appendChild(createAvatar(currentGroup.avatar));
             chat.appendChild(messageElement);
         }
         // 用户名
@@ -102,9 +112,9 @@ function receiveAndDisplayMessage(message: ChatMessage): void {
         }
         messageElement.appendChild(sender);
         messageElement.appendChild(content);
+        chatHistoryStorage.append(currentGroup.groupId, chat.outerHTML);
     }
     chatWindow.appendChild(chat);
-    localStorage.setItem("lastMessage", JSON.stringify(message));
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
