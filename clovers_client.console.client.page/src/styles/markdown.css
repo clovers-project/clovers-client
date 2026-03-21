@@ -1,0 +1,109 @@
+@import url("./base.css");
+
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5,
+.message-content h6,
+.message-content p {
+  margin: 0;
+  padding: 0;
+}
+
+.message-content ol,
+.message-content ul {
+  line-height: 1;
+  font-size: 0.8rem;
+  margin: 0;
+}
+.message-content code {
+  font-size: 0.85rem;
+}
+.message-content code:not(.code-block code) {
+  color: var(--text-primary);
+  background-color: var(--standard-bg);
+  padding: 0.225em 0.725em;
+  border-radius: var(--radius-small);
+  font-size: 0.85rem;
+}
+
+.message-content table {
+  width: 100%;
+  padding: 0;
+  color: var(--text-primary);
+  background-color: var(--heavier-bg);
+  border-radius: var(--radius-small);
+  font-size: 0.85rem;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-small);
+}
+
+.message-content table th {
+  background-color: var(--standard-bg);
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.message-content table td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.message-content table tr:last-child td {
+  border-bottom: none;
+}
+
+.code-block {
+  position: relative;
+  background: var(--heavier-bg);
+  color: var(--text-primary);
+  padding: var(--radius-normal);
+  margin: 0;
+  border-radius: var(--radius-small);
+  font-family: "Consolas", "Monaco", monospace;
+  overflow-x: auto;
+  box-shadow: var(--shadow-small);
+}
+
+.code-block::before {
+  content: attr(data-lang);
+  position: absolute;
+  font-size: 0.68rem;
+  top: 0;
+  right: 0;
+  padding: 0.26em 0.96em;
+  background: var(--standard-bg);
+  color: var(--text-secondary);
+  border-radius: 0 0 0 var(--radius-small);
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.code-block-copy {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 0.68rem;
+  color: var(--text-blue);
+  cursor: pointer;
+  opacity: 0;
+  transition: var(--bezier-responsive);
+  background: var(--heavier-bg);
+  padding: 0.16em 0.66em;
+  border-radius: 4px;
+}
+
+.code-block:hover .code-block-copy {
+  opacity: 1;
+}
+.code-block code {
+  line-height: 1.5;
+  background: transparent !important;
+}

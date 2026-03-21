@@ -7,19 +7,23 @@ from clovers import Adapter, Result
 from clovers.logger import logger
 from collections.abc import AsyncGenerator
 from .config import Config
-from ..typing import ChatMessage
+from ..typing import ChatMessage, ConsoleMessage, JsonBaseType
 
 __config__ = Config.sync_config()
-
-BOT_NICKNAME = __config__.Bot_Nickname
-
 __adapter__ = adapter = Adapter("CONSOLE")
+BOT_NICKNAME = __config__.Bot_Nickname
 
 
 def broadcast(message: ChatMessage, ws_connects: set[websockets.ServerConnection]):
-    message.setdefault("type", "user")
+    message["type"] = "user"
     message.setdefault("senderId", f"bot")
     message.setdefault("senderName", BOT_NICKNAME)
+    data = json.dumps(message, separators=(",", ":"))
+    return map(lambda ws: ws.send(data), ws_connects)
+
+
+def console_broadcast(message: ConsoleMessage, ws_connects: set[websockets.ServerConnection]):
+    message["type"] = "system"
     data = json.dumps(message, separators=(",", ":"))
     return map(lambda ws: ws.send(data), ws_connects)
 
@@ -34,7 +38,16 @@ async def send_at(message, ws_connects: set[websockets.ServerConnection]):
 
 @adapter.send_method("text")
 async def send_text(message: str, ws_connects: set[websockets.ServerConnection]):
+    if not message:
+        return
     await asyncio.gather(*broadcast({"text": message}, ws_connects))
+
+
+@adapter.send_method("console")
+async def send_log(message: list[JsonBaseType], ws_connects: set[websockets.ServerConnection]):
+    if not message:
+        return
+    await asyncio.gather(*console_broadcast({"type": "system", "data": message}, ws_connects))
 
 
 @adapter.send_method("image")
@@ -45,7 +58,6 @@ async def send_image(message: BytesIO | bytes, ws_connects: set[websockets.Serve
 
 @adapter.send_method("list")
 async def send_list(message: list[Result], ws_connects: set[websockets.ServerConnection]):
-
     text = []
     images = []
     for item in message:
@@ -57,6 +69,8 @@ async def send_list(message: list[Result], ws_connects: set[websockets.ServerCon
             msg = item.data
             b64 = b64encode(msg.getvalue() if isinstance(msg, BytesIO) else msg).decode()
             images.append(f"data:image/png;base64,{b64}")
+        elif item.key == "console":
+            await send_log(item.data, ws_connects)
         else:
             logger.warning(f"Unknown send_method: {item.key}")
     chat_message: ChatMessage = {"text": " ".join(text), "images": images}
@@ -73,6 +87,8 @@ async def send_result(result: Result, ws_connects: set[websockets.ServerConnecti
             await send_image(result.data, ws_connects)
         case "list":
             await send_list(result.data, ws_connects)
+        case "console":
+            await send_log(result.data, ws_connects)
         case _:
             logger.warning(f"Unknown send_method: {result.key}")
 
@@ -89,33 +105,35 @@ async def _() -> str:
 
 
 @adapter.property_method("user_id")
-async def _(recv_data: dict) -> str:
+async def _(recv_data: ChatMessage) -> str:
+    assert "senderId" in recv_data
     return recv_data["senderId"]
 
 
 @adapter.property_method("group_id")
-async def _(recv_data: dict) -> str | None:
+async def _(recv_data: ChatMessage) -> str | None:
     if not recv_data.get("is_private"):
         return recv_data.get("groupId")
 
 
 @adapter.property_method("nickname")
-async def _(recv_data: dict) -> str:
+async def _(recv_data: ChatMessage) -> str:
+    assert "senderName" in recv_data
     return recv_data["senderName"]
 
 
 @adapter.property_method("avatar")
-async def _(recv_data: dict) -> str:
+async def _(recv_data: ChatMessage) -> str:
     return recv_data.get("avatar", "")
 
 
 @adapter.property_method("group_avatar")
-async def _(recv_data: dict) -> str:
+async def _(recv_data: ChatMessage) -> str:
     return recv_data.get("groupAvatar", "")
 
 
 @adapter.property_method("permission")
-async def _(recv_data: dict) -> int:
+async def _(recv_data: ChatMessage) -> int:
     if not (permission := recv_data.get("permission")):
         return 0
     match permission:
@@ -129,17 +147,20 @@ async def _(recv_data: dict) -> int:
 
 
 @adapter.property_method("to_me")
-async def _(recv_data: dict) -> bool:
+async def _(recv_data: ChatMessage) -> bool:
+    assert "to_me" in recv_data
     return recv_data["to_me"]
 
 
 @adapter.property_method("at")
-async def _(recv_data: dict) -> list[str]:
+async def _(recv_data: ChatMessage) -> list[str]:
+    assert "at" in recv_data
     return recv_data["at"]
 
 
 @adapter.property_method("image_list")
-async def _(recv_data: dict) -> list[str]:
+async def _(recv_data: ChatMessage) -> list[str]:
+    assert "images" in recv_data
     return recv_data["images"]
 
 

@@ -3,11 +3,23 @@ from pydantic import BaseModel
 
 
 class ChatMessage(TypedDict, total=False):
-    type: Literal["user", "system"]
-    senderId: str
-    senderName: str
+    type: Literal["user"]
     text: str
     images: list[str]
+    senderId: str
+    senderName: str
+    avatar: str
+    groupId: str
+    groupAvatar: str
+    permission: Literal["SuperUser", "Owner", "Admin", "Member"]
+
+
+type JsonBaseType = str | int | float | bool | None
+
+
+class ConsoleMessage(TypedDict, total=False):
+    type: Literal["system"]
+    data: list[JsonBaseType]
 
 
 class User(BaseModel):
