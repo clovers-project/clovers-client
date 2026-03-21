@@ -4,5 +4,6 @@ __pycache__/
 .venv
 /dist
 *.log
+*.lock
 /sample/
 !/sample/bot.py

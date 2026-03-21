@@ -20,11 +20,3 @@ onebot = [
     "websockets (>=15.0.0,<16.0.0)",
 ]
 qq = ["pydantic (>=2.10.6,<3.0.0)", "qq-botpy (>=1.2.1,<2.0.0)"]
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.group.dev.dependencies]
-clovers-aichat = { path = "D:/CLOVERS/CLOVERS_PLUGINS/clovers-aichat", develop = true }
-clovers-divine = { path = "D:/CLOVERS/CLOVERS_PLUGINS/clovers-divine", develop = true }
