@@ -1,153 +1,110 @@
-from pathlib import Path
-from io import BytesIO
-from base64 import b64encode
-from clovers import Adapter, Result
-from .typing import Post, FileLike, ListMessage, SegmentedMessage, GroupMessage, PrivateMessage
-from .config import Config
+from clovers import Adapter
+from .typing import Post, FileLike, ListMessage, OverallResult, SegmentedMessage, GroupMessage, PrivateMessage, MemberInfo
+from ..typing import MessageEvent, Message
+from .utils import f2s, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
+from .config import BOT_NICKNAME, SUPERUSERS
 
-__config__ = Config.sync_config()
-
-BOT_NICKNAME = __config__.Bot_Nickname
-SUPERUSERS = __config__.superusers
 
 __adapter__ = adapter = Adapter("OneBot V11")
 
 
-def f2s(file: FileLike) -> str:
-    if isinstance(file, str):
-        return file
-    elif isinstance(file, Path):
-        return file.resolve().as_uri()
-    elif isinstance(file, BytesIO):
-        file = file.getvalue()
-    return f"base64://{b64encode(file).decode()}"
-
-
-def list2message(message: ListMessage):
-    msg = []
-    for seg in message:
-        match seg.key:
-            case "text":
-                msg.append({"type": "text", "data": {"text": seg.data}})
-            case "image":
-                msg.append({"type": "image", "data": {"file": f2s(seg.data)}})
-            case "at":
-                msg.append({"type": "at", "data": {"qq": int(seg.data)}})
-            case "face":
-                msg.append({"type": "face", "data": {"id": seg.data}})
-    return msg
-
-
-def build_message(recv: dict, message):
+@adapter.send_method("at")
+async def _(message: str, /, post: Post, recv: MessageEvent):
+    msg: Message = [{"type": "at", "data": {"qq": message}}]
     match recv["message_type"]:
         case "group":
-            return {"message_type": "group", "group_id": recv["group_id"], "message": message}
+            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
         case "private":
-            return {"message_type": "private", "user_id": recv["user_id"], "message": message}
+            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("text")
-async def _(message: str, /, post: Post, recv: dict):
-    await post("send_msg", json=build_message(recv, [{"type": "text", "data": {"text": message}}]))
+async def _(message: str, /, post: Post, recv: MessageEvent):
+    msg: Message = [{"type": "text", "data": {"text": message}}]
+    match recv["message_type"]:
+        case "group":
+            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
+        case "private":
+            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("image")
-async def _(message: FileLike, /, post: Post, recv: dict):
-    await post("send_msg", json=build_message(recv, [{"type": "image", "data": {"file": f2s(message)}}]))
+async def _(message: FileLike, /, post: Post, recv: MessageEvent):
+    msg: Message = [{"type": "image", "data": {"file": f2s(message)}}]
+    match recv["message_type"]:
+        case "group":
+            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
+        case "private":
+            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("voice")
-async def _(message: FileLike, /, post: Post, recv: dict):
-    await post("send_msg", json=build_message(recv, [{"type": "record", "data": {"file": f2s(message)}}]))
+async def _(message: FileLike, /, post: Post, recv: MessageEvent):
+    msg: Message = [{"type": "record", "data": {"file": f2s(message)}}]
+    match recv["message_type"]:
+        case "group":
+            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
+        case "private":
+            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("list")
-async def _(message: ListMessage, post: Post, recv: dict):
-    await post("send_msg", json=build_message(recv, list2message(message)))
+async def _(message: ListMessage, post: Post, recv: MessageEvent):
+    msg = [seg for single in message if (seg := result2seg(single))]
+    match recv["message_type"]:
+        case "group":
+            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
+        case "private":
+            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("segmented")
-async def _(message: SegmentedMessage, /, post: Post, recv: dict):
+async def _(message: SegmentedMessage, /, post: Post, recv: MessageEvent):
     match recv["message_type"]:
         case "group":
-            data = {"message_type": "group", "group_id": recv["group_id"]}
+            await send_segmented(lambda msg: send_group_msg(post, recv, msg), message)
         case "private":
-            data = {"message_type": "private", "user_id": recv["user_id"]}
-        case _:
-            raise ValueError("unknown message type")
-    async for seg in message:
-        if seg.key == "list":
-            result_data = seg.data
-        else:
-            result_data = [seg]
-        if not (msg := list2message(result_data)):
-            continue
-        data["message"] = msg
-        await post("send_msg", json=data)
+            await send_segmented(lambda msg: send_private_msg(post, recv, msg), message)
 
 
 @adapter.send_method("group_message")
 async def _(message: GroupMessage, /, post: Post):
     result = message["data"]
-    data: dict = {"group_id": int(message["group_id"])}
+    group_id = int(message["group_id"])
     if result.key == "segmented":
-        seg: Result
-        async for seg in result.data:
-            if seg.key == "list":
-                result_data = seg.data
-            else:
-                result_data = [seg]
-            if not (msg := list2message(result_data)):
-                continue
-            data["message"] = msg
-            await post("send_group_msg", json=data)
-    elif msg := list2message([result]):
-        data["message"] = msg
-        await post("send_group_msg", json=data)
+        await send_segmented(lambda msg: post("send_group_msg", json={"group_id": group_id, "message": msg}), result.data)
+    elif result.key == "list":
+        msg = [seg for single in result.data if (seg := result2seg(single))]
+        if msg:
+            await post("send_group_msg", json={"group_id": group_id, "message": msg})
+    else:
+        if seg := result2seg(result):
+            await post("send_group_msg", json={"group_id": group_id, "message": [seg]})
 
 
 @adapter.send_method("private_message")
-async def _(message: PrivateMessage, /, post: Post, recv: dict):
+async def _(message: PrivateMessage, /, post: Post, recv: MessageEvent):
     result = message["data"]
-    data: dict = {"user_id": int(message["user_id"])}
-    if group_id := recv.get("group_id"):
-        data["group_id"] = group_id
+    user_id = int(message["user_id"])
     if result.key == "segmented":
-        seg: Result
-        async for seg in result.data:
-            if seg.key == "list":
-                result_data = seg.data
-            else:
-                result_data = [seg]
-            if not (msg := list2message(result_data)):
-                continue
-            data["message"] = msg
-            await post("send_private_msg", json=data)
-    elif msg := list2message([result]):
-        data["message"] = msg
-        await post("send_private_msg", json=data)
+        await send_segmented(lambda msg: post("send_private_msg", json={"user_id": user_id, "message": msg}), result.data)
+    elif result.key == "list":
+        msg = [seg for single in result.data if (seg := result2seg(single))]
+        if msg:
+            await post("send_private_msg", json={"user_id": user_id, "message": msg})
+    else:
+        if seg := result2seg(result):
+            await post("send_private_msg", json={"user_id": user_id, "message": [seg]})
 
 
 @adapter.send_method("merge_forward")
-async def _(message: ListMessage, /, post: Post, recv: dict):
-    messages = []
-    for seg in message:
-        if seg.key == "list":
-            result_data = seg.data
-        else:
-            result_data = [seg]
-        if not (msg := list2message(result_data)):
-            continue
-        messages.append({"type": "node", "data": {"name": BOT_NICKNAME, "uin": recv["self_id"], "content": msg}})
-    if not messages:
-        return
+async def _(message: list[OverallResult], /, post: Post, recv: MessageEvent):
+    messages = resultlist2nodelist(BOT_NICKNAME, recv["self_id"], message)
     match recv["message_type"]:
         case "group":
             await post("send_group_forward_msg", json={"group_id": recv["group_id"], "messages": messages})
         case "private":
             await post("send_private_forward_msg", json={"user_id": recv["user_id"], "messages": messages})
-        case _:
-            raise ValueError("unknown message type")
 
 
 @adapter.property_method("Bot_Nickname")
@@ -193,7 +150,7 @@ async def _(recv: dict) -> str | None:
 
 
 @adapter.property_method("image_list")
-async def _(post: Post, recv: dict) -> list[str]:
+async def _(post: Post, recv: MessageEvent) -> list[str]:
     reply_id = None
     url = []
     for msg in recv["message"]:
@@ -202,9 +159,21 @@ async def _(post: Post, recv: dict) -> list[str]:
         elif msg["type"] == "reply":
             reply_id = msg["data"]["id"]
     if reply_id is not None:
-        reply = await post("get_msg", data={"message_id": reply_id})
+        reply = await post("get_msg", json={"message_id": reply_id})
         url.extend(msg["data"]["url"] for msg in reply["data"]["message"] if msg["type"] == "image")
     return url
+
+
+@adapter.property_method("flat_context")
+async def _(post: Post, recv: MessageEvent):
+    reply_id = next((msg["data"]["id"] for msg in recv["message"] if msg["type"] == "reply"), None)
+    if not reply_id:
+        return
+    reply = await post("get_msg", json={"message_id": reply_id})
+    seg = reply["data"]["message"][0]
+    if seg["type"] != "forward":
+        return
+    return await build_flat_context(post, seg["data"]["id"])
 
 
 @adapter.property_method("permission")
@@ -224,27 +193,30 @@ async def _(recv: dict) -> list[str]:
     return [str(seg["data"]["qq"]) for seg in recv["message"] if seg["type"] == "at"]
 
 
+@adapter.call_method("group_member_info")
+async def _(group_id: str, user_id: str, /, post: Post) -> MemberInfo:
+    resp = await post("get_group_member_info", json={"group_id": int(group_id), "user_id": int(user_id)})
+    user_info = resp["data"]
+    return {
+        "group_id": group_id,
+        "user_id": user_id,
+        "avatar": f"https://q1.qlogo.cn/g?b=qq&nk={user_id}&s=640",
+        "nickname": user_info["nickname"],
+        "card": user_info["card"],
+        "last_sent_time": user_info.get("last_sent_time", 0),
+    }
+
+
 @adapter.call_method("group_member_list")
-async def _(group_id: str, /, post: Post):
-    resp = await post("get_group_member_list", data={"group_id": int(group_id)})
-    info_list = resp["data"]
+async def _(group_id: str, /, post: Post) -> list[MemberInfo]:
+    resp = await post("get_group_member_list", json={"group_id": int(group_id)})
+    info_list: list[MemberInfo] = resp["data"]  # type: ignore
     for user_info in info_list:
         user_id = str(user_info["user_id"])
-        user_info["group_id"] = str(user_info["group_id"])
+        user_info["group_id"] = group_id
         user_info["user_id"] = user_id
         user_info["avatar"] = f"https://q1.qlogo.cn/g?b=qq&nk={user_id}&s=640"
     return info_list
-
-
-@adapter.call_method("group_member_info")
-async def _(group_id: str, user_id: str, /, post: Post):
-    resp = await post("get_group_member_info", data={"group_id": int(group_id), "user_id": int(user_id)})
-    user_info = resp["data"]
-    member_user_id = str(user_info["user_id"])
-    user_info["group_id"] = str(user_info["group_id"])
-    user_info["user_id"] = member_user_id
-    user_info["avatar"] = f"https://q1.qlogo.cn/g?b=qq&nk={member_user_id}&s=640"
-    return user_info
 
 
 __all__ = ["__adapter__"]

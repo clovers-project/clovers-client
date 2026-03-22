@@ -4,6 +4,7 @@ import httpx
 import websockets
 from clovers import Leaf, Client
 from clovers_client.logger import logger
+from ..typing import MessageEvent
 from .config import Config
 
 __config__ = Config.sync_config()
@@ -18,12 +19,14 @@ class OneBotV11Client(Leaf, Client):
         # 下面是获取配置
         self.url = __config__.url
         self.ws_url = __config__.ws_url
+        self.http_token = __config__.http_token
+        self.ws_token = __config__.ws_token
         self.load_adapters_from_list(__config__.adapters)
         self.load_adapters_from_dirs(__config__.adapter_dirs)
         self.load_plugins_from_list(__config__.plugins)
         self.load_plugins_from_dirs(__config__.plugin_dirs)
 
-    def extract_message(self, recv: dict, **ignore) -> str | None:
+    def extract_message(self, recv: MessageEvent, **ignore) -> str | None:
         if not recv.get("post_type") == "message":
             return
         message = "".join(seg["data"]["text"] for seg in recv["message"] if seg["type"] == "text")
@@ -46,14 +49,16 @@ class OneBotV11Client(Leaf, Client):
         logger.info(resp.get("message", "No Message"))
 
     @staticmethod
-    def recv_log(recv: dict):
+    def recv_log(recv: MessageEvent):
         user_id = recv.get("user_id", 0)
-        group_id = recv.get("group_id", "private")
+        message_type = recv.get("message_type")
         raw_message = recv.get("raw_message", "None")
-        logger.info(f"[用户:{user_id}][群组：{group_id}]{raw_message}")
+        info = "私聊" if message_type == "private" else f"群组：{recv.get("group_id", "unknown")}"
+        logger.info(f"[{user_id}][{info}]: {raw_message}")
 
     def startup(self):
-        self.client = httpx.AsyncClient(timeout=30)
+        headers = {"Authorization": f"Bearer {self.http_token}"} if self.http_token else None
+        self.client = httpx.AsyncClient(headers=headers, timeout=30)
         return super().startup()
 
     async def shutdown(self):
@@ -61,15 +66,18 @@ class OneBotV11Client(Leaf, Client):
         return await super().shutdown()
 
     async def run(self):
+        headers = {"Authorization": f"Bearer {self.ws_token}"} if self.ws_token else None
         async with self:
             while self.running:
                 try:
-                    ws_connect = await websockets.connect(self.ws_url)
+                    ws_connect = await websockets.connect(self.ws_url, additional_headers=headers)
                     logger.info("websockets connected")
                     async for recv_data in ws_connect:
                         recv = json.loads(recv_data)
-                        self.recv_log(recv)
-                        asyncio.create_task(self.response(post=self.post, recv=recv))
+                        post_type = recv.get("post_type")
+                        if post_type == "message":
+                            self.recv_log(recv)
+                            asyncio.create_task(self.response(post=self.post, recv=recv))
                     logger.info("client closed")
                     return
                 except (websockets.exceptions.ConnectionClosedError, TimeoutError):
