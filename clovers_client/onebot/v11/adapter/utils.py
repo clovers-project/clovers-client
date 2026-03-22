@@ -69,7 +69,7 @@ def resultlist2nodelist(self_name: str, self_id: int, message: list[OverallResul
 
 async def build_flat_context(post: Post, msg_id: str) -> list[FlatContextUnit] | None:
     context = await post("get_forward_msg", json={"message_id": msg_id})
-    messages = context["data"]["messages"]
+    messages = context.json()["data"]["messages"]
     if not messages:
         return
     flat_context: list[FlatContextUnit] = []

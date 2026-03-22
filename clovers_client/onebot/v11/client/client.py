@@ -38,15 +38,8 @@ class OneBotV11Client(Leaf, Client):
             return message[LEN_BOT_NICKNAME:].lstrip()
         return message
 
-    async def post(self, endpoint: str, **kwargs) -> dict:
-        resp = await self.client.post(url=f"{self.url}/{endpoint}", **kwargs)
-        resp = resp.json()
-        logger.info(resp.get("message", "No Message"))
-        return resp
-
-    @staticmethod
-    def resp_log(resp: dict):
-        logger.info(resp.get("message", "No Message"))
+    async def post(self, endpoint: str, **kwargs):
+        return await self.client.post(url=f"{self.url}/{endpoint}", **kwargs)
 
     @staticmethod
     def recv_log(recv: MessageEvent):

@@ -100,12 +100,17 @@ class ForwardNodeData(TypedDict, total=False):
     sender: Sender
 
 
-class Response[DataType](TypedDict):
+class APIResponse[DataType](TypedDict):
     status: str
     retcode: int
     message: str
     wording: str
     data: DataType
+
+
+class Response[DataType](Protocol):
+
+    def json(self) -> APIResponse[DataType]: ...
 
 
 class UserIDAndGroupIDBody(TypedDict):

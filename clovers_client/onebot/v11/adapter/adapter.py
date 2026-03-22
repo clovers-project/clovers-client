@@ -160,7 +160,7 @@ async def _(post: Post, recv: MessageEvent) -> list[str]:
             reply_id = msg["data"]["id"]
     if reply_id is not None:
         reply = await post("get_msg", json={"message_id": reply_id})
-        url.extend(msg["data"]["url"] for msg in reply["data"]["message"] if msg["type"] == "image")
+        url.extend(msg["data"]["url"] for msg in reply.json()["data"]["message"] if msg["type"] == "image")
     return url
 
 
@@ -170,7 +170,7 @@ async def _(post: Post, recv: MessageEvent):
     if not reply_id:
         return
     reply = await post("get_msg", json={"message_id": reply_id})
-    seg = reply["data"]["message"][0]
+    seg = reply.json()["data"]["message"][0]
     if seg["type"] != "forward":
         return
     return await build_flat_context(post, seg["data"]["id"])
@@ -196,7 +196,7 @@ async def _(recv: dict) -> list[str]:
 @adapter.call_method("group_member_info")
 async def _(group_id: str, user_id: str, /, post: Post) -> MemberInfo:
     resp = await post("get_group_member_info", json={"group_id": int(group_id), "user_id": int(user_id)})
-    user_info = resp["data"]
+    user_info = resp.json()["data"]
     return {
         "group_id": group_id,
         "user_id": user_id,
@@ -210,7 +210,7 @@ async def _(group_id: str, user_id: str, /, post: Post) -> MemberInfo:
 @adapter.call_method("group_member_list")
 async def _(group_id: str, /, post: Post) -> list[MemberInfo]:
     resp = await post("get_group_member_list", json={"group_id": int(group_id)})
-    info_list: list[MemberInfo] = resp["data"]  # type: ignore
+    info_list: list[MemberInfo] = resp.json()["data"]  # type: ignore
     for user_info in info_list:
         user_id = str(user_info["user_id"])
         user_info["group_id"] = group_id
