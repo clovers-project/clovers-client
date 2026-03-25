@@ -3,51 +3,46 @@ import json
 import httpx
 import websockets
 from clovers import Leaf, Client
-from clovers_client.logger import logger
+from clovers.logger import logger
 from ..typing import MessageEvent
 from .config import Config
 
-__config__ = Config.sync_config()
-
-BOT_NICKNAME = __config__.Bot_Nickname
-LEN_BOT_NICKNAME = len(BOT_NICKNAME)
-
 
 class OneBotV11Client(Leaf, Client):
-    def __init__(self):
+    def __init__(self, config: Config = Config.sync_config()):
         super().__init__("OneBot V11")
+        init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
+        self.BOT_NICKNAME = config.Bot_Nickname
+        self._length_bot_nickname = len(self.BOT_NICKNAME)
         # 下面是获取配置
-        self.url = __config__.url
-        self.ws_url = __config__.ws_url
-        self.http_token = __config__.http_token
-        self.ws_token = __config__.ws_token
-        self.load_adapters_from_list(__config__.adapters)
-        self.load_adapters_from_dirs(__config__.adapter_dirs)
-        self.load_plugins_from_list(__config__.plugins)
-        self.load_plugins_from_dirs(__config__.plugin_dirs)
+        self.url = config.url
+        self.ws_url = config.ws_url
+        self.http_token = config.http_token
+        self.ws_token = config.ws_token
+        self.load_adapters_from_list(config.adapters)
+        self.load_adapters_from_dirs(config.adapter_dirs)
+        self.load_plugins_from_list(config.plugins)
+        self.load_plugins_from_dirs(config.plugin_dirs)
 
     def extract_message(self, recv: MessageEvent, **ignore) -> str | None:
         if not recv.get("post_type") == "message":
             return
         message = "".join(seg["data"]["text"] for seg in recv["message"] if seg["type"] == "text")
         message = message.lstrip()
+        user_id = recv.get("user_id", 0)
+        raw_message = recv.get("raw_message", "null")
         if recv.get("message_type") == "private":
+            logger.info(f"[{user_id}][private]: {raw_message}")
             recv["to_me"] = True
-        if message.startswith(BOT_NICKNAME):
+        else:
+            logger.info(f"[{user_id}][{recv.get("group_id", "unknown")}]: {raw_message}")
+        if message.startswith(self.BOT_NICKNAME):
             recv["to_me"] = True
-            return message[LEN_BOT_NICKNAME:].lstrip()
+            return message[self._length_bot_nickname :].lstrip()
         return message
 
     async def post(self, endpoint: str, **kwargs):
         return await self.client.post(url=f"{self.url}/{endpoint}", **kwargs)
-
-    @staticmethod
-    def recv_log(recv: MessageEvent):
-        user_id = recv.get("user_id", 0)
-        message_type = recv.get("message_type")
-        raw_message = recv.get("raw_message", "None")
-        info = "私聊" if message_type == "private" else f"群组：{recv.get("group_id", "unknown")}"
-        logger.info(f"[{user_id}][{info}]: {raw_message}")
 
     def startup(self):
         headers = {"Authorization": f"Bearer {self.http_token}"} if self.http_token else None
@@ -69,7 +64,6 @@ class OneBotV11Client(Leaf, Client):
                         recv = json.loads(recv_data)
                         post_type = recv.get("post_type")
                         if post_type == "message":
-                            self.recv_log(recv)
                             asyncio.create_task(self.response(post=self.post, recv=recv))
                     logger.info("client closed")
                     return
@@ -83,6 +77,3 @@ class OneBotV11Client(Leaf, Client):
                 except Exception:
                     logger.exception("something error")
                     return
-
-
-__client__ = OneBotV11Client()
