@@ -138,3 +138,11 @@ class GroupMessageEvent(BaseMessageEvent):
 
 type MessageEvent = PrivateMessageEvent | GroupMessageEvent
 type Message = list[MessageSegmentSend]
+
+
+class APIResponse[DataType](TypedDict):
+    status: str
+    retcode: int
+    message: str
+    wording: str
+    data: DataType

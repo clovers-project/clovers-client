@@ -2,7 +2,15 @@ from pathlib import Path
 from collections.abc import AsyncGenerator
 from typing import TypedDict, Protocol, Literal, overload
 from io import BytesIO
-from ..typing import MessageSegmentSend, MessageSegmentReveive, Sender, Node, GroupMessageEvent, MemberInfo as OneBotV11MemberInfo
+from ..typing import (
+    MessageSegmentSend,
+    MessageSegmentReveive,
+    Sender,
+    Node,
+    GroupMessageEvent,
+    MemberInfo as OneBotV11MemberInfo,
+    APIResponse,
+)
 
 type FileLike = str | bytes | BytesIO | Path
 
@@ -98,14 +106,6 @@ class SendGroupForwardMsgBody(TypedDict):
 class ForwardNodeData(TypedDict, total=False):
     content: list[MessageSegmentReveive]
     sender: Sender
-
-
-class APIResponse[DataType](TypedDict):
-    status: str
-    retcode: int
-    message: str
-    wording: str
-    data: DataType
 
 
 class Response[DataType](Protocol):

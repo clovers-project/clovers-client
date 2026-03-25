@@ -123,17 +123,17 @@ async def _(recv: dict) -> str | None:
         return str(recv["group_id"])
 
 
+@adapter.property_method("nickname")
+async def _(recv: dict) -> str:
+    return recv["sender"]["card"] or recv["sender"]["nickname"]
+
+
 @adapter.property_method("to_me")
 async def _(recv: dict) -> bool:
     if "to_me" in recv:
         return True
     self_id = str(recv["self_id"])
     return any(seg["type"] == "at" and seg["data"]["qq"] == self_id for seg in recv["message"])
-
-
-@adapter.property_method("nickname")
-async def _(recv: dict) -> str:
-    return recv["sender"]["card"] or recv["sender"]["nickname"]
 
 
 @adapter.property_method("avatar")

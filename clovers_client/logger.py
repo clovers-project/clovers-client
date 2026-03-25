@@ -1,7 +1,29 @@
 import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from clovers.logger import logger
+from .config import __config__
 
-logger.setLevel(logging.DEBUG)
+if __config__.log_file:
+    log_file = Path(__config__.log_file)
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    file_handler = RotatingFileHandler(__config__.log_file, maxBytes=1024 * 1024 * 10, backupCount=10, encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter("[%(asctime)s][%(levelname)s][%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+    file_handler.setLevel(logging.INFO)
+
+match __config__.log_level.upper():
+    case "DEBUG":
+        logger.setLevel(logging.DEBUG)
+    case "WARNING":
+        logger.setLevel(logging.WARNING)
+    case "ERROR":
+        logger.setLevel(logging.ERROR)
+    case "CRITICAL":
+        logger.setLevel(logging.CRITICAL)
+    case _:
+        logger.setLevel(logging.INFO)
+
+
 COLORS = {
     "INFO": "\033[92m",  # 绿色
     "WARNING": "\033[93m",  # 黄色

@@ -9,10 +9,6 @@ requires-python = ">=3.12,<4.0.0"
 dependencies = ["clovers (>=0.4.8,<1.0.0)"]
 
 [project.optional-dependencies]
-console = ["pydantic (>=2.10.6,<3.0.0)", "websockets (>=15.0.0,<16.0.0)"]
-onebot = [
-    "pydantic (>=2.10.6,<3.0.0)",
-    "httpx (>=0.23.1,<1.0.0)",
-    "websockets (>=15.0.0,<16.0.0)",
-]
-qq = ["pydantic (>=2.10.6,<3.0.0)", "qq-botpy (>=1.2.1,<2.0.0)"]
+console = ["pydantic>=2.10.6", "uvicorn>=0.42.0", "fastapi>=0.135.2"]
+onebot = ["pydantic>=2.10.6", "httpx>=0.23.1", "websockets>=15.0.0"]
+qq = ["pydantic>=2.10.6", "qq-botpy>=1.2.1"]
