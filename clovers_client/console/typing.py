@@ -21,6 +21,7 @@ class ConsoleMessage(TypedDict):
 
 
 type SendFunction = Callable[[str], Coroutine[Any, Any, None]]
+type UploadFile = Callable[[bytes], str]
 
 
 class MessageEvent(ChatMessage):

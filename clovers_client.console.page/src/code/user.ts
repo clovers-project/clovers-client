@@ -1,7 +1,7 @@
 import type { UserInfo } from "./types";
 import type { CloversManager } from "./core";
 import { creatModal } from "./modal";
-import { cropImageToSquare, setItem } from "./tools";
+import { setItem } from "./tools";
 import { userListBtn, sideBarTitle } from "./sidebar";
 
 export function init(manager: CloversManager) {
@@ -88,10 +88,9 @@ function userInfoTemplate(manager: CloversManager, user: UserInfo, { backdrop, m
     userAvatarUpload.onchange = async (event) => {
         const file = (event.target as HTMLInputElement).files?.[0];
         if (!file) return;
-        const croppedBlob = await cropImageToSquare(file);
-        const blobUrl = URL.createObjectURL(croppedBlob);
-        user.avatar = blobUrl;
-        (content.querySelector("#userAvatarUrl") as HTMLInputElement).value = blobUrl;
+        const URLs = await manager.client.uploadFile([file]);
+        if (URLs.length < 1) return;
+        (content.querySelector("#userAvatarUrl") as HTMLInputElement).value = URLs[0];
     };
 }
 

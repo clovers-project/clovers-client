@@ -1,9 +1,9 @@
-import type { GroupInfo } from '../types';
+import type { ChatMessage, GroupInfo } from '../types';
 import type { CloversManager } from "../core";
 import { chatWindow, chatHistoryStorage } from "../chat";
 import { creatModal } from "../modal";
 import { sideBarArea, sideBarContent, sideBarTitle } from ".";
-import { cropImageToSquare, itemHTML, setItem } from "../tools";
+import { itemHTML, setItem } from "../tools";
 
 const groupListBtn = document.getElementById("groupListBtn") as HTMLButtonElement;
 
@@ -27,8 +27,9 @@ function renderGroupList(manager: CloversManager) {
     manager.groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(manager, group)));
 }
 
-export function appendGroupItem(manager: CloversManager, groupId: string) {
-    const group = manager.appendGroup(groupId);
+export function appendGroupItem(manager: CloversManager, message: ChatMessage) {
+    const group = manager.appendGroup(message.groupId);
+    group.avatar = message.groupAvatar;
     const groupItem = renderGroupItem(manager, group);
     sideBarContent.appendChild(groupItem)
     return groupItem;
@@ -144,10 +145,9 @@ function groupInfoTemplate(manager: CloversManager, group: GroupInfo, { backdrop
     groupAvatarUpload.onchange = async (event) => {
         const file = (event.target as HTMLInputElement).files?.[0];
         if (!file) return;
-        const croppedBlob = await cropImageToSquare(file);
-        const blobUrl = URL.createObjectURL(croppedBlob);
-        group.avatar = blobUrl;
-        (content.querySelector("#groupAvatarUrl") as HTMLInputElement).value = blobUrl;
+        const URLs = await manager.client.uploadFile([file]);
+        if (URLs.length < 1) return;
+        (content.querySelector("#groupAvatarUrl") as HTMLInputElement).value = URLs[0];
     };
 }
 

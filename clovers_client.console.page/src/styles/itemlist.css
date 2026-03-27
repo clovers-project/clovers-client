@@ -41,18 +41,17 @@
 
 .avatar-status {
   position: relative;
-  display: inline-block;
   width: 40px;
   height: 40px;
   vertical-align: middle;
 }
 
 .avatar {
-  display: block;
   width: 40px;
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .status-badge {

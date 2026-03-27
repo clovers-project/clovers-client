@@ -1,17 +1,20 @@
 import json
 import asyncio
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, UploadFile, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from clovers import Leaf, Client
 from clovers.logger import logger
 from clovers_client import init_logger
 from .adapter import __adapter__
+from .utils import md5
 from .config import Config
 from .typing import MessageEvent, CONSOLE_PREFIX
 
 
 PAGE_RESOURCE = Path(__file__).parent / "page"
+ALLOWED_TYPES = {"image", "video", "audio"}
 
 
 class ConsoleClient(Leaf, Client):
@@ -31,9 +34,32 @@ class ConsoleClient(Leaf, Client):
         self.host = config.host
         self.port = config.port
         self.ws_connects: set[WebSocket] = set()
+        self.load_dir = Path(config.load_dir)
+        self.load_dir.mkdir(parents=True, exist_ok=True)
         self.app = FastAPI()
         self.app.websocket("/ws")(self.websocket_handler)
+        self.app.post("/upload")(self.upload)
+        self.app.get("/download/{name}")(self.download)
         self.app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
+
+    async def upload(self, file: UploadFile = File(...)):
+        if not file.content_type:
+            return Response(status_code=400, content="Invalid Content-Type")
+        self.upload_file(await file.read())
+        return Response(status_code=200)
+
+    async def download(self, name: str, check: bool = Query(False)):
+        filepath = self.load_dir / name
+        if not filepath.exists():
+            return Response(status_code=404)
+        return Response(status_code=200) if check else FileResponse(path=filepath)
+
+    def upload_file(self, data: bytes):
+        index = md5(data)
+        filepath = self.load_dir / index
+        if not filepath.exists():
+            filepath.write_bytes(data)
+        return f"/download/{index}"
 
     async def websocket_handler(self, ws: WebSocket):
         await ws.accept()
@@ -50,7 +76,7 @@ class ConsoleClient(Leaf, Client):
                 send = ws.send_text if recv["groupId"] == "private" else self.broadcast
                 if not recv["text"].startswith(CONSOLE_PREFIX):
                     asyncio.create_task(send(receive_text))
-                task = asyncio.create_task(self.response(recv=recv, send=send))
+                task = asyncio.create_task(self.response(recv=recv, send=send, upload=self.upload_file))
                 tasks.add(task)
                 task.add_done_callback(tasks.discard)
         except WebSocketDisconnect:
@@ -74,7 +100,6 @@ class ConsoleClient(Leaf, Client):
         return recv["text"]
 
     async def broadcast(self, data: str):
-        """定义一个全局可用的广播工具"""
         if not self.ws_connects:
             return
         await asyncio.gather(*(ws.send_text(data) for ws in self.ws_connects), return_exceptions=True)

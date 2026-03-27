@@ -5,7 +5,7 @@ from base64 import b64encode
 from clovers import Adapter
 from clovers.logger import logger
 from clovers_client.result import FileLike, ListMessage, SegmentedMessage
-from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendFunction
+from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendFunction, UploadFile
 
 
 __adapter__ = adapter = Adapter()
@@ -51,27 +51,25 @@ async def send_text(message: str, recv: MessageEvent, send: SendFunction):
     await send(json.dumps(data, separators=(",", ":")))
 
 
-def image2url(image: FileLike) -> str:
+def file2bytes(image: FileLike):
     match image:
-        case str():
-            return image
         case Path():
-            return f"data:image/png;base64,{b64encode(image.read_bytes()).decode()}"
+            return image.read_bytes()
         case BytesIO():
-            return f"data:image/png;base64,{b64encode(image.getvalue()).decode()}"
+            return image.getvalue()
         case bytes():
-            return f"data:image/png;base64,{b64encode(image).decode()}"
+            return image
         case _:
             raise TypeError(f"Unsupported type: {type(image)}")
 
 
 @adapter.send_method("image")
-async def send_image(message: FileLike, recv: MessageEvent, send: SendFunction):
+async def send_image(message: FileLike, recv: MessageEvent, send: SendFunction, upload: UploadFile):
     data: ChatMessage = {
         "type": "user",
         "at": [],
         "text": "",
-        "images": [image2url(message)],
+        "images": [message if isinstance(message, str) else upload(file2bytes(message))],
         "senderId": recv["bot_nickname"],
         "senderName": recv["bot_nickname"],
         "avatar": recv["bot_avatar"],
@@ -83,7 +81,7 @@ async def send_image(message: FileLike, recv: MessageEvent, send: SendFunction):
 
 
 @adapter.send_method("list")
-async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction):
+async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction, upload: UploadFile):
     at: list[str] = []
     text: list[str] = []
     images: list[str] = []
@@ -94,7 +92,8 @@ async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction
             case "text":
                 text.append(result.data)
             case "image":
-                images.append(image2url(result.data))
+                image = result.data
+                images.append(image if isinstance(image, str) else upload(file2bytes(image)))
     data: ChatMessage = {
         "type": "user",
         "at": at,
@@ -111,7 +110,7 @@ async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction
 
 
 @adapter.send_method("segmented")
-async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: SendFunction):
+async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: SendFunction, upload: UploadFile):
     async for result in message:
         match result.key:
             case "at":
@@ -119,9 +118,9 @@ async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: Se
             case "text":
                 await send_text(result.data, recv, send)
             case "image":
-                await send_image(result.data, recv, send)
+                await send_image(result.data, recv, send, upload)
             case "list":
-                await send_list(result.data, recv, send)
+                await send_list(result.data, recv, send, upload)
             case "console":
                 await send_console(result.data, recv, send)
             case _:

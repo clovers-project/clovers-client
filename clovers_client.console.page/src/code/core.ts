@@ -152,11 +152,10 @@ export class CloversManager {
                 } else {
                     status = 'tip';
                 }
-                const groupItem = document.getElementById(`groupItem${message.groupId}`) || appendGroupItem(this, message.groupId);
-                setItem(groupItem as HTMLDivElement, null, status, null, `${message.senderName}:${message.text}`);
+                const groupItem = document.getElementById(`groupItem${message.groupId}`) || appendGroupItem(this, message);
+                setItem(groupItem as HTMLDivElement, message.groupAvatar, status, null, `${message.senderName}:${message.text}`);
             });
     }
-
     public send(text: string, images: string[] = [], at: string[] = []) {
         const message: ChatMessage = {
             type: "user",

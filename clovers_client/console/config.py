@@ -13,3 +13,4 @@ class Config(BaseConfig):
     plugin_dirs: list[str] = []
     host: str = "127.0.0.1"
     port: int = 11000
+    load_dir: str = "./load_dir"

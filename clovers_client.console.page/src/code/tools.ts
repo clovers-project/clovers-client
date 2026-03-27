@@ -1,38 +1,3 @@
-export async function cropImageToSquare(file: File): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-                reject(new Error("无法获取 canvas 上下文"));
-                return;
-            }
-            // 取宽高较小值作为方形边长
-            const size = Math.min(img.width, img.height);
-            const offsetX = (img.width - size) / 2;
-            const offsetY = (img.height - size) / 2;
-
-            canvas.width = size;
-            canvas.height = size;
-            // 绘制裁剪后的方形图片
-            ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, size, size);
-
-            // 转换为 Blob
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    resolve(blob);
-                } else {
-                    reject(new Error("图片转换失败"));
-                }
-            }, file.type || "image/png");
-        };
-        img.onerror = () => reject(new Error("图片加载失败"));
-        img.src = URL.createObjectURL(file);
-    });
-}
-
-
 export const itemHTML = `
 <div class="avatar-status">
     <div class="avatar"></div>

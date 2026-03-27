@@ -188,15 +188,7 @@ async function sendMessage(manager: CloversManager) {
     //     manager.currentGroup.flag = false;
     //     manager.send(`\x05\x03\x01title ${text.length > 60 ? text.substring(0, 60) + "..." : text}`);
     // }
-    const images = await Promise.all(
-        pendingImages.map((file) => {
-            return new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target?.result as string);
-                reader.readAsDataURL(file);
-            });
-        }),
-    );
+    const images = await manager.client.uploadFile(pendingImages);
     manager.send(text, images);
     messageInput.value = "";
     pendingImages.length = 0;
