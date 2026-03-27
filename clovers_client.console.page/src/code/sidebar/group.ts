@@ -1,6 +1,6 @@
 import type { ChatMessage, GroupInfo } from '../types';
 import type { CloversManager } from "../core";
-import { chatWindow, chatHistoryStorage } from "../chat";
+import { chatWindow, chatHistoryStorage, systemMessage } from "../chat";
 import { creatModal } from "../modal";
 import { sideBarArea, sideBarContent, sideBarTitle } from ".";
 import { itemHTML, setItem } from "../tools";
@@ -52,9 +52,10 @@ export function init(manager: CloversManager) {
     renderGroupList(manager)
 }
 
-function showGroupChatHistory(groupId: string) {
+function showGroupChatHistory(groupId: string, info?: string) {
     chatHistoryStorage.get(groupId).then((history) => {
         chatWindow.innerHTML = "";
+        if (info) chatWindow.appendChild(systemMessage(info));
         chatWindow.innerHTML += history;
     });
 }
@@ -71,7 +72,7 @@ function renderGroupItem(manager: CloversManager, group: GroupInfo) {
     groupItem.onclick = () => {
         if (manager.currentGroup.groupId === group.groupId) return;
         manager.setCurrentGroup(group.groupId);
-        showGroupChatHistory(group.groupId);
+        showGroupChatHistory(group.groupId, `当前聊天「${group.groupName}」`);
         setItem(groupItem, null, 'none', null, null)
     }
     setting.onclick = (e) => {

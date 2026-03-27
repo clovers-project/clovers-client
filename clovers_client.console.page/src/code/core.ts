@@ -163,7 +163,7 @@ export class CloversManager {
                     status = 'tip';
                 }
                 const groupItem = document.getElementById(`groupItem${message.groupId}`) || appendGroupItem(this, message);
-                setItem(groupItem as HTMLDivElement, message.groupAvatar, status, null, `${message.senderName}:${message.text}`);
+                setItem(groupItem as HTMLDivElement, message.groupAvatar, status, message.groupName, `${message.senderName}: ${message.text}`);
             });
     }
     public send(text: string, images: string[] = [], at: string[] = []) {
@@ -174,8 +174,9 @@ export class CloversManager {
             at: at,
             senderId: this.currentUser.userId,
             senderName: this.currentUser.userName,
-            groupId: this.currentGroup.groupId,
             avatar: this.currentUser.avatar,
+            groupId: this.currentGroup.groupId,
+            groupName: this.currentGroup.groupName,
             groupAvatar: this.currentGroup.avatar,
             permission: this.currentUser.permission,
         };

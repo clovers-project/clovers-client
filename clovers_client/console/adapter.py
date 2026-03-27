@@ -1,11 +1,11 @@
 import json
 from pathlib import Path
 from io import BytesIO
-from base64 import b64encode
 from clovers import Adapter
 from clovers.logger import logger
 from clovers_client.result import FileLike, ListMessage, SegmentedMessage
-from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendFunction, UploadFile
+from .utils import upload, image_url
+from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendFunction
 
 
 __adapter__ = adapter = Adapter()
@@ -21,13 +21,14 @@ async def send_console(message: list[str], send: SendFunction):
 async def send_at(message: str, recv: MessageEvent, send: SendFunction):
     data: ChatMessage = {
         "type": "user",
-        "at": [message],
         "text": "",
         "images": [],
+        "at": [message],
         "senderId": recv["bot_nickname"],
         "senderName": recv["bot_nickname"],
         "avatar": recv["bot_avatar"],
         "groupId": recv["groupId"],
+        "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
@@ -38,13 +39,14 @@ async def send_at(message: str, recv: MessageEvent, send: SendFunction):
 async def send_text(message: str, recv: MessageEvent, send: SendFunction):
     data: ChatMessage = {
         "type": "user",
-        "at": [],
         "text": message,
         "images": [],
+        "at": [],
         "senderId": recv["bot_nickname"],
         "senderName": recv["bot_nickname"],
         "avatar": recv["bot_avatar"],
         "groupId": recv["groupId"],
+        "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
@@ -64,16 +66,17 @@ def file2bytes(image: FileLike):
 
 
 @adapter.send_method("image")
-async def send_image(message: FileLike, recv: MessageEvent, send: SendFunction, upload: UploadFile):
+async def send_image(message: FileLike, recv: MessageEvent, send: SendFunction, load_dir: Path):
     data: ChatMessage = {
         "type": "user",
         "at": [],
         "text": "",
-        "images": [message if isinstance(message, str) else upload(file2bytes(message))],
+        "images": [message if isinstance(message, str) else upload(load_dir, file2bytes(message))],
         "senderId": recv["bot_nickname"],
         "senderName": recv["bot_nickname"],
         "avatar": recv["bot_avatar"],
         "groupId": recv["groupId"],
+        "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
@@ -81,7 +84,7 @@ async def send_image(message: FileLike, recv: MessageEvent, send: SendFunction, 
 
 
 @adapter.send_method("list")
-async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction, upload: UploadFile):
+async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction, load_dir: Path):
     at: list[str] = []
     text: list[str] = []
     images: list[str] = []
@@ -93,16 +96,17 @@ async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction
                 text.append(result.data)
             case "image":
                 image = result.data
-                images.append(image if isinstance(image, str) else upload(file2bytes(image)))
+                images.append(image if isinstance(image, str) else upload(load_dir, file2bytes(image)))
     data: ChatMessage = {
         "type": "user",
-        "at": at,
         "text": "\n".join(text),
         "images": images,
+        "at": at,
         "senderId": recv["bot_nickname"],
         "senderName": recv["bot_nickname"],
         "avatar": recv["bot_avatar"],
         "groupId": recv["groupId"],
+        "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
@@ -110,7 +114,7 @@ async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction
 
 
 @adapter.send_method("segmented")
-async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: SendFunction, upload: UploadFile):
+async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: SendFunction, load_dir: Path):
     async for result in message:
         match result.key:
             case "at":
@@ -118,9 +122,9 @@ async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: Se
             case "text":
                 await send_text(result.data, recv, send)
             case "image":
-                await send_image(result.data, recv, send, upload)
+                await send_image(result.data, recv, send, load_dir)
             case "list":
-                await send_list(result.data, recv, send, upload)
+                await send_list(result.data, recv, send, load_dir)
             case "console":
                 await send_console(result.data, recv, send)
             case _:
@@ -172,7 +176,7 @@ async def _(recv: MessageEvent) -> int:
 
 @adapter.property_method("to_me")
 async def _(recv: MessageEvent) -> bool:
-    return recv["to_me"] or recv["bot_nickname"] in recv["at"]
+    return recv["to_me"] or "" in recv["at"]
 
 
 @adapter.property_method("at")
@@ -181,5 +185,5 @@ async def _(recv: MessageEvent) -> list[str]:
 
 
 @adapter.property_method("image_list")
-async def _(recv: MessageEvent) -> list[str]:
-    return recv["images"]
+async def _(recv: MessageEvent, load_dir: Path) -> list[str]:
+    return [x for url in recv["images"] if (x := image_url(load_dir, url))]

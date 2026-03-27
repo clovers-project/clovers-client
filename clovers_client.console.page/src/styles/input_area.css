@@ -36,6 +36,14 @@
   background-color: rgba(67, 97, 238, 0.1);
 }
 
+.tool-btn.active {
+  color: #4361ee;
+  background-color: rgba(67, 97, 238, 0.15);
+  --pulse-color-semi: rgba(67, 97, 238, 0.4);
+  --pulse-color-transparent: rgba(67, 97, 238, 0);
+  animation: pulse 2s infinite ease-in-out;
+}
+
 /* 图片预览区 */
 .image-preview-area {
   overflow-x: auto;

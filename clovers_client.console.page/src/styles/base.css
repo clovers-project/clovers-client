@@ -58,6 +58,22 @@ hr {
   }
 }
 
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--pulse-color-semi);
+    transform: scale(1);
+  }
+  70% {
+    /* 扩散效果 */
+    box-shadow: 0 0 0 6px var(--pulse-color-transparent);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--pulse-color-transparent);
+    transform: scale(1);
+  }
+}
+
 /* .loading {
   width: 16px;
   height: 16px;

@@ -11,6 +11,7 @@ class ChatMessage(TypedDict):
     senderName: str
     avatar: str
     groupId: str
+    groupName: str
     groupAvatar: str
     permission: Literal["SuperUser", "Owner", "Admin", "Member"]
 
@@ -21,7 +22,6 @@ class ConsoleMessage(TypedDict):
 
 
 type SendFunction = Callable[[str], Coroutine[Any, Any, None]]
-type UploadFile = Callable[[bytes], str]
 
 
 class MessageEvent(ChatMessage):

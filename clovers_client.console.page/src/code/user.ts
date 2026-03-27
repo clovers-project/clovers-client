@@ -1,7 +1,7 @@
 import type { UserInfo } from "./types";
 import type { CloversManager } from "./core";
 import { creatModal } from "./modal";
-import { setItem } from "./tools";
+import { itemHTML, setItem } from "./tools";
 import { userListBtn, sideBarTitle } from "./sidebar";
 
 export function init(manager: CloversManager) {
@@ -99,13 +99,8 @@ function renderUserList(manager: CloversManager, { backdrop, modal } = creatModa
     function renderUserItem(user: UserInfo) {
         const userItem = document.createElement("div");
         userItem.className = "itemlist-item";
-        userItem.innerHTML = `
-${user.avatar ? `<img src="${user.avatar}" class="avatar left">` : '<div class="avatar left"></div>'}
-<div class="itemlist-item-info">
-    <strong>${user.userName}</strong>
-    <small>${user.userId}</small>
-</div>
-<div class="grow-flex"></div>`;
+        userItem.innerHTML = itemHTML;
+        setItem(userItem, user.avatar, "none", user.userName, user.userId);
         const setting = document.createElement("button");
         setting.className = "tool-btn";
         setting.innerHTML = '<i class="fa-solid fa-ellipsis-vertical"></i>';

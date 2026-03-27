@@ -21,6 +21,7 @@ export interface ChatMessage {
     senderName: string;
     avatar: string;
     groupId: string;
+    groupName: string;
     groupAvatar: string;
     permission: "SuperUser" | "Owner" | "Admin" | "Member";
 }

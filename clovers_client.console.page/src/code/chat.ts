@@ -11,6 +11,8 @@ const sendBtn = document.getElementById("sendBtn") as HTMLButtonElement;
 const imageUpload = document.getElementById("imageUpload") as HTMLInputElement;
 const imagePreviewArea = document.getElementById("imagePreviewArea") as HTMLDivElement;
 const clearBtn = document.getElementById("clearBtn") as HTMLButtonElement;
+const atBtn = document.getElementById("atBtn") as HTMLButtonElement;
+
 
 const dbPromise = openDB("ChatAppDB", 1, {
     upgrade(db) {
@@ -181,6 +183,23 @@ export function systemMessage(text: string) {
 }
 
 const pendingImages: File[] = [];
+let atbot = false;
+const switchAt = () => {
+    if (atbot) {
+        atbot = false;
+        chatWindow.appendChild(systemMessage("已关闭 @BOT"));
+        atBtn.classList.remove("active");
+        localStorage.setItem("atbot", "false");
+    } else {
+        atbot = true;
+        chatWindow.appendChild(systemMessage("已开启 @BOT"));
+        atBtn.classList.add("active");
+        localStorage.setItem("atbot", "true");
+    }
+
+};
+atBtn.onclick = switchAt;
+
 async function sendMessage(manager: CloversManager) {
     const text = messageInput.value.trim();
     if (!text && pendingImages.length === 0) return;
@@ -189,7 +208,7 @@ async function sendMessage(manager: CloversManager) {
     //     manager.send(`\x05\x03\x01title ${text.length > 60 ? text.substring(0, 60) + "..." : text}`);
     // }
     const images = await manager.client.uploadFile(pendingImages);
-    manager.send(text, images);
+    manager.send(text, images, atbot ? [""] : []);
     messageInput.value = "";
     pendingImages.length = 0;
     imageUpload.value = "";
@@ -228,12 +247,14 @@ export function init(manager: CloversManager) {
         messageInput.style.height = "auto";
         sendMessage(manager);
     };
-
     clearBtn.onclick = () => {
         chatWindow.innerHTML = "";
         chatHistoryStorage.delete(manager.currentGroup.groupId);
         // manager.send(`\x05\x03\x01cleanup`);
         // manager.currentGroup.flag = true;
         manager.groupSave();
+        chatWindow.appendChild(systemMessage("聊天记录已清空"));
     };
+    atbot = localStorage.getItem("atbot") === "false";
+    switchAt();
 }

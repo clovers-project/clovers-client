@@ -76,7 +76,7 @@ class ConsoleClient(Leaf, Client):
                 send = ws.send_text if recv["groupId"] == "private" else self.broadcast
                 if not recv["text"].startswith(CONSOLE_PREFIX):
                     asyncio.create_task(send(receive_text))
-                task = asyncio.create_task(self.response(recv=recv, send=send, upload=self.upload_file))
+                task = asyncio.create_task(self.response(recv=recv, send=send, load_dir=self.load_dir))
                 tasks.add(task)
                 task.add_done_callback(tasks.discard)
         except WebSocketDisconnect:
