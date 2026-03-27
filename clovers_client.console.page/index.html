@@ -17,7 +17,18 @@
   <body>
     <div class="ui">
       <div class="sidebar" id="sideBarArea">
-        <div id="sideBarTitle" class="itemlist-title"></div>
+        <div id="sideBarTitle" class="itemlist-title">
+          <div id="userListBtn" class="avatar-status" title="用户列表">
+            <img class="avatar" title="当前用户" />
+            <div class="status-badge none"></div>
+          </div>
+          <div class="itemlist-item-info">
+            <strong id="currentUserName"></strong>
+            <small id="connectStatus"></small>
+          </div>
+          <div class="grow-flex"></div>
+        </div>
+        <hr align="center" />
         <div id="sideBarContent"></div>
       </div>
       <div class="sidebar-empty"></div>
@@ -28,16 +39,10 @@
             <button class="tool-btn" id="groupListBtn" title="群组列表">
               <i class="fa-solid fa-user-group"></i>
             </button>
-            <button class="tool-btn" id="userListBtn" title="用户列表">
-              <i class="fas fa-user"></i>
-            </button>
             <label for="imageUpload" class="tool-btn" title="上传图片">
               <i class="fas fa-image"></i>
             </label>
             <input type="file" id="imageUpload" accept="image/*" multiple class="hidden" aria-label="选择图片文件上传" />
-            <button class="tool-btn" id="cloversBtn" title="clovers服务器">
-              <i class="fa-solid fa-server"></i>
-            </button>
             <button class="tool-btn" id="clearBtn" title="清除聊天记录">
               <i class="fa-solid fa-eraser"></i>
             </button>

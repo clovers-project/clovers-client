@@ -1,5 +1,5 @@
 {
-  "name": "clovers_client.console.client.page",
+  "name": "clovers_client.console.page",
   "private": true,
   "version": "0.0.0",
   "type": "module",

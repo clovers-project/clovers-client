@@ -177,10 +177,10 @@ async def _(recv: MessageEvent) -> bool:
 
 
 @adapter.property_method("at")
-async def _(recv: ChatMessage) -> list[str]:
+async def _(recv: MessageEvent) -> list[str]:
     return recv["at"]
 
 
 @adapter.property_method("image_list")
-async def _(recv: ChatMessage) -> list[str]:
+async def _(recv: MessageEvent) -> list[str]:
     return recv["images"]

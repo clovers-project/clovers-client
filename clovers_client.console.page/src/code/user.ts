@@ -1,16 +1,25 @@
-import type { UserInfo, } from './types';
-import { userList, setCurrentUser, defaultUserInfo, currentUser } from "./core";
-import { systemMessage } from './chat'
+import type { UserInfo } from "./types";
+import type { CloversManager } from "./core";
 import { creatModal } from "./modal";
 import { cropImageToSquare } from "./tools";
-function userInfoTemplate({ backdrop, modal } = creatModal(), user: UserInfo) {
+import { userListBtn, currentUserName } from "./sidebar";
+
+export function init(manager: CloversManager) {
+    userListBtn.src = manager.currentUser.avatar ? manager.currentUser.avatar : "./icon.svg";
+    currentUserName.textContent = manager.currentUser.userName;
+    userListBtn.onclick = () => {
+        renderUserList(manager);
+    };
+}
+
+function userInfoTemplate(manager: CloversManager, user: UserInfo, { backdrop, modal } = creatModal()) {
     const content = document.createElement("div");
     content.className = "modal-content";
     content.innerHTML = `
-<h3>请输入用户信息</h3>
+<h3>用户信息</h3>
 <div class="modal-item">
-    <label for="nickname">用户名称:</label>
-    <input type="text" id="nickname" value="${user.userName}">
+    <label for="userName">用户名称:</label>
+    <input type="text" id="userName" value="${user.userName}">
 </div>
 <div class="modal-item">
     <label for="userId">用户ID:</label>
@@ -50,31 +59,36 @@ function userInfoTemplate({ backdrop, modal } = creatModal(), user: UserInfo) {
     content.appendChild(btns);
     modal.appendChild(content);
     confirmBtn.onclick = () => {
-        const userId = (content.querySelector("#userId") as HTMLInputElement).value.trim();
+        const userIdInput = content.querySelector("#userId") as HTMLInputElement;
+        const userId = userIdInput.value.trim();
+        if (userId !== user.userId && manager.hasUser(userId)) {
+            userIdInput.classList.add("error");
+            const errorMsg = document.createElement("span");
+            errorMsg.className = "error-message";
+            errorMsg.textContent = "该 ID 已存在，请更换";
+            userIdInput.parentNode!.appendChild(errorMsg);
+            userIdInput.focus();
+            return;
+        }
         const nickname = (content.querySelector("#nickname") as HTMLInputElement).value.trim();
-        const avatarUrl = (content.querySelector("#avatarUrl") as HTMLInputElement).value.trim();
+        const avatarUrl = (content.querySelector("#userAvatarUrl") as HTMLInputElement).value.trim();
         const permission = (content.querySelector("#permission") as HTMLSelectElement).value as UserInfo["permission"];
         user.userId = userId;
         user.userName = nickname;
         user.avatar = avatarUrl;
         user.permission = permission;
-        document.body.removeChild(backdrop);
-        renderUserList();
-        localStorage.setItem("userList", JSON.stringify(userList));
+        modal.innerHTML = "";
+        renderUserList(manager, { backdrop, modal });
+        manager.userSave();
     };
     cancelBtn.onclick = () => {
         modal.innerHTML = "";
-        renderUserList({ backdrop, modal });
+        renderUserList(manager, { backdrop, modal });
     };
     deleteBtn.onclick = () => {
-        const index = userList.indexOf(user);
-        if (index !== -1) userList.splice(index, 1);
-        if (currentUser.userId === user.userId) {
-            setCurrentUser('1');
-        };
-        document.body.removeChild(backdrop);
-        renderUserList();
-        localStorage.setItem("userList", JSON.stringify(userList));
+        manager.deleteUser(user.userId);
+        modal.innerHTML = "";
+        renderUserList(manager, { backdrop, modal });
     };
     const userAvatarUpload = content.querySelector("#userAvatarUpload") as HTMLInputElement;
     userAvatarUpload.onchange = async (event) => {
@@ -85,34 +99,42 @@ function userInfoTemplate({ backdrop, modal } = creatModal(), user: UserInfo) {
         user.avatar = blobUrl;
         (content.querySelector("#userAvatarUrl") as HTMLInputElement).value = blobUrl;
     };
-
 }
 
-export function renderUserList({ backdrop, modal } = creatModal()) {
+function renderUserList(manager: CloversManager, { backdrop, modal } = creatModal()) {
+    userListBtn.src = manager.currentUser.avatar ? manager.currentUser.avatar : "./icon.svg";
+    currentUserName.textContent = manager.currentUser.userName;
     function renderUserItem(user: UserInfo) {
         const userItem = document.createElement("div");
         userItem.className = "itemlist-item";
-        const avatar = user.avatar ? `<img src="${user.avatar}" class="avatar left">` : '<div class="avatar left"></div>';
-        userItem.innerHTML = `<div class="grow-flex">${avatar}<strong>${user.userName}:</strong><span>${user.userId}</span></div>`;
+        userItem.innerHTML = `
+${user.avatar ? `<img src="${user.avatar}" class="avatar left">` : '<div class="avatar left"></div>'}
+<div class="itemlist-item-info">
+    <strong>${user.userName}</strong>
+    <small>${user.userId}</small>
+</div>
+<div class="grow-flex"></div>`;
         const setting = document.createElement("button");
         setting.className = "tool-btn";
         setting.innerHTML = '<i class="fa-solid fa-ellipsis-vertical"></i>';
         userItem.appendChild(setting);
-        userItem.addEventListener("click", () => {
+        userItem.onclick = () => {
+            if (manager.currentUser.userId !== user.userId) {
+                manager.setCurrentUser(user.userId);
+                userListBtn.src = manager.currentUser.avatar ? manager.currentUser.avatar : "./icon.svg";
+                currentUserName.textContent = manager.currentUser.userName;
+            }
             document.body.removeChild(backdrop);
-            if (currentUser.userId === user.userId) return;
-            setCurrentUser(user.userId);
-            systemMessage(`已切换到用户「${user.userName}」`);
-        });
-        setting.addEventListener("click", (e) => {
+        };
+        setting.onclick = (e) => {
             e.stopPropagation();
             modal.innerHTML = "";
-            userInfoTemplate({ backdrop, modal }, user);
-        });
+            userInfoTemplate(manager, user, { backdrop, modal });
+        }
         return userItem;
     }
     const content = document.createElement("div");
-    content.className = "modal-content"
+    content.className = "modal-content";
     const title = document.createElement("div");
     title.className = "itemlist-title";
     title.innerHTML = '<div class="grow-flex"><h3>用户列表</h3></div>';
@@ -121,24 +143,23 @@ export function renderUserList({ backdrop, modal } = creatModal()) {
     addUserBtn.className = "confirm-button";
     addUserBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
     addUserBtn.onclick = () => {
-        let user = { ...defaultUserInfo, userId: Date.now().toString() };
-        userList.push(user);
-        content.appendChild(renderUserItem(user));
-        localStorage.setItem("userList", JSON.stringify(userList));
+        manager.setCurrentUser(Date.now().toString());
+        manager.userSave();
+        modal.innerHTML = "";
+        renderUserList(manager, { backdrop, modal });
     };
     title.appendChild(addUserBtn);
     content.appendChild(title);
-    if (userList.length === 0) setCurrentUser("1");
-    userList.forEach((user) => content.appendChild(renderUserItem(user)));
+    manager.userList.forEach((user) => content.appendChild(renderUserItem(user)));
     const deleteAllBtn = document.createElement("button");
     deleteAllBtn.className = "delete-all-button";
-    deleteAllBtn.innerHTML = '<i class="fa-solid fa-trash"></i>'
+    deleteAllBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
     deleteAllBtn.onclick = () => {
-        userList.length = 0;
-        setCurrentUser("1");
-        localStorage.setItem("userList", JSON.stringify(userList));
+        manager.userList.length = 0;
+        manager.userList.push(manager.currentUser);
+        manager.userSave();
         modal.innerHTML = "";
-        renderUserList({ backdrop, modal });
+        renderUserList(manager, { backdrop, modal });
     };
     modal.appendChild(content);
     modal.appendChild(deleteAllBtn);

@@ -45,6 +45,7 @@ body::after {
   background: var(--user-msg-color);
   animation: float 89s infinite alternate-reverse;
 }
+
 .side-toolbar {
   display: flex;
   width: 60px;
