@@ -4,10 +4,9 @@ export const itemHTML = `
     <div class="status-badge none"></div>
 </div>
 <div class="itemlist-item-info">
-    <strong id="currentUserName"></strong>
-    <small id="connectStatus"></small>
-</div>
-<div class="grow-flex"></div>`;
+    <strong></strong>
+    <small></small>
+</div>`;
 
 export function setItem(element: HTMLDivElement,
     avatar: string | null,

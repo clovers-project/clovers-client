@@ -40,12 +40,9 @@ export class WebSocketClient {
     private upload_url: string;
     private download_url: string;
     constructor(receiveHandle: (message: ChatMessage | ConsoleMessage) => void) {
-        const http = window.location.protocol + "//";
-        const ws = window.location.protocol === "https:" ? "wss://" : "ws://"
-        const url = window.location.host
-        this.ws_url = `${ws}${url}/ws`;
-        this.upload_url = `${http}${url}/upload`;
-        this.download_url = `${http}${url}/download`;
+        this.ws_url = `/ws`;
+        this.upload_url = `/upload`;
+        this.download_url = `/download`;
         this.receiveHandle = receiveHandle;
     }
 

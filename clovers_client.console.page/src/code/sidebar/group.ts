@@ -41,9 +41,11 @@ export function init(manager: CloversManager) {
     addGroupBtn.className = "tool-btn";
     addGroupBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
     addGroupBtn.onclick = () => {
-        manager.setCurrentGroup(Date.now().toString());
-        manager.groupSave();
-        renderGroupList(manager)
+        const groupId = Date.now().toString();
+        if (manager.hasGroup(groupId)) return;
+        const group = manager.appendGroup(groupId);
+        const groupItem = renderGroupItem(manager, group);
+        sideBarContent.appendChild(groupItem)
     };
     sideBarTitle.appendChild(addGroupBtn);
     setItem(sideBarTitle, manager.currentUser.avatar, null, manager.currentUser.userName, null)

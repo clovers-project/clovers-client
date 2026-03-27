@@ -97,6 +97,15 @@ export class CloversManager {
             else this.setCurrentGroup("1");
         } else localStorage.setItem("groupList", JSON.stringify(this.groupList));
     }
+
+    public appendUser(userId: string) {
+        if (!CloversManager.moveBottom(this.userList, (user) => user.userId === userId)) {
+            this.userList.push({ ...defaultUserInfo, userId: userId });
+        }
+        localStorage.setItem("userList", JSON.stringify(this.userList));
+        return this.userList.at(-1)!;
+    }
+
     public appendGroup(groupId: string) {
         if (!CloversManager.moveBottom(this.groupList, (group) => group.groupId === groupId)) {
             this.groupList.push({ ...defaultGroupInfo, groupId: groupId });
@@ -104,6 +113,7 @@ export class CloversManager {
         localStorage.setItem("groupList", JSON.stringify(this.groupList));
         return this.groupList.at(-1)!;
     }
+
 
 
     public userSave() {

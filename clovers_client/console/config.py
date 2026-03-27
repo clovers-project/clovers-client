@@ -6,7 +6,7 @@ class Config(BaseConfig):
     LOG_FILE: str = "./log/clovers.log"
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
     BOT_NICKNAME: str = "Bot酱"
-    BOT_AVATAR_URL: str = ""
+    BOT_AVATAR_URL: str = "/download/bot_avatar.png"
     adapters: list[str] = []
     adapter_dirs: list[str] = []
     plugins: list[str] = []

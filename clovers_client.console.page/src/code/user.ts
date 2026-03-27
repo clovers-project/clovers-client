@@ -134,8 +134,9 @@ ${user.avatar ? `<img src="${user.avatar}" class="avatar left">` : '<div class="
     addUserBtn.className = "confirm-button";
     addUserBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
     addUserBtn.onclick = () => {
-        manager.setCurrentUser(Date.now().toString());
-        manager.userSave();
+        const userId = Date.now().toString();
+        if (manager.hasUser(userId)) return;
+        manager.appendUser(userId);
         modal.innerHTML = "";
         renderUserList(manager, { backdrop, modal });
     };
