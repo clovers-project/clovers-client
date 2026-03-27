@@ -1,15 +1,12 @@
 import type { UserInfo } from "./types";
 import type { CloversManager } from "./core";
 import { creatModal } from "./modal";
-import { cropImageToSquare } from "./tools";
-import { userListBtn, currentUserName } from "./sidebar";
+import { cropImageToSquare, setItem } from "./tools";
+import { userListBtn, sideBarTitle } from "./sidebar";
 
 export function init(manager: CloversManager) {
-    userListBtn.src = manager.currentUser.avatar ? manager.currentUser.avatar : "./icon.svg";
-    currentUserName.textContent = manager.currentUser.userName;
-    userListBtn.onclick = () => {
-        renderUserList(manager);
-    };
+    setItem(sideBarTitle, manager.currentUser.avatar, null, manager.currentUser.userName, null)
+    userListBtn.onclick = () => { renderUserList(manager) };
 }
 
 function userInfoTemplate(manager: CloversManager, user: UserInfo, { backdrop, modal } = creatModal()) {
@@ -70,13 +67,10 @@ function userInfoTemplate(manager: CloversManager, user: UserInfo, { backdrop, m
             userIdInput.focus();
             return;
         }
-        const nickname = (content.querySelector("#nickname") as HTMLInputElement).value.trim();
-        const avatarUrl = (content.querySelector("#userAvatarUrl") as HTMLInputElement).value.trim();
-        const permission = (content.querySelector("#permission") as HTMLSelectElement).value as UserInfo["permission"];
         user.userId = userId;
-        user.userName = nickname;
-        user.avatar = avatarUrl;
-        user.permission = permission;
+        user.userName = (content.querySelector("#userName") as HTMLInputElement).value.trim();
+        user.avatar = (content.querySelector("#userAvatarUrl") as HTMLInputElement).value.trim();
+        user.permission = (content.querySelector("#permission") as HTMLSelectElement).value as UserInfo["permission"];
         modal.innerHTML = "";
         renderUserList(manager, { backdrop, modal });
         manager.userSave();
@@ -102,8 +96,7 @@ function userInfoTemplate(manager: CloversManager, user: UserInfo, { backdrop, m
 }
 
 function renderUserList(manager: CloversManager, { backdrop, modal } = creatModal()) {
-    userListBtn.src = manager.currentUser.avatar ? manager.currentUser.avatar : "./icon.svg";
-    currentUserName.textContent = manager.currentUser.userName;
+    setItem(sideBarTitle, manager.currentUser.avatar, null, manager.currentUser.userName, null)
     function renderUserItem(user: UserInfo) {
         const userItem = document.createElement("div");
         userItem.className = "itemlist-item";
@@ -121,8 +114,7 @@ ${user.avatar ? `<img src="${user.avatar}" class="avatar left">` : '<div class="
         userItem.onclick = () => {
             if (manager.currentUser.userId !== user.userId) {
                 manager.setCurrentUser(user.userId);
-                userListBtn.src = manager.currentUser.avatar ? manager.currentUser.avatar : "./icon.svg";
-                currentUserName.textContent = manager.currentUser.userName;
+                setItem(sideBarTitle, manager.currentUser.avatar, null, manager.currentUser.userName, null)
             }
             document.body.removeChild(backdrop);
         };

@@ -148,7 +148,7 @@ export async function chatMessage(msg: ChatMessage, is_self: boolean = false) {
         content.innerHTML = await marked.parse(msg.text.trim(), { renderer });
     }
     // 图片内容
-    if (msg.images && msg.images.length > 0) {
+    if (msg.images.length > 0) {
         msg.images.forEach((imgUrl) => {
             const img = document.createElement("img");
             img.className = "message-image-item";
@@ -184,20 +184,10 @@ const pendingImages: File[] = [];
 async function sendMessage(manager: CloversManager) {
     const text = messageInput.value.trim();
     if (!text && pendingImages.length === 0) return;
-    if (manager.currentGroup.flag) {
-        manager.currentGroup.flag = false;
-        manager.send(`\x05\x03\x01title ${text.length > 60 ? text.substring(0, 60) + "..." : text}`);
-        const strongElement = document.getElementById(`groupItem${manager.currentGroup.groupId}`)?.querySelector("strong");
-        if (strongElement) {
-            strongElement.innerHTML = '<span class="loading"></span>';
-        }
-    }
-    messageInput.value = "";
-    pendingImages.length = 0;
-    imageUpload.value = "";
-    imagePreviewArea.innerHTML = "";
-    imagePreviewArea.classList.remove("active");
-    messageInput.focus();
+    // if (manager.currentGroup.flag) {
+    //     manager.currentGroup.flag = false;
+    //     manager.send(`\x05\x03\x01title ${text.length > 60 ? text.substring(0, 60) + "..." : text}`);
+    // }
     const images = await Promise.all(
         pendingImages.map((file) => {
             return new Promise<string>((resolve) => {
@@ -208,6 +198,12 @@ async function sendMessage(manager: CloversManager) {
         }),
     );
     manager.send(text, images);
+    messageInput.value = "";
+    pendingImages.length = 0;
+    imageUpload.value = "";
+    imagePreviewArea.innerHTML = "";
+    imagePreviewArea.classList.remove("active");
+    messageInput.focus();
 }
 
 imageUpload.onchange = (event: Event) => {
@@ -244,8 +240,8 @@ export function init(manager: CloversManager) {
     clearBtn.onclick = () => {
         chatWindow.innerHTML = "";
         chatHistoryStorage.delete(manager.currentGroup.groupId);
-        manager.send(`\x05\x03\x01cleanup`);
-        manager.currentGroup.flag = true;
+        // manager.send(`\x05\x03\x01cleanup`);
+        // manager.currentGroup.flag = true;
         manager.groupSave();
     };
 }

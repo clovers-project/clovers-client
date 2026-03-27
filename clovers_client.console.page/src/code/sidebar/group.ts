@@ -22,6 +22,18 @@ function hideSideBar(e: PointerEvent) {
 groupListBtn.onclick = showSideBar;
 document.addEventListener('click', (e) => { hideSideBar(e); });
 
+function renderGroupList(manager: CloversManager) {
+    sideBarContent.innerHTML = "";
+    manager.groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(manager, group)));
+}
+
+export function appendGroupItem(manager: CloversManager, groupId: string) {
+    const group = manager.appendGroup(groupId);
+    const groupItem = renderGroupItem(manager, group);
+    sideBarContent.appendChild(groupItem)
+    return groupItem;
+}
+
 export function init(manager: CloversManager) {
     showGroupChatHistory(manager.currentGroup.groupId);
     const addGroupBtn = document.createElement("button");
@@ -30,13 +42,11 @@ export function init(manager: CloversManager) {
     addGroupBtn.onclick = () => {
         manager.setCurrentGroup(Date.now().toString());
         manager.groupSave();
-        sideBarContent.innerHTML = ""
-        manager.groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(manager, group)));
+        renderGroupList(manager)
     };
     sideBarTitle.appendChild(addGroupBtn);
     setItem(sideBarTitle, manager.currentUser.avatar, null, manager.currentUser.userName, null)
-    sideBarContent.innerHTML = ""
-    manager.groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(manager, group)));
+    renderGroupList(manager)
 }
 
 function showGroupChatHistory(groupId: string) {
@@ -59,6 +69,7 @@ function renderGroupItem(manager: CloversManager, group: GroupInfo) {
         if (manager.currentGroup.groupId === group.groupId) return;
         manager.setCurrentGroup(group.groupId);
         showGroupChatHistory(group.groupId);
+        setItem(groupItem, null, 'none', null, null)
     }
     setting.onclick = (e) => {
         e.stopPropagation();
@@ -116,19 +127,17 @@ function groupInfoTemplate(manager: CloversManager, group: GroupInfo, { backdrop
             groupIdInput.focus();
             return;
         }
+        group.groupId = groupId;
         group.groupName = (content.querySelector("#groupName") as HTMLInputElement).value.trim();
-        group.groupId = (content.querySelector("#groupId") as HTMLInputElement).value.trim();
         group.avatar = (content.querySelector("#groupAvatarUrl") as HTMLInputElement).value.trim();
-        sideBarContent.innerHTML = ""
-        manager.groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(manager, group)));
+        renderGroupList(manager)
         document.body.removeChild(backdrop);
         manager.groupSave();
     };
     cancelBtn.onclick = () => document.body.removeChild(backdrop);
     deleteBtn.onclick = () => {
         manager.deleteGroup(group.groupId);
-        sideBarContent.innerHTML = ""
-        manager.groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(manager, group)));
+        renderGroupList(manager)
         document.body.removeChild(backdrop);
     };
     const groupAvatarUpload = content.querySelector("#groupAvatarUpload") as HTMLInputElement;

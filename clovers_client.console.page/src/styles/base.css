@@ -58,7 +58,7 @@ hr {
   }
 }
 
-.loading {
+/* .loading {
   width: 16px;
   height: 16px;
   border-top: 2px solid var(--text-blue);
@@ -76,7 +76,7 @@ hr {
   100% {
     transform: rotate(360deg);
   }
-}
+} */
 
 .hidden {
   display: none;

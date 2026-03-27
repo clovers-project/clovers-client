@@ -2,4 +2,3 @@ export const sideBarArea = document.getElementById("sideBarArea") as HTMLDivElem
 export const sideBarContent = document.getElementById("sideBarContent") as HTMLDivElement;
 export const sideBarTitle = document.getElementById("sideBarTitle") as HTMLDivElement;
 export const userListBtn = document.getElementById("userListBtn") as HTMLImageElement;
-export const currentUserName = document.getElementById("currentUserName") as HTMLElement;

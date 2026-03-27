@@ -1,6 +1,6 @@
 [project]
 name = "clovers-client"
-version = "0.1.6"
+version = "0.1.8"
 description = ""
 authors = [{ name = "KarisAya", email = "karisaya@foxmail.com" }]
 readme = "README.md"
@@ -12,3 +12,7 @@ dependencies = ["clovers (>=0.4.8,<1.0.0)"]
 console = ["pydantic>=2.10.6", "uvicorn>=0.42.0", "fastapi>=0.135.2"]
 onebot = ["pydantic>=2.10.6", "httpx>=0.23.1", "websockets>=15.0.0"]
 qq = ["pydantic>=2.10.6", "qq-botpy>=1.2.1"]
+
+[tool.setuptools.package-data]
+# 确保 clovers_client.page 包下的所有后缀文件都被包含
+"clovers_client.page" = ["*"]

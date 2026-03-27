@@ -8,7 +8,7 @@ from clovers.logger import logger
 from clovers_client import init_logger
 from .adapter import __adapter__
 from .config import Config
-from .typing import MessageEvent
+from .typing import MessageEvent, CONSOLE_PREFIX
 
 
 PAGE_RESOURCE = Path(__file__).parent / "page"
@@ -32,8 +32,8 @@ class ConsoleClient(Leaf, Client):
         self.port = config.port
         self.ws_connects: set[WebSocket] = set()
         self.app = FastAPI()
-        self.app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
         self.app.websocket("/ws")(self.websocket_handler)
+        self.app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
 
     async def websocket_handler(self, ws: WebSocket):
         await ws.accept()
@@ -42,11 +42,15 @@ class ConsoleClient(Leaf, Client):
         tasks: set[asyncio.Task] = set()
         try:
             while True:
-                recv: MessageEvent = json.loads(await ws.receive_text())
+                receive_text = await ws.receive_text()
+                recv: MessageEvent = json.loads(receive_text)
                 recv["ip"] = ws.client.host if ws.client else None
                 recv["bot_nickname"] = self.BOT_NICKNAME
                 recv["bot_avatar"] = self.BOT_AVATAR_URL
-                task = asyncio.create_task(self.response(recv=recv, send=ws.send_text if recv["groupId"] == "private" else self.broadcast))
+                send = ws.send_text if recv["groupId"] == "private" else self.broadcast
+                if not recv["text"].startswith(CONSOLE_PREFIX):
+                    asyncio.create_task(send(receive_text))
+                task = asyncio.create_task(self.response(recv=recv, send=send))
                 tasks.add(task)
                 task.add_done_callback(tasks.discard)
         except WebSocketDisconnect:

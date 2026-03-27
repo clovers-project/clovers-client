@@ -4,9 +4,9 @@ from collections.abc import Callable, Coroutine
 
 class ChatMessage(TypedDict):
     type: Literal["user"]
-    at: list[str]
     text: str
     images: list[str]
+    at: list[str]
     senderId: str
     senderName: str
     avatar: str
@@ -28,3 +28,6 @@ class MessageEvent(ChatMessage):
     bot_nickname: str
     bot_avatar: str
     ip: str | None
+
+
+CONSOLE_PREFIX = b"\x05\x03\x01".decode()

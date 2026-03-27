@@ -16,6 +16,7 @@ export interface ChatMessage {
     type: "user";
     text: string;
     images: string[];
+    at: string[];
     senderId: string;
     senderName: string;
     avatar: string;

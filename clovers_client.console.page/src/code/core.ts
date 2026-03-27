@@ -1,6 +1,7 @@
 import type { UserInfo, GroupInfo, ChatMessage, ConsoleMessage } from "./types";
 import { WebSocketClient } from "./websocket";
 import { systemMessage, chatMessage, chatWindow } from "./chat";
+import { appendGroupItem } from "./sidebar/group";
 import { setItem } from "./tools";
 
 export const defaultUserInfo: UserInfo = {
@@ -45,19 +46,25 @@ export class CloversManager {
             console.error(`Error parsing ${key}:`, error);
         }
     }
-    private static moveTop(list: any[], condition: (item: any) => boolean) {
-        if (list.length < 1) return false;
+    private static moveTop<T>(list: T[], condition: (item: T) => boolean) {
         const index = list.findIndex(condition);
         if (index === -1) return false;
-        const user = list[index];
-        list.splice(index, 1);
-        list.unshift(user);
+        const [item] = list.splice(index, 1);
+        list.unshift(item);
+        return true;
+    }
+
+    private static moveBottom<T>(list: T[], condition: (item: T) => boolean) {
+        const index = list.findIndex(condition);
+        if (index === -1) return false;
+        const [item] = list.splice(index, 1);
+        list.push(item);
         return true;
     }
 
     public setCurrentUser(userId: string) {
         if (!CloversManager.moveTop(this.userList, (user) => user.userId === userId)) {
-            this.userList.push({ ...defaultUserInfo, userId: userId });
+            this.userList.unshift({ ...defaultUserInfo, userId: userId });
         }
         this.currentUser = this.userList[0];
         localStorage.setItem("userId", userId);
@@ -65,7 +72,7 @@ export class CloversManager {
     }
     public setCurrentGroup(groupId: string) {
         if (!CloversManager.moveTop(this.groupList, (group) => group.groupId === groupId)) {
-            this.groupList.push({ ...defaultGroupInfo, groupId: groupId });
+            this.groupList.unshift({ ...defaultGroupInfo, groupId: groupId });
         }
         this.currentGroup = this.groupList[0];
         localStorage.setItem("groupId", groupId);
@@ -90,6 +97,14 @@ export class CloversManager {
             else this.setCurrentGroup("1");
         } else localStorage.setItem("groupList", JSON.stringify(this.groupList));
     }
+    public appendGroup(groupId: string) {
+        if (!CloversManager.moveBottom(this.groupList, (group) => group.groupId === groupId)) {
+            this.groupList.push({ ...defaultGroupInfo, groupId: groupId });
+        }
+        localStorage.setItem("groupList", JSON.stringify(this.groupList));
+        return this.groupList.at(-1)!;
+    }
+
 
     public userSave() {
         localStorage.setItem("userList", JSON.stringify(this.userList));
@@ -121,37 +136,42 @@ export class CloversManager {
                     const group = this.groupList.find((group) => group.groupId === groupId);
                     if (!group) return;
                     group.groupName = title;
-                    const strongElement = document.getElementById(`groupItem${groupId}`) as HTMLDivElement;
-                    if (!strongElement) return;
-                    setItem(strongElement, null, "none", msg, null);
+                    const groupItem = document.getElementById(`groupItem${groupId}`) as HTMLDivElement;
+                    if (!groupItem) return;
+                    setItem(groupItem, null, "none", msg, null);
                     return;
                 }
             }
         } else
             chatMessage(message, message.senderId == this.currentUser.userId).then((msg) => {
+                let status: "none" | "tip";
                 if (message.groupId === this.currentGroup.groupId) {
                     chatWindow.appendChild(msg);
                     chatWindow.scrollTop = chatWindow.scrollHeight;
+                    status = 'none';
                 } else {
-                    const strongElement = document.getElementById(`groupItem${message.groupId}`) as HTMLDivElement;
-                    if (!strongElement) return;
-                    setItem(strongElement, null, "tip", null, message.text);
+                    status = 'tip';
                 }
+                const groupItem = document.getElementById(`groupItem${message.groupId}`) || appendGroupItem(this, message.groupId);
+                setItem(groupItem as HTMLDivElement, null, status, null, `${message.senderName}:${message.text}`);
             });
     }
 
-    public send(text: string, images: string[] = []) {
+    public send(text: string, images: string[] = [], at: string[] = []) {
         const message: ChatMessage = {
             type: "user",
+            text: text,
+            images: images,
+            at: at,
             senderId: this.currentUser.userId,
             senderName: this.currentUser.userName,
             groupId: this.currentGroup.groupId,
             avatar: this.currentUser.avatar,
             groupAvatar: this.currentGroup.avatar,
             permission: this.currentUser.permission,
-            text: text,
-            images: images,
         };
+        const groupItem = document.getElementById(`groupItem${message.groupId}`) as HTMLDivElement;
+        if (groupItem) setItem(groupItem, null, 'busy', null, null);
         this.client.send(message);
     }
 }
