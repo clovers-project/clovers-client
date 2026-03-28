@@ -1,6 +1,7 @@
 import json
 import asyncio
 from pathlib import Path
+from functools import partial
 from fastapi import FastAPI, File, UploadFile, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,9 +9,9 @@ from clovers import Leaf, Client
 from clovers.logger import logger
 from clovers_client import init_logger
 from .adapter import __adapter__
-from .utils import md5
+from .utils import upload, int32_generator
 from .config import Config
-from .typing import MessageEvent, CONSOLE_PREFIX
+from .typing import ChatMessage, MessageEvent, CONSOLE_PREFIX
 
 
 PAGE_RESOURCE = Path(__file__).parent / "page"
@@ -30,6 +31,8 @@ class ConsoleClient(Leaf, Client):
         self.load_adapters_from_dirs(config.adapter_dirs)
         self.load_plugins_from_list(config.plugins)
         self.load_plugins_from_dirs(config.plugin_dirs)
+        # inner
+        self.message_id = int32_generator()
         # FastAPI
         self.host = config.host
         self.port = config.port
@@ -45,8 +48,7 @@ class ConsoleClient(Leaf, Client):
     async def upload(self, file: UploadFile = File(...)):
         if not file.content_type:
             return Response(status_code=400, content="Invalid Content-Type")
-        self.upload_file(await file.read())
-        return Response(status_code=200)
+        return Response(status_code=200, content=upload(self.load_dir, await file.read()))
 
     async def download(self, name: str, check: bool = Query(False)):
         filepath = self.load_dir / name
@@ -54,12 +56,16 @@ class ConsoleClient(Leaf, Client):
             return Response(status_code=404)
         return Response(status_code=200) if check else FileResponse(path=filepath)
 
-    def upload_file(self, data: bytes):
-        index = md5(data)
-        filepath = self.load_dir / index
-        if not filepath.exists():
-            filepath.write_bytes(data)
-        return f"/download/{index}"
+    def unicast(self, ws: WebSocket, data: ChatMessage):
+        data["messageId"] = next(self.message_id)
+        return ws.send_text(json.dumps(data))
+
+    def broadcast(self, data: ChatMessage):
+        data["messageId"] = next(self.message_id)
+        return self.boardcast_payload(json.dumps(data))
+
+    async def boardcast_payload(self, payload: str):
+        return await asyncio.gather(*(ws.send_text(payload) for ws in self.ws_connects), return_exceptions=True)
 
     async def websocket_handler(self, ws: WebSocket):
         await ws.accept()
@@ -68,14 +74,16 @@ class ConsoleClient(Leaf, Client):
         tasks: set[asyncio.Task] = set()
         try:
             while True:
-                receive_text = await ws.receive_text()
-                recv: MessageEvent = json.loads(receive_text)
+                recv: MessageEvent = json.loads(await ws.receive_text())
+                if recv["groupId"] == "private":
+                    send = partial(self.unicast, ws)
+                else:
+                    send = self.broadcast
+                if not recv["text"].startswith(CONSOLE_PREFIX):
+                    asyncio.create_task(send(recv))
                 recv["ip"] = ws.client.host if ws.client else None
                 recv["bot_nickname"] = self.BOT_NICKNAME
                 recv["bot_avatar"] = self.BOT_AVATAR_URL
-                send = ws.send_text if recv["groupId"] == "private" else self.broadcast
-                if not recv["text"].startswith(CONSOLE_PREFIX):
-                    asyncio.create_task(send(receive_text))
                 task = asyncio.create_task(self.response(recv=recv, send=send, load_dir=self.load_dir))
                 tasks.add(task)
                 task.add_done_callback(tasks.discard)
@@ -83,10 +91,14 @@ class ConsoleClient(Leaf, Client):
             logger.info("Client disconnected.")
         except Exception:
             logger.exception("Error in websocket_handler")
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
-        self.ws_connects.discard(ws)
-        logger.info(f"Client remaining: {len(self.ws_connects)}")
+        finally:
+            if tasks:
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
+            self.ws_connects.discard(ws)
+            logger.info(f"Client remaining: {len(self.ws_connects)}")
 
     def extract_message(self, recv: MessageEvent, **ignore):
         text = recv["text"]
@@ -98,11 +110,6 @@ class ConsoleClient(Leaf, Client):
         else:
             recv["to_me"] = False
         return recv["text"]
-
-    async def broadcast(self, data: str):
-        if not self.ws_connects:
-            return
-        await asyncio.gather(*(ws.send_text(data) for ws in self.ws_connects), return_exceptions=True)
 
     async def run(self):
         import uvicorn

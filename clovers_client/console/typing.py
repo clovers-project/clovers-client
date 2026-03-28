@@ -1,4 +1,4 @@
-from typing import TypedDict, Literal, Any
+from typing import TypedDict, Literal, Any, NotRequired
 from collections.abc import Callable, Coroutine
 
 
@@ -14,6 +14,7 @@ class ChatMessage(TypedDict):
     groupName: str
     groupAvatar: str
     permission: Literal["SuperUser", "Owner", "Admin", "Member"]
+    messageId: NotRequired[str]
 
 
 class ConsoleMessage(TypedDict):
@@ -21,7 +22,7 @@ class ConsoleMessage(TypedDict):
     data: list
 
 
-type SendFunction = Callable[[str], Coroutine[Any, Any, None]]
+type SendMethod = Callable[[ChatMessage | ConsoleMessage], Coroutine[Any, Any, None]]
 
 
 class MessageEvent(ChatMessage):

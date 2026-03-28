@@ -207,14 +207,18 @@ async function sendMessage(manager: CloversManager) {
     //     manager.currentGroup.flag = false;
     //     manager.send(`\x05\x03\x01title ${text.length > 60 ? text.substring(0, 60) + "..." : text}`);
     // }
-    const images = await manager.client.uploadFile(pendingImages);
-    manager.send(text, images, atbot ? [""] : []);
     messageInput.value = "";
-    pendingImages.length = 0;
     imageUpload.value = "";
     imagePreviewArea.innerHTML = "";
     imagePreviewArea.classList.remove("active");
     messageInput.focus();
+    const images = await manager.client.uploadFile(pendingImages);
+    manager.send(text, images, atbot ? [""] : []);
+    pendingImages.length = 0;
+
+
+
+
 }
 
 imageUpload.onchange = (event: Event) => {

@@ -29,3 +29,10 @@ def image_url(path: Path, url: str):
         return url
     data = download(path, url[len("/download/") :])
     return f"data:image/png;base64,{ b64encode(data).decode()}" if data else None
+
+
+def int32_generator():
+    i = 0
+    while True:
+        yield str(i)
+        i = (i + 1) & 0xFFFFFFFF

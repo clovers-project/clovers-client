@@ -5,20 +5,20 @@ from clovers import Adapter
 from clovers.logger import logger
 from clovers_client.result import FileLike, ListMessage, SegmentedMessage
 from .utils import upload, image_url
-from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendFunction
+from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
 
 
 __adapter__ = adapter = Adapter()
 
 
 @adapter.send_method("console")
-async def send_console(message: list[str], send: SendFunction):
+async def send_console(message: list[str], send: SendMethod):
     data: ConsoleMessage = {"type": "system", "data": message}
-    await send(json.dumps(data, separators=(",", ":")))
+    await send(data)
 
 
 @adapter.send_method("at")
-async def send_at(message: str, recv: MessageEvent, send: SendFunction):
+async def send_at(message: str, recv: MessageEvent, send: SendMethod):
     data: ChatMessage = {
         "type": "user",
         "text": "",
@@ -32,11 +32,11 @@ async def send_at(message: str, recv: MessageEvent, send: SendFunction):
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
-    await send(json.dumps(data, separators=(",", ":")))
+    await send(data)
 
 
 @adapter.send_method("text")
-async def send_text(message: str, recv: MessageEvent, send: SendFunction):
+async def send_text(message: str, recv: MessageEvent, send: SendMethod):
     data: ChatMessage = {
         "type": "user",
         "text": message,
@@ -50,7 +50,7 @@ async def send_text(message: str, recv: MessageEvent, send: SendFunction):
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
-    await send(json.dumps(data, separators=(",", ":")))
+    await send(data)
 
 
 def file2bytes(image: FileLike):
@@ -66,7 +66,7 @@ def file2bytes(image: FileLike):
 
 
 @adapter.send_method("image")
-async def send_image(message: FileLike, recv: MessageEvent, send: SendFunction, load_dir: Path):
+async def send_image(message: FileLike, recv: MessageEvent, send: SendMethod, load_dir: Path):
     data: ChatMessage = {
         "type": "user",
         "at": [],
@@ -80,11 +80,11 @@ async def send_image(message: FileLike, recv: MessageEvent, send: SendFunction, 
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
-    await send(json.dumps(data, separators=(",", ":")))
+    await send(data)
 
 
 @adapter.send_method("list")
-async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction, load_dir: Path):
+async def send_list(message: ListMessage, recv: MessageEvent, send: SendMethod, load_dir: Path):
     at: list[str] = []
     text: list[str] = []
     images: list[str] = []
@@ -110,11 +110,11 @@ async def send_list(message: ListMessage, recv: MessageEvent, send: SendFunction
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
-    await send(json.dumps(data, separators=(",", ":")))
+    await send(data)
 
 
 @adapter.send_method("segmented")
-async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: SendFunction, load_dir: Path):
+async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: SendMethod, load_dir: Path):
     async for result in message:
         match result.key:
             case "at":
