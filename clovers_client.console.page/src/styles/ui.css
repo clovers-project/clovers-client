@@ -79,7 +79,6 @@ body::after {
   top: 0;
   left: 0;
   width: 30%;
-  min-width: 240px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -132,6 +131,7 @@ body::after {
 @media (orientation: portrait) {
   .sidebar {
     transform: translateX(-100%);
+    min-width: 0;
   }
   .sidebar-empty {
     min-width: 0;
@@ -150,6 +150,7 @@ body::after {
 @media (orientation: landscape) {
   .sidebar {
     transform: translateX(0);
+    min-width: 240px;
   }
   .sidebar-empty {
     min-width: 240px;
