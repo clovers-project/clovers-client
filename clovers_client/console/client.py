@@ -33,8 +33,8 @@ class ConsoleClient(Leaf, Client):
         self.message_id = int32_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=100)
         self.BOT_NICKNAME = config.BOT_NICKNAME
-        self._length_bot_nickname = len(self.BOT_NICKNAME)
         self.BOT_AVATAR_URL = config.BOT_AVATAR_URL
+        self._length_bot_nickname = len(self.BOT_NICKNAME)
         # FastAPI
         self.host = config.host
         self.port = config.port

@@ -20,10 +20,10 @@ class OneBotV11Client(Leaf, Client):
         self.load_plugins_from_list(config.plugins)
         self.load_plugins_from_dirs(config.plugin_dirs)
         # inner
+        self.message_id = int32_generator()
         self.BOT_NICKNAME = config.BOT_NICKNAME
         self.SUPERUSERS = config.SUPERUSERS
         self._length_bot_nickname = len(self.BOT_NICKNAME)
-        self.message_id = int32_generator()
         # OneBot V11
         self.ws_url = config.ws_url
         self.ws_token = config.ws_token

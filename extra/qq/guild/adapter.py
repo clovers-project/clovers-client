@@ -3,13 +3,7 @@ from io import BytesIO
 from botpy.message import Message
 from botpy import Client
 from clovers import Adapter
-from .typing import ListResult, SegmentedResult, FileLike
-from .config import Config
-
-__config__ = Config.sync_config()
-
-BOT_NICKNAME = __config__.Bot_Nickname
-SUPERUSERS = __config__.superusers
+from clovers_client.result import FileLike, ListMessage, SegmentedMessage
 
 __adapter__ = adapter = Adapter("QQ Guild")
 
@@ -45,7 +39,7 @@ async def _(data: FileLike, event: Message):
 
 
 @adapter.send_method("list")
-async def _(data: ListResult, event: Message):
+async def _(data: ListMessage, event: Message):
     content = ""
     image = None
     for seg in data:
@@ -63,7 +57,7 @@ async def _(data: ListResult, event: Message):
 
 
 @adapter.send_method("segmented")
-async def _(data: SegmentedResult):
+async def _(data: SegmentedMessage):
     """发送分段信息"""
     async for seg in data:
         await adapter.sends_lib[seg.key](seg.data)
@@ -75,8 +69,8 @@ async def _(data: SegmentedResult):
 
 
 @adapter.property_method("Bot_Nickname")
-async def _():
-    return BOT_NICKNAME
+async def _(bot_name: str):
+    return bot_name
 
 
 @adapter.property_method("user_id")
@@ -118,10 +112,10 @@ async def _(event: Message):
 
 
 @adapter.property_method("permission")
-async def _(client: Client, event: Message):
+async def _(client: Client, event: Message, superusers: set[str]):
     user_id = event.author.id
     channel_id = event.channel_id
-    if user_id in SUPERUSERS:
+    if user_id in superusers:
         return 3
     data = await client.api.get_channel_user_permissions(channel_id=channel_id, user_id=user_id)
     match data["role_id"]:

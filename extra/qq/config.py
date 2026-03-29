@@ -27,18 +27,8 @@ class Intents(BaseModel):
     """音频事件"""
 
 
-class AdapterConfig(BaseModel):
-    enabled: bool = True
-    adapters: list[str] = []
-    adapter_dirs: list[str] = []
-
-
 class Config(BaseConfig):
-    Bot_Nickname: str = "Bot酱"
+    SUPERUSERS: set[str] = set()
     appid: str = ""
     secret: str = ""
     intents: Intents = Intents()
-    group_config: AdapterConfig = AdapterConfig(adapters=["clovers_client.qq.adapters.group"])
-    guild_config: AdapterConfig = AdapterConfig(adapters=["clovers_client.qq.adapters.guild"])
-    plugins: list[str] = []
-    plugin_dirs: list[str] = []

@@ -1,16 +1,10 @@
 from base64 import b64encode
 from pathlib import Path
 from io import BytesIO
+from enum import IntEnum
 from botpy.message import GroupMessage
 from clovers import Adapter
-from enum import IntEnum
-from .typing import ListResult, SegmentedResult, FileLike
-from .config import Config
-
-__config__ = Config.sync_config()
-
-BOT_NICKNAME = __config__.Bot_Nickname
-SUPERUSERS = __config__.superusers
+from clovers_client.result import FileLike, ListMessage, SegmentedMessage
 
 __adapter__ = adapter = Adapter("QQ Group")
 
@@ -61,7 +55,7 @@ async def _(data: str, event: GroupMessage):
 
 
 @adapter.send_method("list")
-async def _(data: ListResult, event: GroupMessage):
+async def _(data: ListMessage, event: GroupMessage):
     content = ""
     image = None
     for seg in data:
@@ -77,7 +71,7 @@ async def _(data: ListResult, event: GroupMessage):
 
 
 @adapter.send_method("segmented")
-async def _(data: SegmentedResult):
+async def _(data: SegmentedMessage):
     async for seg in data:
         await adapter.sends_lib[seg.key](seg.data)
 
@@ -88,8 +82,8 @@ async def _(data: SegmentedResult):
 
 
 @adapter.property_method("Bot_Nickname")
-async def _():
-    return BOT_NICKNAME
+async def _(bot_name: str):
+    return bot_name
 
 
 @adapter.property_method("user_id")
@@ -130,9 +124,9 @@ async def _(event: GroupMessage):
 
 
 @adapter.property_method("permission")
-async def _(event: GroupMessage):
+async def _(event: GroupMessage, superusers: set[str]):
     user_id = event.author.member_openid
-    if user_id in SUPERUSERS:
+    if user_id in superusers:
         return 3
     return 0
 

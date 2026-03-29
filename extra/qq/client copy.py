@@ -1,14 +1,14 @@
 import botpy
 from botpy.message import Message, GroupMessage
 from clovers import Leaf, Client
-from .config import Config
+from ..config import Config
 
 
 class GroupBot(Leaf):
     def __init__(self, config: Config):
         super().__init__("QQ Group")
-        self.load_adapters_from_list(config.group_config.adapters)
-        self.load_adapters_from_dirs(config.group_config.adapter_dirs)
+        self.load_adapters_from_list(config.adapters)
+        self.load_adapters_from_dirs(config.adapter_dirs)
         self.load_plugins_from_list(config.plugins)
         self.load_plugins_from_dirs(config.plugin_dirs)
 
@@ -22,8 +22,8 @@ class GroupBot(Leaf):
 class GuildBot(Leaf):
     def __init__(self, config: Config):
         super().__init__("QQ Guild")
-        self.load_adapters_from_list(config.guild_config.adapters)
-        self.load_adapters_from_dirs(config.guild_config.adapter_dirs)
+        self.load_adapters_from_list(config.adapters)
+        self.load_adapters_from_dirs(config.adapter_dirs)
         self.load_plugins_from_list(config.plugins)
         self.load_plugins_from_dirs(config.plugin_dirs)
 
@@ -51,7 +51,7 @@ class QQBot(botpy.Client):
 class QQBotClient(Client):
     def __init__(self, config: Config = Config.sync_config()):
         super().__init__()
-        self.BOT_NICKNAME = config.Bot_Nickname
+        self.BOT_NICKNAME = config.BOT_NICKNAME
         self._length_bot_nickname = len(self.BOT_NICKNAME)
         self.name = "QQBotSDK"
         self.appid = config.appid
@@ -59,7 +59,6 @@ class QQBotClient(Client):
         self.bot = QQBot(
             GuildBot(config) if config.guild_config.enabled else None,
             GroupBot(config) if config.group_config.enabled else None,
-            botpy.Intents(**config.intents.model_dump()),
         )
 
     def initialize_plugins(self):
