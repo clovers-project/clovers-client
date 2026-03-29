@@ -135,6 +135,7 @@ function groupInfoTemplate(manager: CloversManager, group: GroupInfo, { backdrop
         group.groupName = (content.querySelector("#groupName") as HTMLInputElement).value.trim();
         group.avatar = (content.querySelector("#groupAvatarUrl") as HTMLInputElement).value.trim();
         const groupItem = document.getElementById(`groupItem${groupId}`)! as HTMLDivElement;
+        groupItem.id = `groupItem${groupId}`;
         setItem(groupItem, group.avatar, "none", group.groupName, "Group Info Updated");
         document.body.removeChild(backdrop);
         manager.groupSave();
