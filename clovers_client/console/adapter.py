@@ -176,7 +176,7 @@ async def _(recv: MessageEvent) -> int:
 
 @adapter.property_method("to_me")
 async def _(recv: MessageEvent) -> bool:
-    return recv["to_me"] or "" in recv["at"]
+    return recv["to_me"] or (recv["bot_nickname"] in recv["at"])
 
 
 @adapter.property_method("at")

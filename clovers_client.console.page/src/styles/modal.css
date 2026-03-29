@@ -12,7 +12,7 @@
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--standard-bg-dark);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -40,7 +40,7 @@
 }
 
 .modal-content {
-  padding: 20px;
+  padding: 24px;
 }
 
 #roundBtn {
@@ -60,7 +60,7 @@
 
 .modal-item label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: var(--gap-x1);
   font-weight: 600;
   font-size: 0.95em;
   color: var(--text-primary);
@@ -68,11 +68,11 @@
 
 .modal-item input,
 .modal-item select {
-  margin-bottom: 20px;
   width: 100%;
+  margin-bottom: var(--gap-x3);
   height: var(--modal-content-line-height);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-small);
+  border-radius: var(--radius-tiny);
   font-size: 1em;
   background-color: #f8f9fa;
   color: var(--text-primary);
@@ -95,7 +95,7 @@
 .modal-buttons {
   display: flex;
   flex-direction: row;
-  gap: 12px;
+  gap: var(--gap-x2);
   justify-content: flex-end;
 }
 
@@ -109,14 +109,11 @@
   height: var(--modal-content-line-height);
   width: var(--modal-content-button-width);
   border: none;
-  border-radius: var(--radius-normal);
+  border-radius: var(--radius-small);
   cursor: pointer;
-  /* 关键：统一使用 Flex 居中 */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  /* 关键：统一文字样式 */
   font-size: 0.95em;
   font-weight: 600;
   text-align: center;
@@ -134,14 +131,14 @@
   color: #ccc;
 }
 .delete-all-button:hover {
-  color: #dc3545;
+  color: var(--border-focus-error);
   background: var(--item-select-color);
 }
 
 .error-message {
   position: absolute;
   left: 0;
-  bottom: 4px;
+  bottom: var(--gap-half);
   padding: 0;
   margin: 0;
   color: var(--border-focus-error);

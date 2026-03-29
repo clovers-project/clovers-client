@@ -1,10 +1,4 @@
 @import url("./base.css");
-:root {
-  --item-padding: 12px 12px;
-  --item-padding-large: 16px 12px;
-  --item-select-color: rgba(0, 0, 0, 0.1);
-}
-
 .itemlist-title,
 .itemlist-item {
   display: flex;
@@ -14,11 +8,11 @@
   color: var(--text-primary);
 }
 .itemlist-title {
-  padding: var(--item-padding-large);
+  padding: var(--padding-x4) var(--padding-x3);
 }
 
 .itemlist-item {
-  padding: var(--item-padding);
+  padding: var(--padding-x3);
   min-height: 0;
 }
 
@@ -27,7 +21,7 @@
 }
 
 .itemlist-item:hover {
-  background: var(--item-select-color);
+  background: var(--darken-color);
 }
 
 .itemlist-item .tool-btn {
@@ -43,23 +37,15 @@
   width: 40px;
   height: 40px;
   vertical-align: middle;
-  padding-right: 12px;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
+  padding-right: var(--gap-x1);
 }
 
 .status-badge {
   position: absolute;
   bottom: 0;
-  right: 12px;
-  width: 10px;
-  height: 10px;
+  right: var(--gap-x1);
+  width: var(--radius-normal);
+  height: var(--radius-normal);
   border-radius: 50%;
   box-sizing: border-box;
   z-index: 1;
@@ -87,10 +73,6 @@
   display: none;
 }
 
-.avatar {
-  background-color: #ccc;
-}
-
 .itemlist-item-info {
   display: flex;
   flex-direction: column;
@@ -100,6 +82,7 @@
   flex-grow: 1;
   flex-shrink: 1;
 }
+
 .itemlist-item-info strong,
 .itemlist-item-info small {
   display: block;

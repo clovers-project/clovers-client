@@ -2,6 +2,7 @@ import json
 import asyncio
 from pathlib import Path
 from functools import partial
+from collections import deque
 from fastapi import FastAPI, File, UploadFile, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -33,6 +34,7 @@ class ConsoleClient(Leaf, Client):
         self.load_plugins_from_dirs(config.plugin_dirs)
         # inner
         self.message_id = int32_generator()
+        self.messages: deque[tuple[str, str]] = deque(maxlen=100)
         # FastAPI
         self.host = config.host
         self.port = config.port
@@ -43,6 +45,7 @@ class ConsoleClient(Leaf, Client):
         self.app.websocket("/ws")(self.websocket_handler)
         self.app.post("/upload")(self.upload)
         self.app.get("/download/{name}")(self.download)
+        self.app.get("/message/{message_id}")(self.find_message)
         self.app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
 
     async def upload(self, file: UploadFile = File(...)):
@@ -56,13 +59,23 @@ class ConsoleClient(Leaf, Client):
             return Response(status_code=404)
         return Response(status_code=200) if check else FileResponse(path=filepath)
 
+    async def find_message(self, message_id: str):
+        message = next((msg for msg_id, msg in self.messages if msg_id == message_id), None)
+        if message is None:
+            return Response(status_code=404)
+        return Response(status_code=200, content=message, media_type="application/json")
+
     def unicast(self, ws: WebSocket, data: ChatMessage):
         data["messageId"] = next(self.message_id)
-        return ws.send_text(json.dumps(data))
+        payload = json.dumps(data)
+        self.messages.append((data["messageId"], payload))
+        return ws.send_text(payload)
 
     def broadcast(self, data: ChatMessage):
         data["messageId"] = next(self.message_id)
-        return self.boardcast_payload(json.dumps(data))
+        payload = json.dumps(data)
+        self.messages.append((data["messageId"], payload))
+        return self.boardcast_payload(payload)
 
     async def boardcast_payload(self, payload: str):
         return await asyncio.gather(*(ws.send_text(payload) for ws in self.ws_connects), return_exceptions=True)
@@ -79,6 +92,11 @@ class ConsoleClient(Leaf, Client):
                     send = partial(self.unicast, ws)
                 else:
                     send = self.broadcast
+                if recv["at"] and recv["at"][-1] == "":
+                    del recv["at"][-1]
+                    recv["to_me"] = True
+                else:
+                    recv["to_me"] = False
                 if not recv["text"].startswith(CONSOLE_PREFIX):
                     asyncio.create_task(send(recv))
                 recv["ip"] = ws.client.host if ws.client else None
@@ -102,14 +120,12 @@ class ConsoleClient(Leaf, Client):
 
     def extract_message(self, recv: MessageEvent, **ignore):
         text = recv["text"]
-        message = " ".join(f"@[{at}]" for at in recv["at"]) + text + "".join(f"[image]({image})" for image in recv["images"])
+        message = "".join(f"@{at} " for at in recv["at"]) + text + "".join(f"[image]({image})" for image in recv["images"])
         logger.info(f"[{recv["senderId"]}][{recv["groupId"]}]: {message}")
         if text.startswith(self.BOT_NICKNAME):
-            recv["text"] = text[self._length_bot_nickname :].lstrip()
+            text = text[self._length_bot_nickname :].lstrip()
             recv["to_me"] = True
-        else:
-            recv["to_me"] = False
-        return recv["text"]
+        return text
 
     async def run(self):
         import uvicorn

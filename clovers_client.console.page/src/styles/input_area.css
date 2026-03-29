@@ -1,13 +1,6 @@
 @import url("./base.css");
 @import url("./chat.css");
 
-.input-area {
-  flex-shrink: 0;
-  padding: 15px;
-  background: transparent;
-  background-color: var(--standard-bg);
-}
-
 /* 工具栏 */
 .toolbar {
   display: flex;

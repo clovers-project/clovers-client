@@ -25,7 +25,6 @@
   background-color: var(--standard-bg);
   padding: 0.225em 0.725em;
   border-radius: var(--radius-small);
-  font-size: 0.85rem;
 }
 
 .message-content table {
@@ -88,8 +87,9 @@
 
 .code-block-copy {
   position: absolute;
-  bottom: 8px;
-  right: 12px;
+  bottom: var(--gap-half);
+  right: var(--gap-half);
+  border-radius: var(--gap-half);
   font-size: 0.68rem;
   color: var(--text-blue);
   cursor: pointer;
@@ -97,7 +97,6 @@
   transition: var(--bezier-responsive);
   background: var(--heavier-bg);
   padding: 0.16em 0.66em;
-  border-radius: 4px;
 }
 
 .code-block:hover .code-block-copy {

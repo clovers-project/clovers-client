@@ -17,6 +17,7 @@ export interface ChatMessage {
     text: string;
     images: string[];
     at: string[];
+    reply: string | null;
     senderId: string;
     senderName: string;
     avatar: string;
@@ -24,6 +25,7 @@ export interface ChatMessage {
     groupName: string;
     groupAvatar: string;
     permission: "SuperUser" | "Owner" | "Admin" | "Member";
+    messageId?: string;
 }
 
 type ConsoleMessageData = [string, string, string]

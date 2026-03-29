@@ -1,36 +1,62 @@
 :root {
-  --main-bg: linear-gradient(45deg, #dde8ff 0%, #ddfeff 100%);
+  --lite-bg: rgba(255, 255, 255, 0.3);
   --standard-bg: rgba(255, 255, 255, 0.5);
-  --heavier-bg: rgba(255, 255, 255, 0.8);
+  --heavier-bg: rgba(255, 255, 255, 0.7);
 
-  --border-color: rgba(200, 200, 200, 0.6);
+  --lite-bg-dark: rgba(0, 0, 0, 0.3);
+  --standard-bg-dark: rgba(0, 0, 0, 0.5);
+  --heavier-bg-dark: rgba(0, 0, 0, 0.7);
+
+  --border-color: #ccc;
   --border-focus: #4895ef;
   --border-focus-error: #ff4d4f;
+
   --text-primary: #212529;
   --text-secondary: #595c5e;
   --text-blue: #0057ba;
-  /* 阴影和圆角 */
+  --text-green: #007d32;
+  --text-red: #d32f2f;
+
   --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.1);
   --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.2);
   --shadow-large: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  --padding-x1: 4px;
+  --padding-x2: 8px;
+  --padding-x3: 12px;
+  --padding-x4: 16px;
+
+  --gap-half: 4px;
+  --gap-x1: 8px;
+  --gap-x2: 16px;
+  --gap-x3: 24px;
+
+  --radius-tiny: 4px;
   --radius-small: 8px;
   --radius-normal: 12px;
   --radius-large: 16px;
+
+  --darken-color: rgba(0, 0, 0, 0.1);
+  --lighten-color: rgba(255, 255, 255, 0.9);
+
   --bezier-responsive: 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  --frosted-glass: blur(2px) saturate(120%);
 }
 
 html {
   margin: 0;
   padding: 0;
   height: 100vh;
-  background: var(--main-bg);
+  background: linear-gradient(45deg, #dde8ff 0%, #ddfeff 100%);
   color: var(--text-primary);
 }
+
 body {
   height: 100%;
   margin: 0;
   padding: 0;
 }
+
 body,
 html {
   font-family:
@@ -44,7 +70,7 @@ hr {
   margin: 0 12px;
   border: none;
   height: 1px;
-  background-color: #ccc;
+  background-color: var(--border-color);
 }
 
 @keyframes fadeIn {

@@ -12,7 +12,7 @@ const imageUpload = document.getElementById("imageUpload") as HTMLInputElement;
 const imagePreviewArea = document.getElementById("imagePreviewArea") as HTMLDivElement;
 const clearBtn = document.getElementById("clearBtn") as HTMLButtonElement;
 const atBtn = document.getElementById("atBtn") as HTMLButtonElement;
-
+const mentionStatusArea = document.getElementById('mentionStatusArea') as HTMLDivElement;
 
 const dbPromise = openDB("ChatAppDB", 1, {
     upgrade(db) {
@@ -105,19 +105,145 @@ function renderImagePreview(file: File, index: number): void {
     reader.readAsDataURL(file);
 }
 function removeImage(index: number): void {
-    pendingImages.splice(index, 1);
+    chatManager.pendingImages.splice(index, 1);
     // 重新渲染预览区
     imagePreviewArea.innerHTML = "";
-    if (pendingImages.length > 0) {
-        pendingImages.forEach((file, newIndex) => renderImagePreview(file, newIndex));
+    if (chatManager.pendingImages.length > 0) {
+        chatManager.pendingImages.forEach((file, newIndex) => renderImagePreview(file, newIndex));
     } else {
         imagePreviewArea.classList.remove("active");
     }
 }
 
-export async function chatMessage(msg: ChatMessage, is_self: boolean = false) {
+const updateMentionUI = () => {
+    mentionStatusArea.innerHTML = '';
+    if (chatManager.replay) {
+        const tag = document.createElement('div');
+        tag.className = 'status-tag reply';
+        tag.innerHTML = `<span>回复消息: ${chatManager.replay}</span>`;
+        const btn = document.createElement('span');
+        btn.className = 'close-btn';
+        btn.innerHTML = '×';
+        tag.appendChild(btn);
+        btn.onclick = () => {
+            chatManager.replay = null;
+            tag.remove();
+        };
+        mentionStatusArea.appendChild(tag);
+    }
+    chatManager.at_list.forEach((userId) => {
+        const userName = chatManager.UserStubs.get(userId) || userId;
+        const tag = document.createElement('div');
+        tag.className = 'status-tag';
+        tag.innerHTML = `<span>@ ${userName}</span>`;
+        const btn = document.createElement('span');
+        btn.className = 'close-btn';
+        btn.innerHTML = '×';
+        tag.appendChild(btn);
+        btn.onclick = () => {
+            const index = chatManager.at_list.indexOf(userId);
+            if (index !== -1) { chatManager.at_list.splice(index, 1) }
+            updateMentionUI();
+        };
+        mentionStatusArea.appendChild(tag);
+    });
+};
+
+function showContextMenu(x: number, y: number, message: HTMLDivElement) {
+    const oldMenu = document.querySelector(".context-menu");
+    if (oldMenu) oldMenu.remove();
+    const menu = document.createElement("div");
+    menu.className = "context-menu";
+    const senderId = message.dataset.senderId!;
+    const userName = chatManager.UserStubs.get(senderId) || senderId;
+    const options = [
+        {
+            label: `@ ${userName}`, action: () => {
+                if (chatManager.at_list.includes(senderId)) return;
+                chatManager.at_list.push(senderId);
+                updateMentionUI();
+                messageInput.focus();
+            }
+        },
+        {
+            label: "回复", action: () => {
+                chatManager.replay = message.id;
+                if (!chatManager.at_list.includes(senderId)) chatManager.at_list.push(senderId);
+                updateMentionUI();
+                messageInput.focus();
+            }
+        },
+        {
+            label: "删除", action: () => {
+                message.remove();
+                const groupId = message.dataset.groupId;
+                if (!groupId) return;
+                chatHistoryStorage.delete(groupId).then(() => { chatHistoryStorage.append(groupId, chatWindow.innerHTML); })
+            }
+        },
+    ];
+    const closeMenu = (e: MouseEvent) => {
+        if (menu.contains(e.target as Node)) return;
+        menu.remove();
+        document.removeEventListener("mousedown", closeMenu);
+    };
+    options.forEach(opt => {
+        const item = document.createElement("div");
+        item.className = "menu-item";
+        item.textContent = opt.label;
+        item.onclick = (e) => {
+            e.stopPropagation();
+            opt.action();
+            menu.remove();
+            document.removeEventListener("mousedown", closeMenu);
+        };
+        menu.appendChild(item);
+    });
+    document.body.appendChild(menu);
+    menu.style.left = `${x + menu.offsetWidth > window.innerWidth ? x - menu.offsetWidth : x}px`;
+    menu.style.top = `${y + menu.offsetHeight > window.innerHeight ? y - menu.offsetHeight : y}px`;
+    menu.style.visibility = "visible"; // 计算完位置后再显示
+    menu.classList.add("show");
+    document.addEventListener("mousedown", closeMenu);
+}
+
+function createReplyMessage(messageId: string) {
     const message = document.createElement("div");
+    message.className = "quote-message";
+    const replyMessage = document.getElementById(messageId);
+    const quoteSender = document.createElement("div");
+    quoteSender.className = "quote-sender";
+    const quoteText = document.createElement("div");
+    quoteText.className = "quote-text";
+    if (replyMessage) {
+        message.onclick = () => {
+            replyMessage.scrollIntoView({ behavior: "smooth", block: "center" });
+        };
+        quoteSender.textContent = replyMessage.querySelector(".username")?.textContent || "未知用户";
+        const rawText = replyMessage.querySelector(".message-content")?.textContent;
+        if (rawText) {
+            const index = rawText.indexOf("\n");
+            quoteText.textContent = index !== -1 ? rawText.substring(0, index) : rawText;
+        } else {
+            quoteText.textContent = "无法显示消息内容";
+        }
+    } else {
+        quoteSender.textContent = "未知用户";
+        quoteText.textContent = "引用的消息已被删除";
+    }
+    message.appendChild(quoteSender);
+    message.appendChild(quoteText);
+    return message;
+}
+
+export async function chatMessage(msg: ChatMessage, is_self: boolean = false) {
+    chatManager.UserStubs.set(msg.senderId, msg.senderName);
+    chatManager.GroupStubs.set(msg.groupId, msg.groupName);
+    const message = document.createElement("div");
+    message.id = msg.messageId!;
     message.className = "message";
+    message.dataset.senderId = msg.senderId;
+    message.dataset.groupId = msg.groupId;
     const messageElement = document.createElement("div");
     messageElement.className = "message-column";
     // 用户消息
@@ -147,7 +273,12 @@ export async function chatMessage(msg: ChatMessage, is_self: boolean = false) {
     content.className = "message-content";
     // 文本内容
     if (msg.text) {
-        content.innerHTML = await marked.parse(msg.text.trim(), { renderer });
+        const at = msg.at.map(id => `@${chatManager.UserStubs.get(id) || id} `).join("");
+        content.innerHTML = await marked.parse(at + msg.text.trim(), { renderer });
+    }
+    // 回复消息
+    if (msg.reply) {
+        content.prepend(createReplyMessage(msg.reply));
     }
     // 图片内容
     if (msg.images.length > 0) {
@@ -157,14 +288,6 @@ export async function chatMessage(msg: ChatMessage, is_self: boolean = false) {
             img.src = imgUrl;
             img.alt = "聊天图片";
             img.loading = "lazy";
-            // 添加点击查看大图的事件
-            img.onclick = () => {
-                const backdrop = document.createElement("div");
-                backdrop.className = "backdrop";
-                backdrop.onclick = () => document.body.removeChild(backdrop);
-                backdrop.innerHTML = `<img src="${imgUrl}" style="max-width: 100%; max-height: 100%;">`;
-                document.body.appendChild(backdrop);
-            };
             content.appendChild(img);
         });
     }
@@ -182,27 +305,51 @@ export function systemMessage(text: string) {
     return message;
 }
 
-const pendingImages: File[] = [];
-let atbot = false;
-const switchAt = () => {
-    if (atbot) {
-        atbot = false;
-        chatWindow.appendChild(systemMessage("已关闭 @BOT"));
-        atBtn.classList.remove("active");
-        localStorage.setItem("atbot", "false");
-    } else {
-        atbot = true;
-        chatWindow.appendChild(systemMessage("已开启 @BOT"));
-        atBtn.classList.add("active");
-        localStorage.setItem("atbot", "true");
-    }
 
-};
-atBtn.onclick = switchAt;
+class ChatManager {
+    public readonly pendingImages: File[]
+    public readonly at_list: string[]
+    public readonly UserStubs: Map<string, string>;
+    public readonly GroupStubs: Map<string, string>;
+    public atbot: boolean
+    public replay: string | null
+    constructor() {
+        this.pendingImages = [];
+        this.at_list = [];
+        this.atbot = false;
+        this.replay = null;
+        this.UserStubs = new Map();
+        this.GroupStubs = new Map();
+    }
+    public switchAt = () => {
+        if (this.atbot) {
+            this.atbot = false;
+            atBtn.classList.remove("active");
+            localStorage.setItem("atbot", "false");
+        } else {
+            this.atbot = true;
+            atBtn.classList.add("active");
+            localStorage.setItem("atbot", "true");
+        }
+        messageInput.focus();
+
+    };
+    public clear() {
+        this.pendingImages.length = 0;
+        this.at_list.length = 0;
+        this.atbot = false;
+        this.replay = null;
+    }
+}
+const chatManager = new ChatManager();
+
+atBtn.onclick = chatManager.switchAt;
 
 async function sendMessage(manager: CloversManager) {
     const text = messageInput.value.trim();
-    if (!text && pendingImages.length === 0) return;
+    const images = chatManager.pendingImages.length === 0 ? [] : await manager.client.uploadFile(chatManager.pendingImages);
+    const at = [...chatManager.at_list]
+    if (!text && images.length === 0 && at.length === 0) return;
     // if (manager.currentGroup.flag) {
     //     manager.currentGroup.flag = false;
     //     manager.send(`\x05\x03\x01title ${text.length > 60 ? text.substring(0, 60) + "..." : text}`);
@@ -212,13 +359,10 @@ async function sendMessage(manager: CloversManager) {
     imagePreviewArea.innerHTML = "";
     imagePreviewArea.classList.remove("active");
     messageInput.focus();
-    const images = await manager.client.uploadFile(pendingImages);
-    manager.send(text, images, atbot ? [""] : []);
-    pendingImages.length = 0;
-
-
-
-
+    if (chatManager.atbot) { at.push("") }
+    manager.send(text, images, at, chatManager.replay);
+    chatManager.clear();
+    updateMentionUI();
 }
 
 imageUpload.onchange = (event: Event) => {
@@ -226,11 +370,11 @@ imageUpload.onchange = (event: Event) => {
     if (files === null) return;
     for (let i = 0; i < files.length; i++) {
         if (files[i].type.startsWith("image/")) {
-            pendingImages.push(files[i]);
+            chatManager.pendingImages.push(files[i]);
         }
     }
     imagePreviewArea.innerHTML = "";
-    pendingImages.forEach((file, index) => renderImagePreview(file, index));
+    chatManager.pendingImages.forEach((file, index) => renderImagePreview(file, index));
     imagePreviewArea.classList.add("active");
 };
 
@@ -246,7 +390,6 @@ export function init(manager: CloversManager) {
             sendMessage(manager);
         }
     };
-
     sendBtn.onclick = () => {
         messageInput.style.height = "auto";
         sendMessage(manager);
@@ -259,6 +402,27 @@ export function init(manager: CloversManager) {
         manager.groupSave();
         chatWindow.appendChild(systemMessage("聊天记录已清空"));
     };
-    atbot = localStorage.getItem("atbot") === "false";
-    switchAt();
+    chatManager.atbot = localStorage.getItem("atbot") === "true";
+    if (chatManager.atbot) atBtn.classList.add("active");
+    chatWindow.oncontextmenu = (e) => {
+        const target = e.target as HTMLElement;
+        const message = target.closest(".message") as HTMLDivElement;
+        if (!message) return;
+        e.preventDefault();
+        showContextMenu(e.clientX, e.clientY, message);
+
+    };
+    chatWindow.onclick = (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains("message-image-item")) {
+            const imgUrl = (target as HTMLImageElement).src;
+            const backdrop = document.createElement("div");
+            backdrop.className = "backdrop";
+            backdrop.onclick = () => backdrop.remove();
+            backdrop.innerHTML = `<img src="${imgUrl}" style="max-width: 100%; max-height: 100%;">`;
+            document.body.appendChild(backdrop);
+        }
+    };
 }
+
+

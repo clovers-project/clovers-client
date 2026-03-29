@@ -40,7 +40,7 @@ export class WebSocketClient {
     private upload_url: string;
     private download_url: string;
     constructor(receiveHandle: (message: ChatMessage | ConsoleMessage) => void) {
-        this.ws_url = `/ws`;
+        this.ws_url = `ws://localhost:11000/ws`;
         this.upload_url = `/upload`;
         this.download_url = `/download`;
         this.receiveHandle = receiveHandle;

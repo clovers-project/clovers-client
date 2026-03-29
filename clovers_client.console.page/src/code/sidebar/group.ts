@@ -22,14 +22,10 @@ function hideSideBar(e: PointerEvent) {
 groupListBtn.onclick = showSideBar;
 document.addEventListener('click', (e) => { hideSideBar(e); });
 
-function renderGroupList(manager: CloversManager) {
-    sideBarContent.innerHTML = "";
-    manager.groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(manager, group)));
-}
-
 export function appendGroupItem(manager: CloversManager, message: ChatMessage) {
     const group = manager.appendGroup(message.groupId);
     group.avatar = message.groupAvatar;
+    group.groupName = message.groupName;
     const groupItem = renderGroupItem(manager, group);
     sideBarContent.appendChild(groupItem)
     return groupItem;
@@ -49,7 +45,8 @@ export function init(manager: CloversManager) {
     };
     sideBarTitle.appendChild(addGroupBtn);
     setItem(sideBarTitle, manager.currentUser.avatar, null, manager.currentUser.userName, null)
-    renderGroupList(manager)
+    sideBarContent.innerHTML = "";
+    manager.groupList.forEach((group) => sideBarContent.appendChild(renderGroupItem(manager, group)));
 }
 
 function showGroupChatHistory(groupId: string, info?: string) {
@@ -134,14 +131,25 @@ function groupInfoTemplate(manager: CloversManager, group: GroupInfo, { backdrop
         group.groupId = groupId;
         group.groupName = (content.querySelector("#groupName") as HTMLInputElement).value.trim();
         group.avatar = (content.querySelector("#groupAvatarUrl") as HTMLInputElement).value.trim();
-        renderGroupList(manager)
+        const groupItem = document.getElementById(`groupItem${groupId}`)! as HTMLDivElement;
+        setItem(groupItem, group.avatar, "none", group.groupName, "Group Info Updated");
         document.body.removeChild(backdrop);
         manager.groupSave();
     };
     cancelBtn.onclick = () => document.body.removeChild(backdrop);
     deleteBtn.onclick = () => {
-        manager.deleteGroup(group.groupId);
-        renderGroupList(manager)
+        const groupItem = document.getElementById(`groupItem${group.groupId}`)! as HTMLDivElement;
+        groupItem.remove();
+        if (manager.currentGroup.groupId === group.groupId) {
+            manager.deleteGroup(group.groupId);
+            showGroupChatHistory(manager.currentGroup.groupId, `当前聊天「${manager.currentGroup.groupName}」`);
+            if (!document.getElementById(`groupItem${manager.currentGroup.groupId}`)) {
+                sideBarContent.appendChild(renderGroupItem(manager, manager.currentGroup));
+            }
+        } else {
+            manager.deleteGroup(group.groupId);
+        }
+        chatHistoryStorage.delete(group.groupId);
         document.body.removeChild(backdrop);
     };
     const groupAvatarUpload = content.querySelector("#groupAvatarUpload") as HTMLInputElement;
