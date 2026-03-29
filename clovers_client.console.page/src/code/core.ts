@@ -154,12 +154,16 @@ export class CloversManager {
             }
         } else
             chatMessage(message, message.senderId == this.currentUser.userId).then((msg) => {
+                let status: "none" | "tip";
                 if (message.groupId === this.currentGroup.groupId) {
                     chatWindow.appendChild(msg);
                     chatWindow.scrollTop = chatWindow.scrollHeight;
+                    status = "none"
+                } else {
+                    status = "tip"
                 }
                 const groupItem = document.getElementById(`groupItem${message.groupId}`) || appendGroupItem(this, message);
-                setItem(groupItem as HTMLDivElement, message.groupAvatar, 'none', message.groupName, `${message.senderName}: ${message.text}`);
+                setItem(groupItem as HTMLDivElement, message.groupAvatar, status, message.groupName, `${message.senderName}: ${message.text}`);
             });
     }
     public send(text: string, images: string[] = [], at: string[] = [], reply: string | null = null) {
