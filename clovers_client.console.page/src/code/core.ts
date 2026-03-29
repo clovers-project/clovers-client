@@ -172,7 +172,7 @@ export class CloversManager {
                     group.groupName = message.groupName;
                 }
                 if (flag) this.groupSave();
-                setItem(groupItem as HTMLDivElement, message.groupAvatar, status, message.groupName, `${message.senderName}: ${message.text}`);
+                setItem(groupItem as HTMLDivElement, group.avatar, status, group.groupName, `${message.senderName}: ${message.text}`);
             });
     }
     public send(text: string, images: string[] = [], at: string[] = [], reply: string | null = null) {
