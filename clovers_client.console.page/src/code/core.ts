@@ -102,7 +102,6 @@ export class CloversManager {
         if (!CloversManager.moveBottom(this.userList, (user) => user.userId === userId)) {
             this.userList.push({ ...defaultUserInfo, userId: userId });
         }
-        localStorage.setItem("userList", JSON.stringify(this.userList));
         return this.userList.at(-1)!;
     }
 
@@ -110,7 +109,6 @@ export class CloversManager {
         if (!CloversManager.moveBottom(this.groupList, (group) => group.groupId === groupId)) {
             this.groupList.push({ ...defaultGroupInfo, groupId: groupId });
         }
-        localStorage.setItem("groupList", JSON.stringify(this.groupList));
         return this.groupList.at(-1)!;
     }
 
@@ -163,6 +161,17 @@ export class CloversManager {
                     status = "tip"
                 }
                 const groupItem = document.getElementById(`groupItem${message.groupId}`) || appendGroupItem(this, message);
+                const group = this.groupList.find((group) => group.groupId === message.groupId)!;
+                let flag = false;
+                if (message.groupAvatar && group.avatar !== message.groupAvatar) {
+                    flag = true;
+                    group.avatar = message.groupAvatar;
+                }
+                if (message.groupName && message.groupName != defaultGroupInfo.groupName && group.groupName !== message.groupName) {
+                    flag = true;
+                    group.groupName = message.groupName;
+                }
+                if (flag) this.groupSave();
                 setItem(groupItem as HTMLDivElement, message.groupAvatar, status, message.groupName, `${message.senderName}: ${message.text}`);
             });
     }

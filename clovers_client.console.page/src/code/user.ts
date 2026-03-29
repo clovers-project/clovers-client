@@ -132,6 +132,7 @@ function renderUserList(manager: CloversManager, { backdrop, modal } = creatModa
         const userId = Date.now().toString();
         if (manager.hasUser(userId)) return;
         manager.appendUser(userId);
+        manager.groupSave();
         modal.innerHTML = "";
         renderUserList(manager, { backdrop, modal });
     };

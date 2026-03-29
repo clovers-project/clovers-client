@@ -26,6 +26,7 @@ export function appendGroupItem(manager: CloversManager, message: ChatMessage) {
     const group = manager.appendGroup(message.groupId);
     group.avatar = message.groupAvatar;
     group.groupName = message.groupName;
+    manager.groupSave();
     const groupItem = renderGroupItem(manager, group);
     sideBarContent.appendChild(groupItem)
     return groupItem;
@@ -40,6 +41,7 @@ export function init(manager: CloversManager) {
         const groupId = Date.now().toString();
         if (manager.hasGroup(groupId)) return;
         const group = manager.appendGroup(groupId);
+        manager.groupSave();
         const groupItem = renderGroupItem(manager, group);
         sideBarContent.appendChild(groupItem)
     };
