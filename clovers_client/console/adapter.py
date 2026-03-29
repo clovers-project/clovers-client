@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from io import BytesIO
 from clovers import Adapter

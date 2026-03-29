@@ -1,5 +1,5 @@
 from .typing import CONSOLE_PREFIX
-from .client import ConsoleClient
+from .client import ConsoleClient as Client
 
 
-__all__ = ["ConsoleClient", "CONSOLE_PREFIX"]
+__all__ = ["Client", "CONSOLE_PREFIX"]

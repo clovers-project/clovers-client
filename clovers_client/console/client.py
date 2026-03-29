@@ -23,9 +23,6 @@ class ConsoleClient(Leaf, Client):
     def __init__(self, config: Config = Config.sync_config()):
         super().__init__("CONSOLE")
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
-        self.BOT_NICKNAME = config.BOT_NICKNAME
-        self._length_bot_nickname = len(self.BOT_NICKNAME)
-        self.BOT_AVATAR_URL = config.BOT_AVATAR_URL
         self.adapter.update(__adapter__)
         # 初始化加载
         self.load_adapters_from_list(config.adapters)
@@ -35,6 +32,9 @@ class ConsoleClient(Leaf, Client):
         # inner
         self.message_id = int32_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=100)
+        self.BOT_NICKNAME = config.BOT_NICKNAME
+        self._length_bot_nickname = len(self.BOT_NICKNAME)
+        self.BOT_AVATAR_URL = config.BOT_AVATAR_URL
         # FastAPI
         self.host = config.host
         self.port = config.port

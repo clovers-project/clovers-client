@@ -3,8 +3,16 @@ from io import BytesIO
 from base64 import b64encode
 from collections.abc import Callable, Coroutine
 from typing import Any
-from .typing import Post, FileLike, SegmentedMessage, SingleResult, OverallResult, FlatContextUnit
-from ..typing import MessageEvent, GroupMessageEvent, Message, MessageSegmentSend, Node
+from clovers_client.result import FileLike, SegmentedMessage, SingleResult, OverallResult
+from clovers_client.event import FlatContextUnit
+from .typing import MessageEvent, GroupMessageEvent, Message, MessageSegmentSend, Node, OneBotV11API
+
+
+def int32_generator():
+    i = 0
+    while True:
+        yield str(i)
+        i = (i + 1) & 0xFFFFFFFF
 
 
 def f2s(file: FileLike) -> str:
@@ -29,12 +37,12 @@ def result2seg(result: SingleResult) -> MessageSegmentSend | None:
             return {"type": "face", "data": {"id": result.data}}
 
 
-async def send_group_msg(post: Post, recv: GroupMessageEvent, message: Message):
-    await post("send_group_msg", json={"group_id": recv["group_id"], "message": message})
+async def send_group_msg(call: OneBotV11API, recv: GroupMessageEvent, message: Message):
+    await call("send_group_msg", {"group_id": recv["group_id"], "message": message})
 
 
-async def send_private_msg(post: Post, recv: MessageEvent, message: Message):
-    await post("send_private_msg", json={"user_id": recv["user_id"], "message": message})
+async def send_private_msg(call: OneBotV11API, recv: MessageEvent, message: Message):
+    await call("send_private_msg", {"user_id": recv["user_id"], "message": message})
 
 
 async def send_segmented(send: Callable[[Message], Coroutine[Any, Any, None]], message: SegmentedMessage):
@@ -67,9 +75,8 @@ def resultlist2nodelist(self_name: str, self_id: int, message: list[OverallResul
     return messages
 
 
-async def build_flat_context(post: Post, msg_id: str) -> list[FlatContextUnit] | None:
-    context = await post("get_forward_msg", json={"message_id": msg_id})
-    messages = context.json()["data"]["messages"]
+async def build_flat_context(call: OneBotV11API, msg_id: str) -> list[FlatContextUnit] | None:
+    messages = (await call("get_forward_msg", {"message_id": msg_id}, True))["messages"]
     if not messages:
         return
     flat_context: list[FlatContextUnit] = []
@@ -77,7 +84,7 @@ async def build_flat_context(post: Post, msg_id: str) -> list[FlatContextUnit] |
         if not (content := node.get("content")):
             continue
         if content[0]["type"] == "forward":
-            inner_context = await build_flat_context(post, content[0]["data"]["id"])
+            inner_context = await build_flat_context(call, content[0]["data"]["id"])
             if inner_context:
                 flat_context.extend(inner_context)
             continue

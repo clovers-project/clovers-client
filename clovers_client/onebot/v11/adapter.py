@@ -1,119 +1,120 @@
 from clovers import Adapter
-from .typing import Post, FileLike, ListMessage, OverallResult, SegmentedMessage, GroupMessage, PrivateMessage, MemberInfo
-from ..typing import MessageEvent, Message
+from clovers_client.result import FileLike, ListMessage, OverallResult, SegmentedMessage, GroupMessage, PrivateMessage
+from clovers_client.event import MemberInfo
+from .typing import MessageEvent, Message, OneBotV11API
 from .utils import f2s, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
-from .config import BOT_NICKNAME, SUPERUSERS
 
 
 __adapter__ = adapter = Adapter("OneBot V11")
 
 
 @adapter.send_method("at")
-async def _(message: str, /, post: Post, recv: MessageEvent):
+async def _(message: str, /, call: OneBotV11API, recv: MessageEvent):
     msg: Message = [{"type": "at", "data": {"qq": message}}]
     match recv["message_type"]:
         case "group":
-            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
+            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
         case "private":
-            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
+            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("text")
-async def _(message: str, /, post: Post, recv: MessageEvent):
+async def _(message: str, /, call: OneBotV11API, recv: MessageEvent):
     msg: Message = [{"type": "text", "data": {"text": message}}]
     match recv["message_type"]:
         case "group":
-            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
+            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
         case "private":
-            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
+            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("image")
-async def _(message: FileLike, /, post: Post, recv: MessageEvent):
+async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
     msg: Message = [{"type": "image", "data": {"file": f2s(message)}}]
     match recv["message_type"]:
         case "group":
-            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
+            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
         case "private":
-            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
+            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("voice")
-async def _(message: FileLike, /, post: Post, recv: MessageEvent):
+async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
     msg: Message = [{"type": "record", "data": {"file": f2s(message)}}]
     match recv["message_type"]:
         case "group":
-            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
+            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
         case "private":
-            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
+            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("list")
-async def _(message: ListMessage, post: Post, recv: MessageEvent):
+async def _(message: ListMessage, call: OneBotV11API, recv: MessageEvent):
     msg = [seg for single in message if (seg := result2seg(single))]
     match recv["message_type"]:
         case "group":
-            await post("send_group_msg", json={"group_id": recv["group_id"], "message": msg})
+            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
         case "private":
-            await post("send_private_msg", json={"user_id": recv["user_id"], "message": msg})
+            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
 @adapter.send_method("segmented")
-async def _(message: SegmentedMessage, /, post: Post, recv: MessageEvent):
+async def _(message: SegmentedMessage, /, call: OneBotV11API, recv: MessageEvent):
     match recv["message_type"]:
         case "group":
-            await send_segmented(lambda msg: send_group_msg(post, recv, msg), message)
+            await send_segmented(lambda msg: send_group_msg(call, recv, msg), message)
         case "private":
-            await send_segmented(lambda msg: send_private_msg(post, recv, msg), message)
+            await send_segmented(lambda msg: send_private_msg(call, recv, msg), message)
 
 
 @adapter.send_method("group_message")
-async def _(message: GroupMessage, /, post: Post):
+async def _(message: GroupMessage, /, call: OneBotV11API):
+    print(f"GroupMessage {message}")
     result = message["data"]
     group_id = int(message["group_id"])
     if result.key == "segmented":
-        await send_segmented(lambda msg: post("send_group_msg", json={"group_id": group_id, "message": msg}), result.data)
+        await send_segmented(lambda msg: call("send_group_msg", {"group_id": group_id, "message": msg}), result.data)
     elif result.key == "list":
         msg = [seg for single in result.data if (seg := result2seg(single))]
         if msg:
-            await post("send_group_msg", json={"group_id": group_id, "message": msg})
+            await call("send_group_msg", {"group_id": group_id, "message": msg})
     else:
         if seg := result2seg(result):
-            await post("send_group_msg", json={"group_id": group_id, "message": [seg]})
+            await call("send_group_msg", {"group_id": group_id, "message": [seg]})
 
 
 @adapter.send_method("private_message")
-async def _(message: PrivateMessage, /, post: Post, recv: MessageEvent):
+async def _(message: PrivateMessage, /, call: OneBotV11API):
     result = message["data"]
     user_id = int(message["user_id"])
     if result.key == "segmented":
-        await send_segmented(lambda msg: post("send_private_msg", json={"user_id": user_id, "message": msg}), result.data)
+        await send_segmented(lambda msg: call("send_private_msg", {"user_id": user_id, "message": msg}), result.data)
     elif result.key == "list":
         msg = [seg for single in result.data if (seg := result2seg(single))]
         if msg:
-            await post("send_private_msg", json={"user_id": user_id, "message": msg})
+            await call("send_private_msg", {"user_id": user_id, "message": msg})
     else:
         if seg := result2seg(result):
-            await post("send_private_msg", json={"user_id": user_id, "message": [seg]})
+            await call("send_private_msg", {"user_id": user_id, "message": [seg]})
 
 
 @adapter.send_method("merge_forward")
-async def _(message: list[OverallResult], /, post: Post, recv: MessageEvent):
-    messages = resultlist2nodelist(BOT_NICKNAME, recv["self_id"], message)
+async def _(message: list[OverallResult], /, call: OneBotV11API, recv: MessageEvent):
+    messages = resultlist2nodelist(recv["BOT_NICKNAME"], recv["self_id"], message)
     match recv["message_type"]:
         case "group":
-            await post("send_group_forward_msg", json={"group_id": recv["group_id"], "messages": messages})
+            await call("send_group_forward_msg", {"group_id": recv["group_id"], "messages": messages})
         case "private":
-            await post("send_private_forward_msg", json={"user_id": recv["user_id"], "messages": messages})
+            await call("send_private_forward_msg", {"user_id": recv["user_id"], "messages": messages})
 
 
 @adapter.property_method("Bot_Nickname")
-async def _() -> str:
-    return BOT_NICKNAME
+async def _(recv: MessageEvent) -> str:
+    return recv["BOT_NICKNAME"]
 
 
 @adapter.property_method("user_id")
-async def _(recv: dict) -> str:
+async def _(recv: MessageEvent) -> str:
     return str(recv["user_id"])
 
 
@@ -150,7 +151,7 @@ async def _(recv: dict) -> str | None:
 
 
 @adapter.property_method("image_list")
-async def _(post: Post, recv: MessageEvent) -> list[str]:
+async def _(call: OneBotV11API, recv: MessageEvent) -> list[str]:
     reply_id = None
     url = []
     for msg in recv["message"]:
@@ -159,26 +160,26 @@ async def _(post: Post, recv: MessageEvent) -> list[str]:
         elif msg["type"] == "reply":
             reply_id = msg["data"]["id"]
     if reply_id is not None:
-        reply = await post("get_msg", json={"message_id": reply_id})
-        url.extend(msg["data"]["url"] for msg in reply.json()["data"]["message"] if msg["type"] == "image")
+        reply = await call("get_msg", {"message_id": reply_id}, True)
+        url.extend(msg["data"]["url"] for msg in reply["message"] if msg["type"] == "image")
     return url
 
 
 @adapter.property_method("flat_context")
-async def _(post: Post, recv: MessageEvent):
+async def _(call: OneBotV11API, recv: MessageEvent):
     reply_id = next((msg["data"]["id"] for msg in recv["message"] if msg["type"] == "reply"), None)
     if not reply_id:
         return
-    reply = await post("get_msg", json={"message_id": reply_id})
-    seg = reply.json()["data"]["message"][0]
+    reply = await call("get_msg", {"message_id": reply_id}, True)
+    seg = reply["message"][0]
     if seg["type"] != "forward":
         return
-    return await build_flat_context(post, seg["data"]["id"])
+    return await build_flat_context(call, seg["data"]["id"])
 
 
 @adapter.property_method("permission")
 async def _(recv: dict) -> int:
-    if str(recv["user_id"]) in SUPERUSERS:
+    if str(recv["user_id"]) in recv["SUPERUSERS"]:
         return 3
     if role := recv["sender"].get("role"):
         if role == "owner":
@@ -194,9 +195,8 @@ async def _(recv: dict) -> list[str]:
 
 
 @adapter.call_method("group_member_info")
-async def _(group_id: str, user_id: str, /, post: Post) -> MemberInfo:
-    resp = await post("get_group_member_info", json={"group_id": int(group_id), "user_id": int(user_id)})
-    user_info = resp.json()["data"]
+async def _(group_id: str, user_id: str, /, call: OneBotV11API) -> MemberInfo:
+    user_info = await call("get_group_member_info", {"group_id": int(group_id), "user_id": int(user_id)}, True)
     return {
         "group_id": group_id,
         "user_id": user_id,
@@ -208,9 +208,8 @@ async def _(group_id: str, user_id: str, /, post: Post) -> MemberInfo:
 
 
 @adapter.call_method("group_member_list")
-async def _(group_id: str, /, post: Post) -> list[MemberInfo]:
-    resp = await post("get_group_member_list", json={"group_id": int(group_id)})
-    info_list: list[MemberInfo] = resp.json()["data"]  # type: ignore
+async def _(group_id: str, /, call: OneBotV11API) -> list[MemberInfo]:
+    info_list: list[MemberInfo] = await call("get_group_member_list", {"group_id": int(group_id)}, True)  # type: ignore
     for user_info in info_list:
         user_id = str(user_info["user_id"])
         user_info["group_id"] = group_id

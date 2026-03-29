@@ -1,4 +1,4 @@
-from typing import TypedDict, Literal, NotRequired
+from typing import TypedDict, Literal, NotRequired, Protocol, overload
 
 
 class At(TypedDict):
@@ -98,6 +98,8 @@ class BaseMessageEvent(TypedDict):
     message: list[MessageSegmentReveive]
     raw_message: str
     to_me: bool  # 此字段为内部字段，非 OneBot V11 定义
+    BOT_NICKNAME: str  # 此字段为内部字段，非 OneBot V11 定义
+    SUPERUSERS: set[str]  # 此字段为内部字段，非 OneBot V11 定义
 
 
 class Sender(TypedDict):
@@ -143,6 +145,82 @@ type Message = list[MessageSegmentSend]
 class APIResponse[DataType](TypedDict):
     status: str
     retcode: int
-    message: str
-    wording: str
     data: DataType
+    echo: str
+
+
+class SendPrivateMsgBody(TypedDict):
+    user_id: int
+    message: list[MessageSegmentSend]
+
+
+class SendGroupMsgBody(TypedDict):
+    group_id: int
+    message: list[MessageSegmentSend]
+
+
+class SendPrivateForwardMsgBody(TypedDict):
+    user_id: int
+    messages: list[Node]
+
+
+class SendGroupForwardMsgBody(TypedDict):
+    group_id: int
+    messages: list[Node]
+
+
+class ForwardNodeData(TypedDict, total=False):
+    content: list[MessageSegmentReveive]
+    sender: Sender
+
+
+class UserIDAndGroupIDBody(TypedDict):
+    group_id: int
+    user_id: int
+
+
+class OneBotV11API(Protocol):
+
+    @overload
+    async def __call__(self, endpoint: Literal["send_private_msg"], params: SendPrivateMsgBody) -> None: ...
+
+    @overload
+    async def __call__(self, endpoint: Literal["send_group_msg"], params: SendGroupMsgBody) -> None: ...
+
+    @overload
+    async def __call__(self, endpoint: Literal["send_private_forward_msg"], params: SendPrivateForwardMsgBody) -> None: ...
+
+    @overload
+    async def __call__(self, endpoint: Literal["send_group_forward_msg"], params: SendGroupForwardMsgBody) -> None: ...
+
+    @overload
+    async def __call__(
+        self,
+        endpoint: Literal["get_msg"],
+        params: dict[Literal["message_id"], str],
+        need_response: Literal[True],
+    ) -> GroupMessageEvent: ...
+
+    @overload
+    async def __call__(
+        self,
+        endpoint: Literal["get_forward_msg"],
+        params: dict[Literal["message_id"], str],
+        need_response: Literal[True],
+    ) -> dict[Literal["messages"], list[ForwardNodeData]]: ...
+
+    @overload
+    async def __call__(
+        self,
+        endpoint: Literal["get_group_member_info"],
+        params: UserIDAndGroupIDBody,
+        need_response: Literal[True],
+    ) -> MemberInfo: ...
+
+    @overload
+    async def __call__(
+        self,
+        endpoint: Literal["get_group_member_list"],
+        params: dict[Literal["group_id"], int],
+        need_response: Literal[True],
+    ) -> list[MemberInfo]: ...
