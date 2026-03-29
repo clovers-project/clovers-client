@@ -210,6 +210,7 @@ function showContextMenu(x: number, y: number, message: HTMLDivElement) {
 function createReplyMessage(messageId: string) {
     const message = document.createElement("div");
     message.className = "quote-message";
+    message.dataset.refId = messageId;
     const replyMessage = document.getElementById(messageId);
     const quoteSender = document.createElement("div");
     quoteSender.className = "quote-sender";
@@ -414,6 +415,8 @@ export function init(manager: CloversManager) {
     };
     chatWindow.onclick = (e) => {
         const target = e.target as HTMLElement;
+        let refId;
+        let quoteMessage;
         if (target.classList.contains("message-image-item")) {
             const imgUrl = (target as HTMLImageElement).src;
             const backdrop = document.createElement("div");
@@ -421,6 +424,10 @@ export function init(manager: CloversManager) {
             backdrop.onclick = () => backdrop.remove();
             backdrop.innerHTML = `<img src="${imgUrl}" style="max-width: 100%; max-height: 100%;">`;
             document.body.appendChild(backdrop);
+        } else if (
+            (refId = (target.closest(".quote-message") as HTMLElement)?.dataset?.refId) &&
+            (quoteMessage = document.getElementById(refId))) {
+            quoteMessage.scrollIntoView({ behavior: "smooth", block: "center" });
         }
     };
 }

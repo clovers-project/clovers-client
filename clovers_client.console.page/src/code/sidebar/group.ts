@@ -54,6 +54,7 @@ function showGroupChatHistory(groupId: string, info?: string) {
         chatWindow.innerHTML = "";
         if (info) chatWindow.appendChild(systemMessage(info));
         chatWindow.innerHTML += history;
+        chatWindow.scrollTop = chatWindow.scrollHeight;
     });
 }
 function renderGroupItem(manager: CloversManager, group: GroupInfo) {
