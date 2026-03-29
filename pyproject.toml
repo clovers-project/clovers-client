@@ -12,6 +12,6 @@ dependencies = ["clovers (>=0.4.8,<1.0.0)", "pydantic>=2.10.6"]
 console = ["uvicorn>=0.42.0", "fastapi>=0.135.2", "python-multipart>=0.0.22"]
 onebot = ["websockets>=15.0.0"]
 
-[tool.setuptools.package-data]
-# 确保 clovers_client.page 包下的所有后缀文件都被包含
-"clovers_client.page" = ["*"]
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
