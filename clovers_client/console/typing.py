@@ -27,6 +27,4 @@ type SendMethod = Callable[[ChatMessage | ConsoleMessage], Coroutine[Any, Any, N
 
 class MessageEvent(ChatMessage):
     to_me: bool
-    bot_name: str
-    bot_avatar: str
     ip: str | None

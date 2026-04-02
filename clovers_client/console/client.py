@@ -7,9 +7,8 @@ from fastapi import FastAPI, File, UploadFile, Query, WebSocket, WebSocketDiscon
 from fastapi.responses import Response, FileResponse
 from clovers import Leaf, Client
 from clovers.logger import logger
-from clovers_client import init_logger
+from clovers_client.logger import init_logger
 from clovers_client.config import ClientConfig
-from .adapter import __adapter__
 from .utils import upload, int32_id_generator
 from .typing import ChatMessage, MessageEvent
 
@@ -28,6 +27,8 @@ class ConsoleClient(Leaf, Client):
     def __init__(self, config: Config = Config.sync_config("clovers")):
         super().__init__("CONSOLE")
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
+        from .adapter import __adapter__
+
         self.adapter.update(__adapter__)
         # 初始化加载
         self.load_adapters_from_list(config.adapters)
@@ -94,8 +95,6 @@ class ConsoleClient(Leaf, Client):
             if not recv["text"].startswith(CONSOLE_PREFIX):
                 asyncio.create_task(send(recv))
             recv["ip"] = ws.client.host if ws.client else None
-            recv["bot_name"] = self.BOT_NICKNAME
-            recv["bot_avatar"] = self.BOT_AVATAR_URL
             yield recv, send
 
     async def websocket_handler(self, ws: WebSocket):
@@ -106,15 +105,7 @@ class ConsoleClient(Leaf, Client):
         reveive_event = self.reveive_event(ws)
         try:
             async for recv, send in reveive_event:
-                resp = self.response(
-                    recv=recv,
-                    send=send,
-                    ws=ws,
-                    unicast=self.unicast,
-                    broadcast=self.broadcast,
-                    load_dir=self.load_dir,
-                )
-                tasks.add(task := asyncio.create_task(resp))
+                tasks.add(task := asyncio.create_task(self.response(recv=recv, send=send, ws=ws, client=self)))
                 task.add_done_callback(tasks.discard)
         except WebSocketDisconnect:
             logger.info("Client disconnected.")

@@ -1,10 +1,9 @@
 from clovers import EventProtocol
+from typing import TypedDict, Protocol, Literal, Any, overload
 from collections.abc import Coroutine
-from typing import Any, TypedDict, Protocol, Literal, overload
 from .result import FileLike, ListMessage, GroupMessage, PrivateMessage, OverallResult
 
-type AsyncFunction[T] = Coroutine[Any, Any, T]
-type OptionalCall[T] = AsyncFunction[T | None] | None
+type OptCoro[T] = Coroutine[Any, Any, T] | None
 
 
 class MemberInfo(TypedDict):
@@ -47,8 +46,6 @@ class Event(EventProtocol, Protocol):
     2: 群主\n
     3: 超级管理员
     """
-    flat_context: list[FlatContextUnit]
-    """引用的转发聊天记录的平铺展示"""
 
     @overload
     async def call(self, key: Literal["text"], message: str): ...
@@ -69,13 +66,13 @@ class Event(EventProtocol, Protocol):
     async def call(self, key: Literal["private_message"], message: PrivateMessage): ...
 
     @overload
-    async def call(self, key: Literal["merge_forward"], message: list[OverallResult]) -> OptionalCall[list[FlatContextUnit]]: ...
+    async def call(self, key: Literal["merge_forward"], message: list[OverallResult]): ...
 
     @overload
-    def call(self, key: Literal["flat_context"]) -> OptionalCall[list[FlatContextUnit]]: ...
+    def call(self, key: Literal["flat_context"]) -> OptCoro[list[FlatContextUnit]]: ...
 
     @overload
-    def call(self, key: Literal["group_member_info"], group_id: str, user_id: str) -> OptionalCall[MemberInfo]: ...
+    def call(self, key: Literal["group_member_info"], group_id: str, user_id: str) -> OptCoro[MemberInfo]: ...
 
     @overload
-    def call(self, key: Literal["group_member_list"], group_id: str) -> OptionalCall[list[MemberInfo]]: ...
+    def call(self, key: Literal["group_member_list"], group_id: str) -> OptCoro[list[MemberInfo]]: ...
