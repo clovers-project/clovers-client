@@ -296,7 +296,7 @@ export async function chatMessage(msg: ChatMessage, is_self: boolean = false) {
     }
     messageElement.appendChild(sender);
     messageElement.appendChild(content);
-    chatHistoryStorage.append(msg.groupId, message.outerHTML);
+    await chatHistoryStorage.append(msg.groupId, message.outerHTML);
     return message;
 }
 
