@@ -3,24 +3,31 @@ import json
 import websockets
 from clovers import Leaf, Client
 from clovers.logger import logger
-from clovers_client import init_logger
-from .adapter import __adapter__
-from .utils import int32_generator
+from clovers_client.logger import init_logger
+from clovers_client.config import ClientConfig
+from .utils import int32_id_generator
 from .typing import MessageEvent, APIResponse
-from .config import Config
+
+
+class Config(ClientConfig):
+    SUPERUSERS: set[str] = set()
+    ws_url: str = "ws://127.0.0.1:3001"
+    ws_token: str | None = None
 
 
 class OneBotV11Client(Leaf, Client):
     def __init__(self, config: Config = Config.sync_config()):
         super().__init__("OneBot V11")
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
+        from .adapter import __adapter__
+
         self.adapter.update(__adapter__)
         self.load_adapters_from_list(config.adapters)
         self.load_adapters_from_dirs(config.adapter_dirs)
         self.load_plugins_from_list(config.plugins)
         self.load_plugins_from_dirs(config.plugin_dirs)
         # inner
-        self.message_id = int32_generator()
+        self.message_id = int32_id_generator()
         self.BOT_NICKNAME = config.BOT_NICKNAME
         self.SUPERUSERS = config.SUPERUSERS
         self._length_bot_nickname = len(self.BOT_NICKNAME)

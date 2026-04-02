@@ -1,11 +1,18 @@
 from clovers import Adapter
-from clovers_client.result import FileLike, ListMessage, OverallResult, SegmentedMessage, GroupMessage, PrivateMessage
+from clovers.logger import logger
+from clovers_client.result import FileLike, ListMessage, SingleResult, ListResult, SegmentedMessage, GroupMessage, PrivateMessage
 from clovers_client.event import MemberInfo
 from .typing import MessageEvent, Message, OneBotV11API
 from .utils import f2s, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
 
 
 __adapter__ = adapter = Adapter("OneBot V11")
+
+
+@adapter.send_method("console")
+async def send_console(message: list[str]):
+    title, groupId, msg = message
+    logger.info(f"[CONSOLE][{groupId}][{title}]: {msg}")
 
 
 @adapter.send_method("at")
@@ -58,6 +65,11 @@ async def _(message: ListMessage, call: OneBotV11API, recv: MessageEvent):
             await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
+@adapter.send_method("file")
+async def _(message: FileLike, call: OneBotV11API, recv: MessageEvent):
+    pass
+
+
 @adapter.send_method("segmented")
 async def _(message: SegmentedMessage, /, call: OneBotV11API, recv: MessageEvent):
     match recv["message_type"]:
@@ -99,7 +111,7 @@ async def _(message: PrivateMessage, /, call: OneBotV11API):
 
 
 @adapter.send_method("merge_forward")
-async def _(message: list[OverallResult], /, call: OneBotV11API, recv: MessageEvent):
+async def _(message: list[SingleResult | ListResult], /, call: OneBotV11API, recv: MessageEvent):
     messages = resultlist2nodelist(recv["BOT_NICKNAME"], recv["self_id"], message)
     match recv["message_type"]:
         case "group":
@@ -113,22 +125,6 @@ async def _(recv: MessageEvent) -> str:
     return recv["BOT_NICKNAME"]
 
 
-@adapter.property_method("user_id")
-async def _(recv: MessageEvent) -> str:
-    return str(recv["user_id"])
-
-
-@adapter.property_method("group_id")
-async def _(recv: dict) -> str | None:
-    if "group_id" in recv:
-        return str(recv["group_id"])
-
-
-@adapter.property_method("nickname")
-async def _(recv: dict) -> str:
-    return recv["sender"]["card"] or recv["sender"]["nickname"]
-
-
 @adapter.property_method("to_me")
 async def _(recv: dict) -> bool:
     if "to_me" in recv:
@@ -137,17 +133,9 @@ async def _(recv: dict) -> bool:
     return any(seg["type"] == "at" and seg["data"]["qq"] == self_id for seg in recv["message"])
 
 
-@adapter.property_method("avatar")
-async def _(recv: dict) -> str:
-    return f"https://q1.qlogo.cn/g?b=qq&nk={recv["user_id"]}&s=640"
-
-
-@adapter.property_method("group_avatar")
-async def _(recv: dict) -> str | None:
-    if "group_id" not in recv:
-        return
-    group_id = recv["group_id"]
-    return f"https://p.qlogo.cn/gh/{group_id}/{group_id}/640"
+@adapter.property_method("at")
+async def _(recv: dict) -> list[str]:
+    return [str(seg["data"]["qq"]) for seg in recv["message"] if seg["type"] == "at"]
 
 
 @adapter.property_method("image_list")
@@ -165,16 +153,33 @@ async def _(call: OneBotV11API, recv: MessageEvent) -> list[str]:
     return url
 
 
-@adapter.property_method("flat_context")
-async def _(call: OneBotV11API, recv: MessageEvent):
-    reply_id = next((msg["data"]["id"] for msg in recv["message"] if msg["type"] == "reply"), None)
-    if not reply_id:
+@adapter.property_method("user_id")
+async def _(recv: MessageEvent) -> str:
+    return str(recv["user_id"])
+
+
+@adapter.property_method("nickname")
+async def _(recv: dict) -> str:
+    return recv["sender"]["card"] or recv["sender"]["nickname"]
+
+
+@adapter.property_method("avatar")
+async def _(recv: dict) -> str:
+    return f"https://q1.qlogo.cn/g?b=qq&nk={recv["user_id"]}&s=640"
+
+
+@adapter.property_method("group_id")
+async def _(recv: dict) -> str | None:
+    if "group_id" in recv:
+        return str(recv["group_id"])
+
+
+@adapter.property_method("group_avatar")
+async def _(recv: dict) -> str | None:
+    if "group_id" not in recv:
         return
-    reply = await call("get_msg", {"message_id": reply_id}, True)
-    seg = reply["message"][0]
-    if seg["type"] != "forward":
-        return
-    return await build_flat_context(call, seg["data"]["id"])
+    group_id = recv["group_id"]
+    return f"https://p.qlogo.cn/gh/{group_id}/{group_id}/640"
 
 
 @adapter.property_method("permission")
@@ -189,9 +194,16 @@ async def _(recv: dict) -> int:
     return 0
 
 
-@adapter.property_method("at")
-async def _(recv: dict) -> list[str]:
-    return [str(seg["data"]["qq"]) for seg in recv["message"] if seg["type"] == "at"]
+@adapter.property_method("flat_context")
+async def _(call: OneBotV11API, recv: MessageEvent):
+    reply_id = next((msg["data"]["id"] for msg in recv["message"] if msg["type"] == "reply"), None)
+    if not reply_id:
+        return
+    reply = await call("get_msg", {"message_id": reply_id}, True)
+    seg = reply["message"][0]
+    if seg["type"] != "forward":
+        return
+    return await build_flat_context(call, seg["data"]["id"])
 
 
 @adapter.call_method("group_member_info")

@@ -3,12 +3,12 @@ from io import BytesIO
 from base64 import b64encode
 from collections.abc import Callable, Coroutine
 from typing import Any
-from clovers_client.result import FileLike, SegmentedMessage, SingleResult, OverallResult
+from clovers_client.result import FileLike, SegmentedMessage, SingleResult, ListResult
 from clovers_client.event import FlatContextUnit
 from .typing import MessageEvent, GroupMessageEvent, Message, MessageSegmentSend, Node, OneBotV11API
 
 
-def int32_generator():
+def int32_id_generator():
     i = 0
     while True:
         yield str(i)
@@ -47,19 +47,30 @@ async def send_private_msg(call: OneBotV11API, recv: MessageEvent, message: Mess
 
 async def send_segmented(send: Callable[[Message], Coroutine[Any, Any, None]], message: SegmentedMessage):
     async for result in message:
-        if result.key == "list":
-            msg = [seg for single in result.data if (seg := result2seg(single))]
-            if not msg:
+        match result.key:
+            case "list":
+                msg = [seg for single in result.data if (seg := result2seg(single))]
+                if not msg:
+                    continue
+            case "at" | "text" | "image":
+                seg = result2seg(result)
+                if not seg:
+                    continue
+                msg = [seg]
+            case "file":
                 continue
-        else:
-            seg = result2seg(result)
-            if not seg:
+            case "voice":
                 continue
-            msg = [seg]
+            case "video":
+                continue
+            case "console":
+                continue
+            case _:
+                continue
         await send(msg)
 
 
-def resultlist2nodelist(self_name: str, self_id: int, message: list[OverallResult]) -> list[Node]:
+def resultlist2nodelist(self_name: str, self_id: int, message: list[SingleResult | ListResult]) -> list[Node]:
     messages = []
     for result in message:
         if result.key == "list":
