@@ -273,9 +273,11 @@ export async function chatMessage(msg: ChatMessage, is_self: boolean = false) {
     const content = document.createElement("div");
     content.className = "message-content";
     // 文本内容
+    const at = msg.at.map(id => `@${chatManager.UserStubs.get(id) || id} `).join("");
     if (msg.text) {
-        const at = msg.at.map(id => `@${chatManager.UserStubs.get(id) || id} `).join("");
         content.innerHTML = await marked.parse(at + msg.text.trim(), { renderer });
+    } else {
+        content.innerHTML = at;
     }
     // 回复消息
     if (msg.reply) {

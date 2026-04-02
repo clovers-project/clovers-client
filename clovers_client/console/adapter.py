@@ -133,7 +133,8 @@ async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, cli
     if isinstance(message, str):
         if message.startswith("http"):
             data["text"] = f"[下载文件]({message})"
-            return send(data)
+            await send(data)
+            return
         else:
             file = Path(message)
     elif isinstance(message, Path):
@@ -157,9 +158,9 @@ async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: Se
     async for result in message:
         match result.key:
             case "at":
-                await send_at(result.data, recv, send)
+                await send_at(result.data, recv, send, client)
             case "text":
-                await send_text(result.data, recv, send)
+                await send_text(result.data, recv, send, client)
             case "image":
                 await send_image(result.data, recv, send, client)
             case "list":
@@ -173,7 +174,7 @@ async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: Se
 
 
 @adapter.send_method("group_message")
-async def _(message: GroupMessage, recv: MessageEvent, client: Client):
+async def _(message: GroupMessage, client: Client):
     result = message["data"]
     redirect: MessageEvent = {
         "groupId": message["group_id"],
