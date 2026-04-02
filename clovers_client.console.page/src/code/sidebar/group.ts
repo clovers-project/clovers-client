@@ -122,14 +122,20 @@ function groupInfoTemplate(manager: CloversManager, group: GroupInfo, { backdrop
     confirmBtn.onclick = () => {
         const groupIdInput = content.querySelector("#groupId") as HTMLInputElement;
         const groupId = groupIdInput.value.trim();
-        if (groupId !== group.groupId && manager.hasGroup(groupId)) {
-            groupIdInput.classList.add("error");
-            const errorMsg = document.createElement("span");
-            errorMsg.className = "error-message";
-            errorMsg.textContent = "该 ID 已存在，请更换";
-            groupIdInput.parentNode!.appendChild(errorMsg);
-            groupIdInput.focus();
-            return;
+        if (groupId !== group.groupId) {
+            if (manager.hasGroup(groupId)) {
+                groupIdInput.classList.add("error");
+                const errorMsg = document.createElement("span");
+                errorMsg.className = "error-message";
+                errorMsg.textContent = "该 ID 已存在，请更换";
+                groupIdInput.parentNode!.appendChild(errorMsg);
+                groupIdInput.focus();
+                return;
+            }
+            chatHistoryStorage.get(group.groupId).then((html) => {
+                chatHistoryStorage.delete(group.groupId);
+                chatHistoryStorage.append(group.groupId, html);
+            });
         }
         const groupItem = document.getElementById(`groupItem${group.groupId}`)! as HTMLDivElement;
         groupItem.id = `groupItem${groupId}`;

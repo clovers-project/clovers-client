@@ -21,12 +21,29 @@ const dbPromise = openDB("ChatAppDB", 1, {
         }
     },
 });
+
+class RecordUnit {
+    records = [] as string[];
+    queue = Promise.resolve();
+}
+
 export const chatHistoryStorage = {
+    records: new Map<string, RecordUnit>(),
     async append(groupId: string, html: string) {
-        const db = await dbPromise;
-        const records: string[] = (await db.get("histories", groupId)) || [];
-        records.push(html);
-        await db.put("histories", records, groupId);
+        if (!this.records.has(groupId)) {
+            this.records.set(groupId, new RecordUnit());
+        }
+        const current = this.records.get(groupId)!
+        current.records.push(html);
+        current.queue = current.queue.then(async () => {
+            if (current.records.length == 0) return;
+            const db = await dbPromise;
+            const history: string[] = (await db.get("histories", groupId)) || [];
+            history.push(...current.records);
+            current.records.length = 0;
+            await db.put("histories", history, groupId);
+        });
+        await current.queue;
     },
     async get(groupId: string): Promise<string> {
         const db = await dbPromise;
@@ -37,10 +54,14 @@ export const chatHistoryStorage = {
     async delete(groupId: string) {
         const db = await dbPromise;
         await db.delete("histories", groupId);
+        if (this.records.has(groupId)) {
+            this.records.delete(groupId);
+        }
     },
     async clearAll() {
         const db = await dbPromise;
         await db.clear("histories");
+        this.records.clear();
     },
 };
 
@@ -296,7 +317,7 @@ export async function chatMessage(msg: ChatMessage, is_self: boolean = false) {
     }
     messageElement.appendChild(sender);
     messageElement.appendChild(content);
-    await chatHistoryStorage.append(msg.groupId, message.outerHTML);
+    chatHistoryStorage.append(msg.groupId, message.outerHTML);
     return message;
 }
 
