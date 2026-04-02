@@ -5,22 +5,27 @@ from functools import partial
 from collections import deque
 from fastapi import FastAPI, File, UploadFile, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response, FileResponse
-from fastapi.staticfiles import StaticFiles
 from clovers import Leaf, Client
 from clovers.logger import logger
 from clovers_client import init_logger
+from clovers_client.config import ClientConfig
 from .adapter import __adapter__
-from .utils import upload, int32_generator
-from .config import Config
-from .typing import ChatMessage, MessageEvent, CONSOLE_PREFIX
+from .utils import upload, int32_id_generator
+from .typing import ChatMessage, MessageEvent
 
-
+CONSOLE_PREFIX = b"\x05\x03\x01".decode()
 PAGE_RESOURCE = Path(__file__).parent / "page"
-ALLOWED_TYPES = {"image", "video", "audio"}
+
+
+class Config(ClientConfig):
+    BOT_AVATAR_URL: str = "/download/bot_avatar.png"
+    host: str = "127.0.0.1"
+    port: int = 11000
+    load_dir: str = "./load_dir"
 
 
 class ConsoleClient(Leaf, Client):
-    def __init__(self, config: Config = Config.sync_config()):
+    def __init__(self, config: Config = Config.sync_config("clovers")):
         super().__init__("CONSOLE")
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
         self.adapter.update(__adapter__)
@@ -30,7 +35,7 @@ class ConsoleClient(Leaf, Client):
         self.load_plugins_from_list(config.plugins)
         self.load_plugins_from_dirs(config.plugin_dirs)
         # inner
-        self.message_id = int32_generator()
+        self.message_id = int32_id_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=100)
         self.BOT_NICKNAME = config.BOT_NICKNAME
         self.BOT_AVATAR_URL = config.BOT_AVATAR_URL
@@ -41,12 +46,6 @@ class ConsoleClient(Leaf, Client):
         self.ws_connects: set[WebSocket] = set()
         self.load_dir = Path(config.load_dir)
         self.load_dir.mkdir(parents=True, exist_ok=True)
-        self.app = FastAPI()
-        self.app.websocket("/ws")(self.websocket_handler)
-        self.app.post("/upload")(self.upload)
-        self.app.get("/download/{name}")(self.download)
-        self.app.get("/message/{message_id}")(self.find_message)
-        self.app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
 
     async def upload(self, file: UploadFile = File(...)):
         if not file.content_type:
@@ -80,30 +79,42 @@ class ConsoleClient(Leaf, Client):
     async def boardcast_payload(self, payload: str):
         return await asyncio.gather(*(ws.send_text(payload) for ws in self.ws_connects), return_exceptions=True)
 
+    async def reveive_event(self, ws: WebSocket):
+        while True:
+            recv: MessageEvent = json.loads(await ws.receive_text())
+            if recv["groupId"] == "private":
+                send = partial(self.unicast, ws)
+            else:
+                send = self.broadcast
+            if recv["at"] and recv["at"][-1] == "":
+                del recv["at"][-1]
+                recv["to_me"] = True
+            else:
+                recv["to_me"] = False
+            if not recv["text"].startswith(CONSOLE_PREFIX):
+                asyncio.create_task(send(recv))
+            recv["ip"] = ws.client.host if ws.client else None
+            recv["bot_name"] = self.BOT_NICKNAME
+            recv["bot_avatar"] = self.BOT_AVATAR_URL
+            yield recv, send
+
     async def websocket_handler(self, ws: WebSocket):
         await ws.accept()
         self.ws_connects.add(ws)
         logger.info(f"New client connected. Total: {len(self.ws_connects)}")
         tasks: set[asyncio.Task] = set()
+        reveive_event = self.reveive_event(ws)
         try:
-            while True:
-                recv: MessageEvent = json.loads(await ws.receive_text())
-                if recv["groupId"] == "private":
-                    send = partial(self.unicast, ws)
-                else:
-                    send = self.broadcast
-                if recv["at"] and recv["at"][-1] == "":
-                    del recv["at"][-1]
-                    recv["to_me"] = True
-                else:
-                    recv["to_me"] = False
-                if not recv["text"].startswith(CONSOLE_PREFIX):
-                    asyncio.create_task(send(recv))
-                recv["ip"] = ws.client.host if ws.client else None
-                recv["bot_nickname"] = self.BOT_NICKNAME
-                recv["bot_avatar"] = self.BOT_AVATAR_URL
-                task = asyncio.create_task(self.response(recv=recv, send=send, load_dir=self.load_dir))
-                tasks.add(task)
+            async for recv, send in reveive_event:
+                resp = self.response(
+                    recv=recv,
+                    send=send,
+                    ws=ws,
+                    unicast=self.unicast,
+                    broadcast=self.broadcast,
+                    load_dir=self.load_dir,
+                )
+                tasks.add(task := asyncio.create_task(resp))
                 task.add_done_callback(tasks.discard)
         except WebSocketDisconnect:
             logger.info("Client disconnected.")
@@ -129,9 +140,15 @@ class ConsoleClient(Leaf, Client):
 
     async def run(self):
         import uvicorn
+        from fastapi.staticfiles import StaticFiles
 
-        config = uvicorn.Config(self.app, host=self.host, port=self.port, log_level="info")
+        app = FastAPI()
+        app.websocket("/ws")(self.websocket_handler)
+        app.post("/upload")(self.upload)
+        app.get("/download/{name}")(self.download)
+        app.get("/message/{message_id}")(self.find_message)
+        app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
+        config = uvicorn.Config(app, host=self.host, port=self.port, log_level="info")
         server = uvicorn.Server(config)
-        logger.info(f"ConsoleClient running at http://{self.host}:{self.port}")
         async with self:
             await server.serve()

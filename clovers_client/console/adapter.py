@@ -1,9 +1,11 @@
 from pathlib import Path
 from io import BytesIO
+from functools import partial
+from fastapi import WebSocket
 from clovers import Adapter
 from clovers.logger import logger
-from clovers_client.result import FileLike, ListMessage, SegmentedMessage
-from .utils import upload, image_url
+from clovers_client.result import FileLike, ListMessage, SegmentedMessage, GroupMessage, PrivateMessage
+from .utils import md5, upload, image_url
 from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
 
 
@@ -23,8 +25,8 @@ async def send_at(message: str, recv: MessageEvent, send: SendMethod):
         "text": "",
         "images": [],
         "at": [message],
-        "senderId": recv["bot_nickname"],
-        "senderName": recv["bot_nickname"],
+        "senderId": recv["bot_name"],
+        "senderName": recv["bot_name"],
         "avatar": recv["bot_avatar"],
         "groupId": recv["groupId"],
         "groupName": recv["groupName"],
@@ -41,8 +43,8 @@ async def send_text(message: str, recv: MessageEvent, send: SendMethod):
         "text": message,
         "images": [],
         "at": [],
-        "senderId": recv["bot_nickname"],
-        "senderName": recv["bot_nickname"],
+        "senderId": recv["bot_name"],
+        "senderName": recv["bot_name"],
         "avatar": recv["bot_avatar"],
         "groupId": recv["groupId"],
         "groupName": recv["groupName"],
@@ -52,16 +54,16 @@ async def send_text(message: str, recv: MessageEvent, send: SendMethod):
     await send(data)
 
 
-def file2bytes(image: FileLike):
-    match image:
+def file2bytes(file: FileLike):
+    match file:
         case Path():
-            return image.read_bytes()
+            return file.read_bytes()
         case BytesIO():
-            return image.getvalue()
+            return file.getvalue()
         case bytes():
-            return image
+            return file
         case _:
-            raise TypeError(f"Unsupported type: {type(image)}")
+            raise TypeError(f"Unsupported type: {type(file)}")
 
 
 @adapter.send_method("image")
@@ -71,8 +73,8 @@ async def send_image(message: FileLike, recv: MessageEvent, send: SendMethod, lo
         "at": [],
         "text": "",
         "images": [message if isinstance(message, str) else upload(load_dir, file2bytes(message))],
-        "senderId": recv["bot_nickname"],
-        "senderName": recv["bot_nickname"],
+        "senderId": recv["bot_name"],
+        "senderName": recv["bot_name"],
         "avatar": recv["bot_avatar"],
         "groupId": recv["groupId"],
         "groupName": recv["groupName"],
@@ -101,14 +103,51 @@ async def send_list(message: ListMessage, recv: MessageEvent, send: SendMethod, 
         "text": "\n".join(text),
         "images": images,
         "at": at,
-        "senderId": recv["bot_nickname"],
-        "senderName": recv["bot_nickname"],
+        "senderId": recv["bot_name"],
+        "senderName": recv["bot_name"],
         "avatar": recv["bot_avatar"],
         "groupId": recv["groupId"],
         "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
+    await send(data)
+
+
+@adapter.send_method("file")
+async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, load_dir: Path):
+    data: ChatMessage = {
+        "type": "user",
+        "text": "",
+        "images": [],
+        "at": [],
+        "senderId": recv["bot_name"],
+        "senderName": recv["bot_name"],
+        "avatar": recv["bot_avatar"],
+        "groupId": recv["groupId"],
+        "groupName": recv["groupName"],
+        "groupAvatar": recv["groupAvatar"],
+        "permission": "Member",
+    }
+    if isinstance(message, str):
+        if message.startswith("http"):
+            data["text"] = f"[下载文件]({message})"
+            return send(data)
+        else:
+            file = Path(message)
+    elif isinstance(message, Path):
+        file = message
+    else:
+        raise TypeError("file message must be str or Path")
+    if not file.exists():
+        raise FileNotFoundError(file)
+    folder = load_dir / "file"
+    folder.mkdir(parents=True, exist_ok=True)
+    file_data = file.read_bytes()
+    file_name = f"{md5(file_data)}{file.suffix}"
+    file_path = folder / file_name
+    file_path.write_bytes(file_data)
+    data["text"] = f"[下载文件](/download/file/{file_name})"
     await send(data)
 
 
@@ -124,25 +163,69 @@ async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: Se
                 await send_image(result.data, recv, send, load_dir)
             case "list":
                 await send_list(result.data, recv, send, load_dir)
+            case "file":
+                await send_file(result.data, recv, send, load_dir)
             case "console":
                 await send_console(result.data, recv, send)
             case _:
                 logger.warning(f"Unknown send_method: {result.key}")
 
 
+@adapter.send_method("group_message")
+async def _(message: GroupMessage, recv: MessageEvent, broadcast: SendMethod, load_dir: Path):
+    result = message["data"]
+    groupId = recv["groupId"]
+    recv["groupId"] = message["group_id"]
+    if result.key == "segmented":
+        await send_segmented(result.data, recv, broadcast, load_dir)
+    elif result.key == "list":
+        await send_list(result.data, recv, broadcast, load_dir)
+    else:
+        await send_list([result.data], recv, broadcast, load_dir)
+    recv["groupId"] = groupId
+
+
+@adapter.send_method("private_message")
+async def _(message: PrivateMessage, recv: MessageEvent, ws: WebSocket, unicast, load_dir: Path):
+    result = message["data"]
+    senderId = recv["senderId"]
+    if senderId != message["user_id"]:
+        raise ValueError("私聊消息的目标只能是触发事件发送者自身")
+    groupId = recv["groupId"]
+    recv["groupId"] = "private"
+    unicast = partial(unicast, ws)
+    if result.key == "segmented":
+        await send_segmented(result.data, recv, unicast, load_dir)
+    elif result.key == "list":
+        await send_list(result.data, recv, unicast, load_dir)
+    else:
+        await send_list([result.data], recv, unicast, load_dir)
+    recv["groupId"] = groupId
+
+
 @adapter.property_method("Bot_Nickname")
 async def _(recv: MessageEvent) -> str:
-    return recv["bot_nickname"]
+    return recv["bot_name"]
+
+
+@adapter.property_method("to_me")
+async def _(recv: MessageEvent) -> bool:
+    return recv["to_me"] or (recv["bot_name"] in recv["at"])
+
+
+@adapter.property_method("at")
+async def _(recv: MessageEvent) -> list[str]:
+    return recv["at"]
+
+
+@adapter.property_method("image_list")
+async def _(recv: MessageEvent, load_dir: Path) -> list[str]:
+    return [x for url in recv["images"] if (x := image_url(load_dir, url))]
 
 
 @adapter.property_method("user_id")
 async def _(recv: MessageEvent) -> str:
     return recv["senderId"]
-
-
-@adapter.property_method("group_id")
-async def _(recv: MessageEvent) -> str | None:
-    return None if recv["groupId"] == "private" else recv["groupId"]
 
 
 @adapter.property_method("nickname")
@@ -153,6 +236,11 @@ async def _(recv: MessageEvent) -> str:
 @adapter.property_method("avatar")
 async def _(recv: MessageEvent) -> str:
     return recv["avatar"]
+
+
+@adapter.property_method("group_id")
+async def _(recv: MessageEvent) -> str | None:
+    return None if recv["groupId"] == "private" else recv["groupId"]
 
 
 @adapter.property_method("group_avatar")
@@ -171,18 +259,3 @@ async def _(recv: MessageEvent) -> int:
             return 1
         case _:
             return 0
-
-
-@adapter.property_method("to_me")
-async def _(recv: MessageEvent) -> bool:
-    return recv["to_me"] or (recv["bot_nickname"] in recv["at"])
-
-
-@adapter.property_method("at")
-async def _(recv: MessageEvent) -> list[str]:
-    return recv["at"]
-
-
-@adapter.property_method("image_list")
-async def _(recv: MessageEvent, load_dir: Path) -> list[str]:
-    return [x for url in recv["images"] if (x := image_url(load_dir, url))]

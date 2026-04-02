@@ -27,9 +27,6 @@ type SendMethod = Callable[[ChatMessage | ConsoleMessage], Coroutine[Any, Any, N
 
 class MessageEvent(ChatMessage):
     to_me: bool
-    bot_nickname: str
+    bot_name: str
     bot_avatar: str
     ip: str | None
-
-
-CONSOLE_PREFIX = b"\x05\x03\x01".decode()

@@ -31,7 +31,7 @@ def image_url(path: Path, url: str):
     return f"data:image/png;base64,{ b64encode(data).decode()}" if data else None
 
 
-def int32_generator():
+def int32_id_generator():
     i = 0
     while True:
         yield str(i)
