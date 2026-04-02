@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from clovers_client.config import Config as BaseConfig
+from clovers_client.config import ClientConfig as BaseConfig
 
 
 class Intents(BaseModel):

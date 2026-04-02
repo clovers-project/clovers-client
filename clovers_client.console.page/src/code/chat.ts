@@ -338,7 +338,6 @@ class ChatManager {
     public clear() {
         this.pendingImages.length = 0;
         this.at_list.length = 0;
-        this.atbot = false;
         this.replay = null;
     }
 }

@@ -50,7 +50,12 @@ class ListResult(Protocol):
     data: ListMessage
 
 
-type OverallResult = SingleResult | ListResult
+class FileResult(Protocol):
+    key: Literal["file"]
+    data: FileLike
+
+
+type OverallResult = SingleResult | ListResult | FileResult
 
 type SegmentedMessage = AsyncGenerator[OverallResult, None]
 
@@ -83,4 +88,4 @@ class PrivateResult(TypedDict):
     data: Result
 
 
-__all__ = ["SingleResult", "ListResult", "OverallResult", "SegmentedResult", "Result", "GroupResult", "PrivateResult"]
+__all__ = ["SingleResult", "ListResult", "FileResult", "OverallResult", "SegmentedResult", "Result", "GroupResult", "PrivateResult"]

@@ -24,18 +24,20 @@ class FlatContextUnit(TypedDict):
 
 
 class Event(EventProtocol, Protocol):
-    user_id: str
-    """用户唯一ID"""
-    group_id: str | None
-    """群组唯一ID，为空时为私聊"""
-    nickname: str
-    """用户昵称"""
     to_me: bool
     """是否为针对我的事件"""
+    at: list[str]
+    """消息中包含的 @ 的用户 ID 列表"""
     image_list: list[str]
     """消息中包含的图片 URL 列表"""
+    user_id: str
+    """用户唯一ID"""
+    nickname: str
+    """用户昵称"""
     avatar: str
     """用户头像 URL"""
+    group_id: str | None
+    """群组唯一ID，为空时为私聊"""
     group_avatar: str | None
     """群组头像 URL"""
     permission: Literal[0, 1, 2, 3]
@@ -58,13 +60,16 @@ class Event(EventProtocol, Protocol):
     async def call(self, key: Literal["list"], message: ListMessage): ...
 
     @overload
+    async def call(self, key: Literal["file"], message: FileLike): ...
+
+    @overload
     async def call(self, key: Literal["group_message"], message: GroupMessage): ...
 
     @overload
     async def call(self, key: Literal["private_message"], message: PrivateMessage): ...
 
     @overload
-    async def call(self, key: Literal["merge_forward"], message: list[OverallResult]): ...
+    async def call(self, key: Literal["merge_forward"], message: list[OverallResult]) -> OptionalCall[list[FlatContextUnit]]: ...
 
     @overload
     def call(self, key: Literal["flat_context"]) -> OptionalCall[list[FlatContextUnit]]: ...
