@@ -21,7 +21,7 @@ class OneBotV11Client(Leaf, Client):
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
         from .adapter import __adapter__
 
-        self.adapter.update(__adapter__)
+        self.adapter.mixin(__adapter__)
         self.load_adapters_from_list(config.adapters)
         self.load_adapters_from_dirs(config.adapter_dirs)
         self.load_plugins_from_list(config.plugins)

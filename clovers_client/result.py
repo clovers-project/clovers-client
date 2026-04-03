@@ -1,7 +1,8 @@
-from typing import TypedDict, Protocol, Literal
-from collections.abc import AsyncGenerator
+from typing import TypedDict, Literal
+from collections.abc import AsyncGenerator, Sequence
 from pathlib import Path
 from io import BytesIO
+from clovers import Result as CloversResult
 
 type FileLike = str | bytes | BytesIO | Path
 
@@ -11,65 +12,22 @@ type JsonObject = dict[str, JsonBaseType | JsonArray]
 type JsonType = JsonBaseType | JsonArray | JsonObject
 
 type SingleResult = AtResult | TextResult | ImageResult
-type ListMessage = list[SingleResult]
-type OverallResult = SingleResult | ConsoleResult | ListResult | FileResult | VoiceResult | VideoResult
+type SequenceMessage = Sequence[SingleResult]
+type OverallResult = SingleResult | ConsoleResult | SequenceResult | FileResult | VoiceResult | VideoResult
 type SegmentedMessage = AsyncGenerator[OverallResult, None]
-type Result = SingleResult | ListResult | SegmentedResult
+type Result = SingleResult | SequenceResult | SegmentedResult
 
-
-class ConsoleResult(Protocol):
-    key: Literal["console"]
-    data: JsonType
-
-
-class AtResult(Protocol):
-    key: Literal["at"]
-    data: str
-
-
-class TextResult(Protocol):
-    key: Literal["text"]
-    data: str
-
-
-class ImageResult(Protocol):
-    key: Literal["image"]
-    data: FileLike
-
-
-class ListResult(Protocol):
-    key: Literal["list"]
-    data: ListMessage
-
-
-class VoiceResult(Protocol):
-    key: Literal["voice"]
-    data: FileLike
-
-
-class VideoResult(Protocol):
-    key: Literal["video"]
-    data: FileLike
-
-
-class FileResult(Protocol):
-    key: Literal["file"]
-    data: FileLike
-
-
-class SegmentedResult(Protocol):
-    key: Literal["segmented"]
-    data: SegmentedMessage
-
-
-class GroupMessage(TypedDict):
-    group_id: str
-    data: Result
-
-
-class GroupResult(TypedDict):
-    key: Literal["group_message"]
-    data: Result
+type ConsoleResult = CloversResult[Literal["console"], JsonType]
+type AtResult = CloversResult[Literal["at"], str]
+type TextResult = CloversResult[Literal["text"], str]
+type ImageResult = CloversResult[Literal["image"], FileLike]
+type SequenceResult = CloversResult[Literal["list"], SequenceMessage]
+type VoiceResult = CloversResult[Literal["voice"], FileLike]
+type VideoResult = CloversResult[Literal["video"], FileLike]
+type FileResult = CloversResult[Literal["file"], FileLike]
+type SegmentedResult = CloversResult[Literal["segmented"], SegmentedMessage]
+type PrivateResult = CloversResult[Literal["private_message"], PrivateMessage]
+type GroupResult = CloversResult[Literal["group_message"], GroupMessage]
 
 
 class PrivateMessage(TypedDict):
@@ -77,9 +35,9 @@ class PrivateMessage(TypedDict):
     data: Result
 
 
-class PrivateResult(TypedDict):
-    key: Literal["private_message"]
+class GroupMessage(TypedDict):
+    group_id: str
     data: Result
 
 
-__all__ = ["SingleResult", "OverallResult", "SegmentedResult", "Result", "GroupResult", "PrivateResult"]
+__all__ = ["SingleResult", "OverallResult", "SegmentedResult", "Result", "PrivateResult", "GroupResult"]

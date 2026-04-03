@@ -5,7 +5,7 @@ from fastapi import WebSocket
 from clovers import Adapter
 from clovers.logger import logger
 from clovers_client.console import Client
-from clovers_client.result import FileLike, ListMessage, SegmentedMessage, GroupMessage, PrivateMessage
+from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, GroupMessage, PrivateMessage
 from .utils import md5, upload, image_url
 from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
 
@@ -86,7 +86,7 @@ async def send_image(message: FileLike, recv: MessageEvent, send: SendMethod, cl
 
 
 @adapter.send_method("list")
-async def send_list(message: ListMessage, recv: MessageEvent, send: SendMethod, client: Client):
+async def send_list(message: SequenceMessage, recv: MessageEvent, send: SendMethod, client: Client):
     at: list[str] = []
     text: list[str] = []
     images: list[str] = []
@@ -97,8 +97,7 @@ async def send_list(message: ListMessage, recv: MessageEvent, send: SendMethod, 
             case "text":
                 text.append(result.data)
             case "image":
-                image = result.data
-                images.append(image if isinstance(image, str) else upload(client.load_dir, file2bytes(image)))
+                images.append(image if isinstance(image := result.data, str) else upload(client.load_dir, file2bytes(image)))
     data: ChatMessage = {
         "type": "user",
         "text": "\n".join(text),

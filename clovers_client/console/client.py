@@ -29,7 +29,7 @@ class ConsoleClient(Leaf, Client):
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
         from .adapter import __adapter__
 
-        self.adapter.update(__adapter__)
+        self.adapter.mixin(__adapter__)
         # 初始化加载
         self.load_adapters_from_list(config.adapters)
         self.load_adapters_from_dirs(config.adapter_dirs)

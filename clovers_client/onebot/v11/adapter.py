@@ -1,10 +1,9 @@
 from clovers import Adapter
 from clovers.logger import logger
-from clovers_client.result import FileLike, ListMessage, SingleResult, ListResult, SegmentedMessage, GroupMessage, PrivateMessage
+from clovers_client.result import FileLike, SequenceMessage, SingleResult, SequenceResult, SegmentedMessage, GroupMessage, PrivateMessage
 from clovers_client.event import MemberInfo
 from .typing import MessageEvent, Message, OneBotV11API
 from .utils import f2s, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
-
 
 __adapter__ = adapter = Adapter("OneBot V11")
 
@@ -56,7 +55,7 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
 
 
 @adapter.send_method("list")
-async def _(message: ListMessage, call: OneBotV11API, recv: MessageEvent):
+async def _(message: SequenceMessage, call: OneBotV11API, recv: MessageEvent):
     msg = [seg for single in message if (seg := result2seg(single))]
     match recv["message_type"]:
         case "group":
@@ -111,7 +110,7 @@ async def _(message: PrivateMessage, /, call: OneBotV11API):
 
 
 @adapter.send_method("merge_forward")
-async def _(message: list[SingleResult | ListResult], /, call: OneBotV11API, recv: MessageEvent):
+async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API, recv: MessageEvent):
     messages = resultlist2nodelist(recv["BOT_NICKNAME"], recv["self_id"], message)
     match recv["message_type"]:
         case "group":

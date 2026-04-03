@@ -3,7 +3,7 @@ from io import BytesIO
 from base64 import b64encode
 from collections.abc import Callable, Coroutine
 from typing import Any
-from clovers_client.result import FileLike, SegmentedMessage, SingleResult, ListResult
+from clovers_client.result import FileLike, SegmentedMessage, SingleResult, SequenceResult
 from clovers_client.event import FlatContextUnit
 from .typing import MessageEvent, GroupMessageEvent, Message, MessageSegmentSend, Node, OneBotV11API
 
@@ -70,7 +70,7 @@ async def send_segmented(send: Callable[[Message], Coroutine[Any, Any, None]], m
         await send(msg)
 
 
-def resultlist2nodelist(self_name: str, self_id: int, message: list[SingleResult | ListResult]) -> list[Node]:
+def resultlist2nodelist(self_name: str, self_id: int, message: list[SingleResult | SequenceResult]) -> list[Node]:
     messages = []
     for result in message:
         if result.key == "list":

@@ -1,7 +1,7 @@
-from clovers import EventProtocol
+from clovers import EventType
 from typing import TypedDict, Protocol, Literal, Any, overload
-from collections.abc import Coroutine
-from .result import FileLike, ListMessage, GroupMessage, PrivateMessage, OverallResult
+from collections.abc import Coroutine, Sequence
+from .result import FileLike, SequenceMessage, GroupMessage, PrivateMessage, OverallResult
 
 type OptCoro[T] = Coroutine[Any, Any, T] | None
 
@@ -22,7 +22,7 @@ class FlatContextUnit(TypedDict):
     images: list[str]
 
 
-class Event(EventProtocol, Protocol):
+class Event(EventType, Protocol):
     to_me: bool
     """是否为针对我的事件"""
     at: list[str]
@@ -48,25 +48,25 @@ class Event(EventProtocol, Protocol):
     """
 
     @overload
-    async def call(self, key: Literal["text"], message: str): ...
+    async def send(self, key: Literal["text"], message: str): ...
 
     @overload
-    async def call(self, key: Literal["image"], message: FileLike): ...
+    async def send(self, key: Literal["image"], message: FileLike): ...
 
     @overload
-    async def call(self, key: Literal["list"], message: ListMessage): ...
+    async def send(self, key: Literal["list"], message: SequenceMessage): ...
 
     @overload
-    async def call(self, key: Literal["file"], message: FileLike): ...
+    async def send(self, key: Literal["file"], message: FileLike): ...
 
     @overload
-    async def call(self, key: Literal["group_message"], message: GroupMessage): ...
+    async def send(self, key: Literal["group_message"], message: GroupMessage): ...
 
     @overload
-    async def call(self, key: Literal["private_message"], message: PrivateMessage): ...
+    async def send(self, key: Literal["private_message"], message: PrivateMessage): ...
 
     @overload
-    async def call(self, key: Literal["merge_forward"], message: list[OverallResult]): ...
+    async def send(self, key: Literal["merge_forward"], message: Sequence[OverallResult]): ...
 
     @overload
     def call(self, key: Literal["flat_context"]) -> OptCoro[list[FlatContextUnit]]: ...
@@ -76,3 +76,9 @@ class Event(EventProtocol, Protocol):
 
     @overload
     def call(self, key: Literal["group_member_list"], group_id: str) -> OptCoro[list[MemberInfo]]: ...
+
+    def send(self, key: str, message: Any):
+        raise NotImplementedError
+
+    def call(self, key: str, *args: Any, **kwargs):
+        raise NotImplementedError
