@@ -169,6 +169,16 @@ class SendGroupForwardMsgBody(TypedDict):
     messages: list[Node]
 
 
+class UploadPrivateFileBody(TypedDict):
+    user_id: int
+    file: str
+
+
+class UploadGroupFileBody(TypedDict):
+    group_id: int
+    file: str
+
+
 class ForwardNodeData(TypedDict, total=False):
     content: list[MessageSegmentReveive]
     sender: Sender
@@ -192,6 +202,12 @@ class OneBotV11API(Protocol):
 
     @overload
     async def __call__(self, endpoint: Literal["send_group_forward_msg"], params: SendGroupForwardMsgBody) -> None: ...
+
+    @overload
+    async def __call__(self, endpoint: Literal["upload_private_file"], params: UploadPrivateFileBody) -> None: ...
+
+    @overload
+    async def __call__(self, endpoint: Literal["upload_group_file"], params: UploadGroupFileBody) -> None: ...
 
     @overload
     async def __call__(

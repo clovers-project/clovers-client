@@ -1,5 +1,5 @@
-import asyncio
 import json
+import asyncio
 import websockets
 from clovers import Leaf, Client
 from clovers.logger import logger
@@ -43,6 +43,7 @@ class OneBotV11Client(Leaf, Client):
         message = message.lstrip()
         user_id = recv.get("user_id", 0)
         raw_message = recv.get("raw_message", "null")
+        raw_message = (raw_message[:100] + "...") if len(raw_message) > 100 else raw_message
         recv["BOT_NICKNAME"] = self.BOT_NICKNAME
         recv["SUPERUSERS"] = self.SUPERUSERS
         if recv.get("message_type") == "private":
@@ -109,6 +110,6 @@ class OneBotV11Client(Leaf, Client):
                         for task in tasks:
                             if not task.done():
                                 task.cancel()
-                    tasks.add(asyncio.create_task(ws_connect.close()))
                     tasks.add(asyncio.create_task(self.ws_api.close()))
+                    tasks.add(asyncio.create_task(ws_connect.close()))
                     await asyncio.gather(*tasks, return_exceptions=True)

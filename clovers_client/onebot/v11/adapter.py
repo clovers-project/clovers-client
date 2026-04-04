@@ -1,3 +1,8 @@
+import os
+import asyncio
+from pathlib import Path
+from io import BytesIO
+from tempfile import NamedTemporaryFile
 from clovers import Adapter
 from clovers.logger import logger
 from clovers_client.result import FileLike, SequenceMessage, SingleResult, SequenceResult, SegmentedMessage, GroupMessage, PrivateMessage
@@ -9,7 +14,7 @@ __adapter__ = adapter = Adapter("OneBot V11")
 
 
 @adapter.send_method("console")
-async def send_console(message: list[str]):
+async def send_console(message: list[str], /):
     title, groupId, msg = message
     logger.info(f"[CONSOLE][{groupId}][{title}]: {msg}")
 
@@ -55,7 +60,7 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
 
 
 @adapter.send_method("list")
-async def _(message: SequenceMessage, call: OneBotV11API, recv: MessageEvent):
+async def _(message: SequenceMessage, /, call: OneBotV11API, recv: MessageEvent):
     msg = [seg for single in message if (seg := result2seg(single))]
     match recv["message_type"]:
         case "group":
@@ -64,9 +69,47 @@ async def _(message: SequenceMessage, call: OneBotV11API, recv: MessageEvent):
             await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
+async def del_file_task(file: str, seconds: int = 30):
+    await asyncio.sleep(seconds)
+    os.unlink(file)
+
+
 @adapter.send_method("file")
-async def _(message: FileLike, call: OneBotV11API, recv: MessageEvent):
-    pass
+async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
+    match recv["message_type"]:
+        case "group":
+            upload_file = lambda url: call("upload_group_file", {"group_id": recv["group_id"], "file": url})
+        case "private":
+            upload_file = lambda url: call("upload_private_file", {"user_id": recv["user_id"], "file": url})
+        case _:
+            logger.error(f"unknown message_type: {message}")
+            return
+    match message:
+        case str():
+            await upload_file(message)
+            return
+        case Path():
+            await upload_file(message.as_posix())
+            return
+        case bytes():
+            with NamedTemporaryFile(suffix=".tmp", delete=False) as tmp:
+                tmp.write(message)
+                tmp.flush()
+                file = tmp.name
+        case BytesIO():
+            with NamedTemporaryFile(suffix=".tmp", delete=False) as tmp:
+                message.seek(0)
+                while chunk := message.read(8192):
+                    tmp.write(chunk)
+                tmp.flush()
+                file = tmp.name
+        case _:
+            logger.warning(f"unknown file message type: {type(message)}")
+            return
+    try:
+        await upload_file(file)
+    finally:
+        asyncio.create_task(del_file_task(file))
 
 
 @adapter.send_method("segmented")
