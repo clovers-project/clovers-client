@@ -172,11 +172,13 @@ class SendGroupForwardMsgBody(TypedDict):
 class UploadPrivateFileBody(TypedDict):
     user_id: int
     file: str
+    name: NotRequired[str]
 
 
 class UploadGroupFileBody(TypedDict):
     group_id: int
     file: str
+    name: NotRequired[str]
 
 
 class ForwardNodeData(TypedDict, total=False):

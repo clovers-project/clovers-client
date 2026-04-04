@@ -1,5 +1,6 @@
 import os
 import asyncio
+from datetime import datetime
 from pathlib import Path
 from io import BytesIO
 from tempfile import NamedTemporaryFile
@@ -78,26 +79,32 @@ async def del_file_task(file: str, seconds: int = 30):
 async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
     match recv["message_type"]:
         case "group":
-            upload_file = lambda url: call("upload_group_file", {"group_id": recv["group_id"], "file": url})
+            upload_file = lambda url, name: call("upload_group_file", {"group_id": recv["group_id"], "file": url, "name": name})
         case "private":
-            upload_file = lambda url: call("upload_private_file", {"user_id": recv["user_id"], "file": url})
+            upload_file = lambda url, name: call("upload_private_file", {"user_id": recv["user_id"], "file": url, "name": name})
         case _:
             logger.error(f"unknown message_type: {message}")
             return
     match message:
         case str():
-            await upload_file(message)
+            if "/" in message:
+                file_name = message.rsplit("/", 1)[-1]
+            elif "\\" in message:
+                file_name = message.rsplit("\\", 1)[-1]
+            else:
+                file_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            await upload_file(message, file_name)
             return
         case Path():
-            await upload_file(message.as_posix())
+            await upload_file(message.as_posix(), message.name)
             return
         case bytes():
-            with NamedTemporaryFile(suffix=".tmp", delete=False) as tmp:
+            with NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
                 tmp.write(message)
                 tmp.flush()
                 file = tmp.name
         case BytesIO():
-            with NamedTemporaryFile(suffix=".tmp", delete=False) as tmp:
+            with NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
                 message.seek(0)
                 while chunk := message.read(8192):
                     tmp.write(chunk)
@@ -107,7 +114,7 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
             logger.warning(f"unknown file message type: {type(message)}")
             return
     try:
-        await upload_file(file)
+        await upload_file(file, f"{ datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt")
     finally:
         asyncio.create_task(del_file_task(file))
 

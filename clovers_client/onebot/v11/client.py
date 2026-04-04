@@ -43,7 +43,6 @@ class OneBotV11Client(Leaf, Client):
         message = message.lstrip()
         user_id = recv.get("user_id", 0)
         raw_message = recv.get("raw_message", "null")
-        raw_message = (raw_message[:100] + "...") if len(raw_message) > 100 else raw_message
         recv["BOT_NICKNAME"] = self.BOT_NICKNAME
         recv["SUPERUSERS"] = self.SUPERUSERS
         if recv.get("message_type") == "private":
@@ -74,7 +73,6 @@ class OneBotV11Client(Leaf, Client):
                 del self.api_futures[echo]
                 raise
         else:
-            print(f"Call API {endpoint} with params {params}")
             await self.ws_api.send(json.dumps({"action": endpoint, "params": params}))
 
     async def run(self):
