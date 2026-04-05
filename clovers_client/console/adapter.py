@@ -10,7 +10,7 @@ from .utils import md5, upload, image_url
 from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
 
 
-__adapter__ = adapter = Adapter()
+__adapter__ = adapter = Adapter("CONSOLE")
 
 
 @adapter.send_method("console")
