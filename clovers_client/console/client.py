@@ -5,7 +5,7 @@ from functools import partial
 from collections import deque
 from fastapi import FastAPI, File, UploadFile, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response, FileResponse
-from clovers import Leaf, Client
+from clovers import CloversCore
 from clovers.logger import logger
 from clovers_client.logger import init_logger
 from clovers_client.config import ClientConfig
@@ -23,7 +23,7 @@ class Config(ClientConfig):
     load_dir: str = "./load_dir"
 
 
-class ConsoleClient(Leaf, Client):
+class ConsoleClient(CloversCore):
     def __init__(self, config: Config = Config.sync_config("clovers")):
         super().__init__("CONSOLE")
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
@@ -31,10 +31,8 @@ class ConsoleClient(Leaf, Client):
 
         self.adapter.mixin(__adapter__)
         # 初始化加载
-        self.load_adapters_from_list(config.adapters)
-        self.load_adapters_from_dirs(config.adapter_dirs)
-        self.load_plugins_from_list(config.plugins)
-        self.load_plugins_from_dirs(config.plugin_dirs)
+        self.adapter.load_adapter(config.adapters, config.adapter_dirs)
+        self.plugins.load_plugin(config.plugins, config.plugin_dirs)
         # inner
         self.message_id = int32_id_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=100)
@@ -55,9 +53,10 @@ class ConsoleClient(Leaf, Client):
 
     async def download(self, name: str, check: bool = Query(False)):
         filepath = self.load_dir / name
-        if not filepath.exists():
-            return Response(status_code=404)
-        return Response(status_code=200) if check else FileResponse(path=filepath)
+        print(filepath.resolve())
+        if filepath.exists() and filepath.is_file():
+            return Response(status_code=200) if check else FileResponse(path=filepath)
+        return Response(status_code=404)
 
     async def find_message(self, message_id: str):
         message = next((msg for msg_id, msg in self.messages if msg_id == message_id), None)
@@ -78,7 +77,7 @@ class ConsoleClient(Leaf, Client):
         return self.boardcast_payload(payload)
 
     async def boardcast_payload(self, payload: str):
-        return await asyncio.gather(*(ws.send_text(payload) for ws in self.ws_connects), return_exceptions=True)
+        await asyncio.gather(*(ws.send_text(payload) for ws in self.ws_connects))
 
     async def reveive_event(self, ws: WebSocket):
         while True:
@@ -101,24 +100,16 @@ class ConsoleClient(Leaf, Client):
         await ws.accept()
         self.ws_connects.add(ws)
         logger.info(f"New client connected. Total: {len(self.ws_connects)}")
-        tasks: set[asyncio.Task] = set()
         reveive_event = self.reveive_event(ws)
         try:
             async for recv, send in reveive_event:
-                tasks.add(task := asyncio.create_task(self.response(recv=recv, send=send, ws=ws, client=self)))
-                task.add_done_callback(tasks.discard)
+                self.dispatch(recv=recv, send=send, ws=ws, client=self)
         except WebSocketDisconnect:
             logger.info("Client disconnected.")
         except Exception:
             logger.exception("Error in websocket_handler")
-        finally:
-            if tasks:
-                for task in tasks:
-                    if not task.done():
-                        task.cancel()
-                await asyncio.gather(*tasks, return_exceptions=True)
-            self.ws_connects.discard(ws)
-            logger.info(f"Client remaining: {len(self.ws_connects)}")
+        self.ws_connects.discard(ws)
+        logger.info(f"Client remaining: {len(self.ws_connects)}")
 
     def extract_message(self, recv: MessageEvent, **ignore):
         text = recv["text"]
@@ -136,10 +127,11 @@ class ConsoleClient(Leaf, Client):
         app = FastAPI()
         app.websocket("/ws")(self.websocket_handler)
         app.post("/upload")(self.upload)
-        app.get("/download/{name}")(self.download)
+        app.get("/download/{name:path}")(self.download)
         app.get("/message/{message_id}")(self.find_message)
         app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
         config = uvicorn.Config(app, host=self.host, port=self.port, log_level="info")
         server = uvicorn.Server(config)
-        async with self:
-            await server.serve()
+        await self.startup()
+        await server.serve()
+        await self.shutdown()

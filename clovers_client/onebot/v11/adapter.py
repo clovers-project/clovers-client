@@ -50,9 +50,9 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
             await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
-@adapter.send_method("voice")
-async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
-    msg: Message = [{"type": "record", "data": {"file": f2s(message)}}]
+@adapter.send_method("list")
+async def _(message: SequenceMessage, /, call: OneBotV11API, recv: MessageEvent):
+    msg = [seg for single in message if (seg := result2seg(single))]
     match recv["message_type"]:
         case "group":
             await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
@@ -60,9 +60,9 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
             await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
-@adapter.send_method("list")
-async def _(message: SequenceMessage, /, call: OneBotV11API, recv: MessageEvent):
-    msg = [seg for single in message if (seg := result2seg(single))]
+@adapter.send_method("voice")
+async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
+    msg: Message = [{"type": "record", "data": {"file": f2s(message)}}]
     match recv["message_type"]:
         case "group":
             await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
