@@ -8,9 +8,9 @@ class Config(BaseModel):
 
     @classmethod
     def sync_config(cls, config_key: str = "clovers"):
-        __clovers_config__: dict = CloversConfig.environ().setdefault(config_key, {})
-        __clovers_config__.update((__config__ := cls.model_validate(__clovers_config__)).model_dump())
-        return __config__
+        clovers_config: dict = CloversConfig.environ().setdefault(config_key, {})
+        clovers_config.update((__config := cls.model_validate(clovers_config)).model_dump())
+        return __config
 
 
 class ClientConfig(Config):
