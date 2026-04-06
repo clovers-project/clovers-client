@@ -10,16 +10,16 @@ from .utils import md5, upload, image_url
 from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
 
 
-__adapter__ = adapter = Adapter("CONSOLE")
+ADAPTER = Adapter("CONSOLE")
 
 
-@adapter.send_method("console")
+@ADAPTER.send_method("console")
 async def send_console(message: list[str], send: SendMethod):
     data: ConsoleMessage = {"type": "system", "data": message}
     await send(data)
 
 
-@adapter.send_method("at")
+@ADAPTER.send_method("at")
 async def send_at(message: str, recv: MessageEvent, send: SendMethod, client: Client):
     data: ChatMessage = {
         "type": "user",
@@ -37,7 +37,7 @@ async def send_at(message: str, recv: MessageEvent, send: SendMethod, client: Cl
     await send(data)
 
 
-@adapter.send_method("text")
+@ADAPTER.send_method("text")
 async def send_text(message: str, recv: MessageEvent, send: SendMethod, client: Client):
     data: ChatMessage = {
         "type": "user",
@@ -67,7 +67,7 @@ def file2bytes(file: FileLike):
             raise TypeError(f"Unsupported type: {type(file)}")
 
 
-@adapter.send_method("image")
+@ADAPTER.send_method("image")
 async def send_image(message: FileLike, recv: MessageEvent, send: SendMethod, client: Client):
     data: ChatMessage = {
         "type": "user",
@@ -85,7 +85,7 @@ async def send_image(message: FileLike, recv: MessageEvent, send: SendMethod, cl
     await send(data)
 
 
-@adapter.send_method("list")
+@ADAPTER.send_method("list")
 async def send_list(message: SequenceMessage, recv: MessageEvent, send: SendMethod, client: Client):
     at: list[str] = []
     text: list[str] = []
@@ -114,7 +114,7 @@ async def send_list(message: SequenceMessage, recv: MessageEvent, send: SendMeth
     await send(data)
 
 
-@adapter.send_method("file")
+@ADAPTER.send_method("file")
 async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, client: Client):
     data: ChatMessage = {
         "type": "user",
@@ -152,7 +152,7 @@ async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, cli
     await send(data)
 
 
-@adapter.send_method("segmented")
+@ADAPTER.send_method("segmented")
 async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: SendMethod, client: Client):
     async for result in message:
         match result.key:
@@ -172,7 +172,7 @@ async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: Se
                 logger.warning(f"Unsupported send_method: {result.key}")
 
 
-@adapter.send_method("group_message")
+@ADAPTER.send_method("group_message")
 async def _(message: GroupMessage, client: Client):
     result = message["data"]
     redirect: MessageEvent = {
@@ -188,7 +188,7 @@ async def _(message: GroupMessage, client: Client):
         await send_list([result.data], redirect, client.broadcast, client)
 
 
-@adapter.send_method("private_message")
+@ADAPTER.send_method("private_message")
 async def _(message: PrivateMessage, recv: MessageEvent, ws: WebSocket, client: Client):
     result = message["data"]
     senderId = recv["senderId"]
@@ -208,52 +208,52 @@ async def _(message: PrivateMessage, recv: MessageEvent, ws: WebSocket, client: 
         await send_list([result.data], redirect, unicast, client)
 
 
-@adapter.property_method("Bot_Nickname")
+@ADAPTER.property_method("Bot_Nickname")
 async def _(client: Client) -> str:
     return client.BOT_NICKNAME
 
 
-@adapter.property_method("to_me")
+@ADAPTER.property_method("to_me")
 async def _(recv: MessageEvent, client: Client) -> bool:
     return recv["to_me"] or (client.BOT_NICKNAME in recv["at"])
 
 
-@adapter.property_method("at")
+@ADAPTER.property_method("at")
 async def _(recv: MessageEvent) -> list[str]:
     return recv["at"]
 
 
-@adapter.property_method("image_list")
+@ADAPTER.property_method("image_list")
 async def _(recv: MessageEvent, client: Client) -> list[str]:
     return [x for url in recv["images"] if (x := image_url(client.load_dir, url))]
 
 
-@adapter.property_method("user_id")
+@ADAPTER.property_method("user_id")
 async def _(recv: MessageEvent) -> str:
     return recv["senderId"]
 
 
-@adapter.property_method("nickname")
+@ADAPTER.property_method("nickname")
 async def _(recv: MessageEvent) -> str:
     return recv["senderName"]
 
 
-@adapter.property_method("avatar")
+@ADAPTER.property_method("avatar")
 async def _(recv: MessageEvent) -> str:
     return recv["avatar"]
 
 
-@adapter.property_method("group_id")
+@ADAPTER.property_method("group_id")
 async def _(recv: MessageEvent) -> str | None:
     return None if recv["groupId"] == "private" else recv["groupId"]
 
 
-@adapter.property_method("group_avatar")
+@ADAPTER.property_method("group_avatar")
 async def _(recv: MessageEvent) -> str:
     return recv["groupAvatar"]
 
 
-@adapter.property_method("permission")
+@ADAPTER.property_method("permission")
 async def _(recv: MessageEvent) -> int:
     match recv["permission"]:
         case "SuperUser":

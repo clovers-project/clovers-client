@@ -11,16 +11,16 @@ from clovers_client.event import MemberInfo
 from .typing import MessageEvent, Message, OneBotV11API
 from .utils import f2s, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
 
-__adapter__ = adapter = Adapter("OneBot V11")
+ADAPTER = Adapter("OneBot V11")
 
 
-@adapter.send_method("console")
+@ADAPTER.send_method("console")
 async def send_console(message: list[str], /):
     title, groupId, msg = message
     logger.info(f"[CONSOLE][{groupId}][{title}]: {msg}")
 
 
-@adapter.send_method("at")
+@ADAPTER.send_method("at")
 async def _(message: str, /, call: OneBotV11API, recv: MessageEvent):
     msg: Message = [{"type": "at", "data": {"qq": message}}]
     match recv["message_type"]:
@@ -30,7 +30,7 @@ async def _(message: str, /, call: OneBotV11API, recv: MessageEvent):
             await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
-@adapter.send_method("text")
+@ADAPTER.send_method("text")
 async def _(message: str, /, call: OneBotV11API, recv: MessageEvent):
     msg: Message = [{"type": "text", "data": {"text": message}}]
     match recv["message_type"]:
@@ -40,7 +40,7 @@ async def _(message: str, /, call: OneBotV11API, recv: MessageEvent):
             await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
-@adapter.send_method("image")
+@ADAPTER.send_method("image")
 async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
     msg: Message = [{"type": "image", "data": {"file": f2s(message)}}]
     match recv["message_type"]:
@@ -50,7 +50,7 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
             await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
-@adapter.send_method("list")
+@ADAPTER.send_method("list")
 async def _(message: SequenceMessage, /, call: OneBotV11API, recv: MessageEvent):
     msg = [seg for single in message if (seg := result2seg(single))]
     match recv["message_type"]:
@@ -60,7 +60,7 @@ async def _(message: SequenceMessage, /, call: OneBotV11API, recv: MessageEvent)
             await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
-@adapter.send_method("voice")
+@ADAPTER.send_method("voice")
 async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
     msg: Message = [{"type": "record", "data": {"file": f2s(message)}}]
     match recv["message_type"]:
@@ -75,7 +75,7 @@ async def del_file_task(file: str, seconds: int = 30):
     os.unlink(file)
 
 
-@adapter.send_method("file")
+@ADAPTER.send_method("file")
 async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
     match recv["message_type"]:
         case "group":
@@ -96,7 +96,7 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
             await upload_file(message, file_name)
             return
         case Path():
-            await upload_file(message.as_posix(), message.name)
+            await upload_file(message.resolve().as_posix(), message.name)
             return
         case bytes():
             with NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
@@ -119,7 +119,7 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
         asyncio.create_task(del_file_task(file))
 
 
-@adapter.send_method("segmented")
+@ADAPTER.send_method("segmented")
 async def _(message: SegmentedMessage, /, call: OneBotV11API, recv: MessageEvent):
     match recv["message_type"]:
         case "group":
@@ -128,7 +128,7 @@ async def _(message: SegmentedMessage, /, call: OneBotV11API, recv: MessageEvent
             await send_segmented(lambda msg: send_private_msg(call, recv, msg), message)
 
 
-@adapter.send_method("group_message")
+@ADAPTER.send_method("group_message")
 async def _(message: GroupMessage, /, call: OneBotV11API):
     print(f"GroupMessage {message}")
     result = message["data"]
@@ -144,7 +144,7 @@ async def _(message: GroupMessage, /, call: OneBotV11API):
             await call("send_group_msg", {"group_id": group_id, "message": [seg]})
 
 
-@adapter.send_method("private_message")
+@ADAPTER.send_method("private_message")
 async def _(message: PrivateMessage, /, call: OneBotV11API):
     result = message["data"]
     user_id = int(message["user_id"])
@@ -159,7 +159,7 @@ async def _(message: PrivateMessage, /, call: OneBotV11API):
             await call("send_private_msg", {"user_id": user_id, "message": [seg]})
 
 
-@adapter.send_method("merge_forward")
+@ADAPTER.send_method("merge_forward")
 async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API, recv: MessageEvent):
     messages = resultlist2nodelist(recv["BOT_NICKNAME"], recv["self_id"], message)
     match recv["message_type"]:
@@ -169,12 +169,12 @@ async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API,
             await call("send_private_forward_msg", {"user_id": recv["user_id"], "messages": messages})
 
 
-@adapter.property_method("Bot_Nickname")
+@ADAPTER.property_method("Bot_Nickname")
 async def _(recv: MessageEvent) -> str:
     return recv["BOT_NICKNAME"]
 
 
-@adapter.property_method("to_me")
+@ADAPTER.property_method("to_me")
 async def _(recv: dict) -> bool:
     if "to_me" in recv:
         return True
@@ -182,12 +182,12 @@ async def _(recv: dict) -> bool:
     return any(seg["type"] == "at" and seg["data"]["qq"] == self_id for seg in recv["message"])
 
 
-@adapter.property_method("at")
+@ADAPTER.property_method("at")
 async def _(recv: dict) -> list[str]:
     return [str(seg["data"]["qq"]) for seg in recv["message"] if seg["type"] == "at"]
 
 
-@adapter.property_method("image_list")
+@ADAPTER.property_method("image_list")
 async def _(call: OneBotV11API, recv: MessageEvent) -> list[str]:
     reply_id = None
     url = []
@@ -202,28 +202,28 @@ async def _(call: OneBotV11API, recv: MessageEvent) -> list[str]:
     return url
 
 
-@adapter.property_method("user_id")
+@ADAPTER.property_method("user_id")
 async def _(recv: MessageEvent) -> str:
     return str(recv["user_id"])
 
 
-@adapter.property_method("nickname")
+@ADAPTER.property_method("nickname")
 async def _(recv: dict) -> str:
     return recv["sender"]["card"] or recv["sender"]["nickname"]
 
 
-@adapter.property_method("avatar")
+@ADAPTER.property_method("avatar")
 async def _(recv: dict) -> str:
     return f"https://q1.qlogo.cn/g?b=qq&nk={recv["user_id"]}&s=640"
 
 
-@adapter.property_method("group_id")
+@ADAPTER.property_method("group_id")
 async def _(recv: dict) -> str | None:
     if "group_id" in recv:
         return str(recv["group_id"])
 
 
-@adapter.property_method("group_avatar")
+@ADAPTER.property_method("group_avatar")
 async def _(recv: dict) -> str | None:
     if "group_id" not in recv:
         return
@@ -231,7 +231,7 @@ async def _(recv: dict) -> str | None:
     return f"https://p.qlogo.cn/gh/{group_id}/{group_id}/640"
 
 
-@adapter.property_method("permission")
+@ADAPTER.property_method("permission")
 async def _(recv: dict) -> int:
     if str(recv["user_id"]) in recv["SUPERUSERS"]:
         return 3
@@ -243,7 +243,7 @@ async def _(recv: dict) -> int:
     return 0
 
 
-@adapter.property_method("flat_context")
+@ADAPTER.property_method("flat_context")
 async def _(call: OneBotV11API, recv: MessageEvent):
     reply_id = next((msg["data"]["id"] for msg in recv["message"] if msg["type"] == "reply"), None)
     if not reply_id:
@@ -255,7 +255,7 @@ async def _(call: OneBotV11API, recv: MessageEvent):
     return await build_flat_context(call, seg["data"]["id"])
 
 
-@adapter.call_method("group_member_info")
+@ADAPTER.call_method("group_member_info")
 async def _(group_id: str, user_id: str, /, call: OneBotV11API) -> MemberInfo:
     user_info = await call("get_group_member_info", {"group_id": int(group_id), "user_id": int(user_id)}, True)
     return {
@@ -268,7 +268,7 @@ async def _(group_id: str, user_id: str, /, call: OneBotV11API) -> MemberInfo:
     }
 
 
-@adapter.call_method("group_member_list")
+@ADAPTER.call_method("group_member_list")
 async def _(group_id: str, /, call: OneBotV11API) -> list[MemberInfo]:
     info_list: list[MemberInfo] = await call("get_group_member_list", {"group_id": int(group_id)}, True)  # type: ignore
     for user_info in info_list:
@@ -279,4 +279,4 @@ async def _(group_id: str, /, call: OneBotV11API) -> list[MemberInfo]:
     return info_list
 
 
-__all__ = ["__adapter__"]
+__all__ = ["ADAPTER"]

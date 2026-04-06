@@ -19,9 +19,9 @@ class OneBotV11Client(CloversCore):
     def __init__(self, config: Config = Config.sync_config()):
         super().__init__("OneBot V11")
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
-        from .adapter import __adapter__
+        from .adapter import ADAPTER
 
-        self.adapter.mixin(__adapter__)
+        self.adapter.mixin(ADAPTER)
         # 初始化加载
         self.adapter.load_adapter(config.adapters, config.adapter_dirs)
         self.plugins.load_plugin(config.plugins, config.plugin_dirs)
@@ -74,26 +74,26 @@ class OneBotV11Client(CloversCore):
 
     async def run(self):
         headers = {"Authorization": f"Bearer {self.ws_token}"} if self.ws_token else None
-        await self.startup()
-        while self.__ready:
-            try:
-                ws_connect = await websockets.connect(self.ws_url, additional_headers=headers)
-                self.__tasks.add(asyncio.create_task(self.run_api_connect(headers)))
-                logger.info("websockets connected")
-                async for recv_data in ws_connect:
-                    recv = json.loads(recv_data)
-                    if not recv.get("post_type") == "message":
-                        continue
-                    self.dispatch(call=self.call_api, recv=recv)
-                logger.info("client closed")
-                await asyncio.sleep(5)  # 正常关闭也会尝试重连
-            except (websockets.exceptions.ConnectionClosedError, TimeoutError):
-                logger.error("websockets reconnecting...")
-                await asyncio.sleep(5)
-            except ConnectionRefusedError as e:
-                logger.error(f"ConnectionRefusedError: {e}")
-                logger.error(f"Please check service on {self.ws_url}")
-                return
-            except Exception:
-                logger.exception("something error")
-                return
+        async with self:
+            while self._ready:
+                try:
+                    ws_connect = await websockets.connect(self.ws_url, additional_headers=headers)
+                    self.create_task(self.run_api_connect(headers))
+                    logger.info("websockets connected")
+                    async for recv_data in ws_connect:
+                        recv = json.loads(recv_data)
+                        if not recv.get("post_type") == "message":
+                            continue
+                        self.dispatch(call=self.call_api, recv=recv)
+                    logger.info("client closed")
+                    await asyncio.sleep(5)  # 正常关闭也会尝试重连
+                except (websockets.exceptions.ConnectionClosedError, TimeoutError):
+                    logger.error("websockets reconnecting...")
+                    await asyncio.sleep(5)
+                except ConnectionRefusedError as e:
+                    logger.error(f"ConnectionRefusedError: {e}")
+                    logger.error(f"Please check service on {self.ws_url}")
+                    return
+                except Exception:
+                    logger.exception("something error")
+                    return

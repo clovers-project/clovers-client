@@ -27,9 +27,9 @@ class ConsoleClient(CloversCore):
     def __init__(self, config: Config = Config.sync_config("clovers")):
         super().__init__("CONSOLE")
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
-        from .adapter import __adapter__
+        from .adapter import ADAPTER
 
-        self.adapter.mixin(__adapter__)
+        self.adapter.mixin(ADAPTER)
         # 初始化加载
         self.adapter.load_adapter(config.adapters, config.adapter_dirs)
         self.plugins.load_plugin(config.plugins, config.plugin_dirs)
