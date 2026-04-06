@@ -7,8 +7,8 @@ type OptCoro[T] = Coroutine[Any, Any, T] | None
 
 
 class MemberInfo(TypedDict):
-    group_id: str
     user_id: str
+    group_id: str
     nickname: str
     card: str
     avatar: str
