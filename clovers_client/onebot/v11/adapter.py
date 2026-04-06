@@ -1,17 +1,21 @@
-import os
-import asyncio
 from datetime import datetime
 from pathlib import Path
-from io import BytesIO
-from tempfile import NamedTemporaryFile
 from clovers import Adapter
 from clovers.logger import logger
+from clovers_client.onebot.v11 import Client
 from clovers_client.result import FileLike, SequenceMessage, SingleResult, SequenceResult, SegmentedMessage, GroupMessage, PrivateMessage
 from clovers_client.event import MemberInfo
 from .typing import MessageEvent, Message, OneBotV11API
-from .utils import f2s, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
+from .utils import init, format_file, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
 
 ADAPTER = Adapter("OneBot V11")
+
+
+@ADAPTER.setup
+def setup(client: Client):
+    init(client.is_local)
+    global CLIENT
+    CLIENT = client
 
 
 @ADAPTER.send_method("console")
@@ -42,7 +46,7 @@ async def _(message: str, /, call: OneBotV11API, recv: MessageEvent):
 
 @ADAPTER.send_method("image")
 async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
-    msg: Message = [{"type": "image", "data": {"file": f2s(message)}}]
+    msg: Message = [{"type": "image", "data": {"file": format_file(message)}}]
     match recv["message_type"]:
         case "group":
             await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
@@ -62,7 +66,7 @@ async def _(message: SequenceMessage, /, call: OneBotV11API, recv: MessageEvent)
 
 @ADAPTER.send_method("voice")
 async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
-    msg: Message = [{"type": "record", "data": {"file": f2s(message)}}]
+    msg: Message = [{"type": "record", "data": {"file": format_file(message)}}]
     match recv["message_type"]:
         case "group":
             await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
@@ -70,53 +74,29 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
             await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
-async def del_file_task(file: str, seconds: int = 30):
-    await asyncio.sleep(seconds)
-    os.unlink(file)
-
-
 @ADAPTER.send_method("file")
 async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent):
-    match recv["message_type"]:
-        case "group":
-            upload_file = lambda url, name: call("upload_group_file", {"group_id": recv["group_id"], "file": url, "name": name})
-        case "private":
-            upload_file = lambda url, name: call("upload_private_file", {"user_id": recv["user_id"], "file": url, "name": name})
-        case _:
-            logger.error(f"unknown message_type: {message}")
-            return
     match message:
         case str():
             if "/" in message:
-                file_name = message.rsplit("/", 1)[-1]
+                name = message.rsplit("/", 1)[-1]
+                if "." not in name:
+                    name += ".txt"
             elif "\\" in message:
-                file_name = message.rsplit("\\", 1)[-1]
+                name = message.rsplit("\\", 1)[-1]
+                if "." not in name:
+                    name += ".txt"
             else:
-                file_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            await upload_file(message, file_name)
-            return
+                name = f"{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt"
         case Path():
-            await upload_file(message.resolve().as_posix(), message.name)
-            return
-        case bytes():
-            with NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
-                tmp.write(message)
-                tmp.flush()
-                file = tmp.name
-        case BytesIO():
-            with NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
-                message.seek(0)
-                while chunk := message.read(8192):
-                    tmp.write(chunk)
-                tmp.flush()
-                file = tmp.name
+            name = message.name
         case _:
-            logger.warning(f"unknown file message type: {type(message)}")
-            return
-    try:
-        await upload_file(file, f"{ datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt")
-    finally:
-        asyncio.create_task(del_file_task(file))
+            name = f"{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt"
+    match recv["message_type"]:
+        case "group":
+            await call("upload_group_file", {"group_id": recv["group_id"], "file": format_file(message), "name": name})
+        case "private":
+            await call("upload_private_file", {"user_id": recv["user_id"], "file": format_file(message), "name": name})
 
 
 @ADAPTER.send_method("segmented")
@@ -161,7 +141,7 @@ async def _(message: PrivateMessage, /, call: OneBotV11API):
 
 @ADAPTER.send_method("merge_forward")
 async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API, recv: MessageEvent):
-    messages = resultlist2nodelist(recv["BOT_NICKNAME"], recv["self_id"], message)
+    messages = resultlist2nodelist(CLIENT.BOT_NICKNAME, recv["self_id"], message)
     match recv["message_type"]:
         case "group":
             await call("send_group_forward_msg", {"group_id": recv["group_id"], "messages": messages})
@@ -170,8 +150,8 @@ async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API,
 
 
 @ADAPTER.property_method("Bot_Nickname")
-async def _(recv: MessageEvent) -> str:
-    return recv["BOT_NICKNAME"]
+async def _() -> str:
+    return CLIENT.BOT_NICKNAME
 
 
 @ADAPTER.property_method("to_me")
@@ -208,23 +188,27 @@ async def _(recv: MessageEvent) -> str:
 
 
 @ADAPTER.property_method("nickname")
-async def _(recv: dict) -> str:
-    return recv["sender"]["card"] or recv["sender"]["nickname"]
+async def _(recv: MessageEvent) -> str:
+    sender = recv["sender"]
+    if "card" in sender:
+        return sender["card"] or sender["nickname"] or "unknown"
+    else:
+        return sender["nickname"] or "unknown"
 
 
 @ADAPTER.property_method("avatar")
-async def _(recv: dict) -> str:
+async def _(recv: MessageEvent) -> str:
     return f"https://q1.qlogo.cn/g?b=qq&nk={recv["user_id"]}&s=640"
 
 
 @ADAPTER.property_method("group_id")
-async def _(recv: dict) -> str | None:
+async def _(recv: MessageEvent) -> str | None:
     if "group_id" in recv:
         return str(recv["group_id"])
 
 
 @ADAPTER.property_method("group_avatar")
-async def _(recv: dict) -> str | None:
+async def _(recv: MessageEvent) -> str | None:
     if "group_id" not in recv:
         return
     group_id = recv["group_id"]
@@ -232,8 +216,8 @@ async def _(recv: dict) -> str | None:
 
 
 @ADAPTER.property_method("permission")
-async def _(recv: dict) -> int:
-    if str(recv["user_id"]) in recv["SUPERUSERS"]:
+async def _(recv: MessageEvent) -> int:
+    if str(recv["user_id"]) in CLIENT.SUPERUSERS:
         return 3
     if role := recv["sender"].get("role"):
         if role == "owner":

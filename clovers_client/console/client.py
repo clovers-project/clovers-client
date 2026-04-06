@@ -10,7 +10,7 @@ from clovers.logger import logger
 from clovers_client.logger import init_logger
 from clovers_client.config import ClientConfig
 from .utils import upload, int32_id_generator
-from .typing import ChatMessage, MessageEvent
+from .typing import Message, MessageEvent
 
 CONSOLE_PREFIX = b"\x05\x03\x01".decode()
 PAGE_RESOURCE = Path(__file__).parent / "page"
@@ -64,13 +64,13 @@ class ConsoleClient(CloversCore):
             return Response(status_code=404)
         return Response(status_code=200, content=message, media_type="application/json")
 
-    def unicast(self, ws: WebSocket, data: ChatMessage):
+    def unicast(self, ws: WebSocket, data: Message):
         data["messageId"] = next(self.message_id)
         payload = json.dumps(data)
         self.messages.append((data["messageId"], payload))
         return ws.send_text(payload)
 
-    def broadcast(self, data: ChatMessage):
+    def broadcast(self, data: Message):
         data["messageId"] = next(self.message_id)
         payload = json.dumps(data)
         self.messages.append((data["messageId"], payload))
@@ -103,7 +103,7 @@ class ConsoleClient(CloversCore):
         reveive_event = self.reveive_event(ws)
         try:
             async for recv, send in reveive_event:
-                self.dispatch(recv=recv, send=send, ws=ws, client=self)
+                self.dispatch(recv=recv, send=send, ws=ws)
         except WebSocketDisconnect:
             logger.info("Client disconnected.")
         except Exception:

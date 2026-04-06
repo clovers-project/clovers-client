@@ -20,9 +20,11 @@ class ChatMessage(TypedDict):
 class ConsoleMessage(TypedDict):
     type: Literal["system"]
     data: list
+    messageId: NotRequired[str]
 
 
-type SendMethod = Callable[[ChatMessage | ConsoleMessage], Coroutine[Any, Any, None]]
+type Message = ChatMessage | ConsoleMessage
+type SendMethod = Callable[[Message], Coroutine[Any, Any, None]]
 
 
 class MessageEvent(ChatMessage):

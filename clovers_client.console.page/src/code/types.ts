@@ -33,4 +33,5 @@ type ConsoleMessageData = [string, string, string]
 export interface ConsoleMessage {
     type: "system"
     data: ConsoleMessageData;
+    messageId?: string;
 }

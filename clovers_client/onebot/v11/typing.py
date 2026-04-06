@@ -98,8 +98,6 @@ class BaseMessageEvent(TypedDict):
     message: list[MessageSegmentReveive]
     raw_message: str
     to_me: bool  # 此字段为内部字段，非 OneBot V11 定义
-    BOT_NICKNAME: str  # 此字段为内部字段，非 OneBot V11 定义
-    SUPERUSERS: set[str]  # 此字段为内部字段，非 OneBot V11 定义
 
 
 class Sender(TypedDict):

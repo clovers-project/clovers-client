@@ -3,9 +3,18 @@ from io import BytesIO
 from base64 import b64encode
 from collections.abc import Callable, Coroutine
 from typing import Any
-from clovers_client.result import FileLike, SegmentedMessage, SingleResult, SequenceResult
+from clovers_client.result import FileLike, SegmentedMessage, SingleResult, SequenceResult, OverallResult
 from clovers_client.event import FlatContextUnit
 from .typing import MessageEvent, GroupMessageEvent, Message, MessageSegmentSend, Node, OneBotV11API
+
+
+def format_file(file: FileLike) -> str: ...
+def init(is_local: bool):
+    global format_file
+    if is_local:
+        format_file = f2s
+    else:
+        format_file = f2b
 
 
 def int32_id_generator():
@@ -15,26 +24,51 @@ def int32_id_generator():
         i = (i + 1) & 0xFFFFFFFF
 
 
+def b64url(data: bytes):
+    return f"base64://{b64encode(data).decode()}"
+
+
 def f2s(file: FileLike) -> str:
-    if isinstance(file, str):
-        return file
-    elif isinstance(file, Path):
-        return file.resolve().as_uri()
-    elif isinstance(file, BytesIO):
-        file = file.getvalue()
-    return f"base64://{b64encode(file).decode()}"
+    match file:
+        case str():
+            return file
+        case Path():
+            return file.resolve().as_uri()
+        case BytesIO():
+            return b64url(file.getvalue())
+        case _:
+            return b64url(file)
 
 
-def result2seg(result: SingleResult) -> MessageSegmentSend | None:
+def f2b(file: FileLike) -> str:
+    match file:
+        case str():
+            if file.startswith("http") or file.startswith("base64://"):
+                return file
+            data = (Path(file[:7]) if file.startswith("file://") else Path(file)).read_bytes()
+        case Path():
+            data = file.read_bytes()
+        case BytesIO():
+            data = file.getvalue()
+        case _:
+            data = file
+    return b64url(data)
+
+
+def result2seg(result: OverallResult) -> MessageSegmentSend | None:
     match result.key:
         case "text":
             return {"type": "text", "data": {"text": result.data}}
         case "image":
-            return {"type": "image", "data": {"file": f2s(result.data)}}
+            return {"type": "image", "data": {"file": format_file(result.data)}}
         case "at":
             return {"type": "at", "data": {"qq": result.data}}
         case "face":
             return {"type": "face", "data": {"id": result.data}}
+        case "voice":
+            return {"type": "video", "data": {"file": format_file(result.data)}}
+        case "video":
+            return {"type": "video", "data": {"file": format_file(result.data)}}
 
 
 async def send_group_msg(call: OneBotV11API, recv: GroupMessageEvent, message: Message):

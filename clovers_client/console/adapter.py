@@ -5,12 +5,18 @@ from fastapi import WebSocket
 from clovers import Adapter
 from clovers.logger import logger
 from clovers_client.console import Client
-from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, GroupMessage, PrivateMessage
+from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, Result, GroupMessage, PrivateMessage
 from .utils import md5, upload, image_url
 from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
 
 
 ADAPTER = Adapter("CONSOLE")
+
+
+@ADAPTER.setup
+def setup(client: Client):
+    global CLIENT
+    CLIENT = client
 
 
 @ADAPTER.send_method("console")
@@ -20,15 +26,15 @@ async def send_console(message: list[str], send: SendMethod):
 
 
 @ADAPTER.send_method("at")
-async def send_at(message: str, recv: MessageEvent, send: SendMethod, client: Client):
+async def send_at(message: str, recv: MessageEvent, send: SendMethod):
     data: ChatMessage = {
         "type": "user",
         "text": "",
         "images": [],
         "at": [message],
-        "senderId": client.BOT_NICKNAME,
-        "senderName": client.BOT_NICKNAME,
-        "avatar": client.BOT_AVATAR_URL,
+        "senderId": CLIENT.BOT_NICKNAME,
+        "senderName": CLIENT.BOT_NICKNAME,
+        "avatar": CLIENT.BOT_AVATAR_URL,
         "groupId": recv["groupId"],
         "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
@@ -38,15 +44,15 @@ async def send_at(message: str, recv: MessageEvent, send: SendMethod, client: Cl
 
 
 @ADAPTER.send_method("text")
-async def send_text(message: str, recv: MessageEvent, send: SendMethod, client: Client):
+async def send_text(message: str, recv: MessageEvent, send: SendMethod):
     data: ChatMessage = {
         "type": "user",
         "text": message,
         "images": [],
         "at": [],
-        "senderId": client.BOT_NICKNAME,
-        "senderName": client.BOT_NICKNAME,
-        "avatar": client.BOT_AVATAR_URL,
+        "senderId": CLIENT.BOT_NICKNAME,
+        "senderName": CLIENT.BOT_NICKNAME,
+        "avatar": CLIENT.BOT_AVATAR_URL,
         "groupId": recv["groupId"],
         "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
@@ -68,15 +74,15 @@ def file2bytes(file: FileLike):
 
 
 @ADAPTER.send_method("image")
-async def send_image(message: FileLike, recv: MessageEvent, send: SendMethod, client: Client):
+async def send_image(message: FileLike, recv: MessageEvent, send: SendMethod):
     data: ChatMessage = {
         "type": "user",
         "at": [],
         "text": "",
-        "images": [message if isinstance(message, str) else upload(client.load_dir, file2bytes(message))],
-        "senderId": client.BOT_NICKNAME,
-        "senderName": client.BOT_NICKNAME,
-        "avatar": client.BOT_AVATAR_URL,
+        "images": [message if isinstance(message, str) else upload(CLIENT.load_dir, file2bytes(message))],
+        "senderId": CLIENT.BOT_NICKNAME,
+        "senderName": CLIENT.BOT_NICKNAME,
+        "avatar": CLIENT.BOT_AVATAR_URL,
         "groupId": recv["groupId"],
         "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
@@ -86,7 +92,7 @@ async def send_image(message: FileLike, recv: MessageEvent, send: SendMethod, cl
 
 
 @ADAPTER.send_method("list")
-async def send_list(message: SequenceMessage, recv: MessageEvent, send: SendMethod, client: Client):
+async def send_list(message: SequenceMessage, recv: MessageEvent, send: SendMethod):
     at: list[str] = []
     text: list[str] = []
     images: list[str] = []
@@ -97,15 +103,15 @@ async def send_list(message: SequenceMessage, recv: MessageEvent, send: SendMeth
             case "text":
                 text.append(result.data)
             case "image":
-                images.append(image if isinstance(image := result.data, str) else upload(client.load_dir, file2bytes(image)))
+                images.append(image if isinstance(image := result.data, str) else upload(CLIENT.load_dir, file2bytes(image)))
     data: ChatMessage = {
         "type": "user",
         "text": "\n".join(text),
         "images": images,
         "at": at,
-        "senderId": client.BOT_NICKNAME,
-        "senderName": client.BOT_NICKNAME,
-        "avatar": client.BOT_AVATAR_URL,
+        "senderId": CLIENT.BOT_NICKNAME,
+        "senderName": CLIENT.BOT_NICKNAME,
+        "avatar": CLIENT.BOT_AVATAR_URL,
         "groupId": recv["groupId"],
         "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
@@ -115,15 +121,15 @@ async def send_list(message: SequenceMessage, recv: MessageEvent, send: SendMeth
 
 
 @ADAPTER.send_method("file")
-async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, client: Client):
+async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod):
     data: ChatMessage = {
         "type": "user",
         "text": "",
         "images": [],
         "at": [],
-        "senderId": client.BOT_NICKNAME,
-        "senderName": client.BOT_NICKNAME,
-        "avatar": client.BOT_AVATAR_URL,
+        "senderId": CLIENT.BOT_NICKNAME,
+        "senderName": CLIENT.BOT_NICKNAME,
+        "avatar": CLIENT.BOT_AVATAR_URL,
         "groupId": recv["groupId"],
         "groupName": recv["groupName"],
         "groupAvatar": recv["groupAvatar"],
@@ -142,7 +148,7 @@ async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, cli
         raise TypeError("file message must be str or Path")
     if not file.exists():
         raise FileNotFoundError(file)
-    folder = client.load_dir / "file"
+    folder = CLIENT.load_dir / "file"
     folder.mkdir(parents=True, exist_ok=True)
     file_data = file.read_bytes()
     file_name = f"{md5(file_data)}{file.suffix}"
@@ -152,60 +158,55 @@ async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, cli
     await send(data)
 
 
+async def send_result(result: Result, recv: MessageEvent, send: SendMethod):
+    match result.key:
+        case "at":
+            await send_at(result.data, recv, send)
+        case "text":
+            await send_text(result.data, recv, send)
+        case "image":
+            await send_image(result.data, recv, send)
+        case "list":
+            await send_list(result.data, recv, send)
+        case "segmented":
+            await send_segmented(result.data, recv, send)
+        case "file":
+            await send_file(result.data, recv, send)
+        case "console":
+            await send_console(result.data, send)
+        case _:
+            logger.warning(f"Unsupported send_method: {result.key}")
+
+
 @ADAPTER.send_method("segmented")
-async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: SendMethod, client: Client):
+async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: SendMethod):
     async for result in message:
-        match result.key:
-            case "at":
-                await send_at(result.data, recv, send, client)
-            case "text":
-                await send_text(result.data, recv, send, client)
-            case "image":
-                await send_image(result.data, recv, send, client)
-            case "list":
-                await send_list(result.data, recv, send, client)
-            case "file":
-                await send_file(result.data, recv, send, client)
-            case "console":
-                await send_console(result.data, recv, send)
-            case _:
-                logger.warning(f"Unsupported send_method: {result.key}")
+        await send_result(result, recv, send)
 
 
 @ADAPTER.send_method("group_message")
-async def _(message: GroupMessage, client: Client):
+async def _(message: GroupMessage):
     result = message["data"]
     redirect: MessageEvent = {
         "groupId": message["group_id"],
         "groupName": "",
         "groupAvatar": "",
     }  # type: ignore
-    if result.key == "segmented":
-        await send_segmented(result.data, redirect, client.broadcast, client)
-    elif result.key == "list":
-        await send_list(result.data, redirect, client.broadcast, client)
-    else:
-        await send_list([result.data], redirect, client.broadcast, client)
+    await send_result(result, redirect, CLIENT.broadcast)
 
 
 @ADAPTER.send_method("private_message")
-async def _(message: PrivateMessage, recv: MessageEvent, ws: WebSocket, client: Client):
+async def _(message: PrivateMessage, recv: MessageEvent, ws: WebSocket):
     result = message["data"]
     senderId = recv["senderId"]
     if senderId != message["user_id"]:
         raise ValueError("私聊消息的目标只能是触发事件发送者自身")
     redirect: MessageEvent = {
         "groupId": "private",
-        "groupName": client.BOT_NICKNAME,
-        "groupAvatar": client.BOT_AVATAR_URL,
+        "groupName": CLIENT.BOT_NICKNAME,
+        "groupAvatar": CLIENT.BOT_AVATAR_URL,
     }  # type: ignore
-    unicast = partial(client.unicast, ws)
-    if result.key == "segmented":
-        await send_segmented(result.data, redirect, unicast, client)
-    elif result.key == "list":
-        await send_list(result.data, redirect, unicast, client)
-    else:
-        await send_list([result.data], redirect, unicast, client)
+    await send_result(result, redirect, partial(CLIENT.unicast, ws))
 
 
 @ADAPTER.property_method("Bot_Nickname")
@@ -214,8 +215,8 @@ async def _(client: Client) -> str:
 
 
 @ADAPTER.property_method("to_me")
-async def _(recv: MessageEvent, client: Client) -> bool:
-    return recv["to_me"] or (client.BOT_NICKNAME in recv["at"])
+async def _(recv: MessageEvent) -> bool:
+    return recv["to_me"] or (CLIENT.BOT_NICKNAME in recv["at"])
 
 
 @ADAPTER.property_method("at")
@@ -224,8 +225,8 @@ async def _(recv: MessageEvent) -> list[str]:
 
 
 @ADAPTER.property_method("image_list")
-async def _(recv: MessageEvent, client: Client) -> list[str]:
-    return [x for url in recv["images"] if (x := image_url(client.load_dir, url))]
+async def _(recv: MessageEvent) -> list[str]:
+    return [x for url in recv["images"] if (x := image_url(CLIENT.load_dir, url))]
 
 
 @ADAPTER.property_method("user_id")

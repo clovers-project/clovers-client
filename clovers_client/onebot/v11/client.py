@@ -1,6 +1,7 @@
 import json
 import asyncio
 import websockets
+from urllib.parse import urlparse
 from clovers import CloversCore
 from clovers.logger import logger
 from clovers_client.logger import init_logger
@@ -33,6 +34,7 @@ class OneBotV11Client(CloversCore):
         # OneBot V11
         self.ws_url = config.ws_url
         self.ws_token = config.ws_token
+        self.is_local = urlparse(config.ws_url).hostname in ("127.0.0.1", "::1", "localhost")
         self.api_futures: dict[str, asyncio.Future] = {}
 
     async def run_api_connect(self, headers: dict | None):
@@ -60,8 +62,6 @@ class OneBotV11Client(CloversCore):
         message = message.lstrip()
         user_id = recv.get("user_id", 0)
         raw_message = recv.get("raw_message", "null")
-        recv["BOT_NICKNAME"] = self.BOT_NICKNAME
-        recv["SUPERUSERS"] = self.SUPERUSERS
         if recv.get("message_type") == "private":
             logger.info(f"[{user_id}][private]: {raw_message}")
             recv["to_me"] = True
