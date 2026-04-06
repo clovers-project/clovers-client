@@ -8,15 +8,7 @@ from clovers_client.event import FlatContextUnit
 from .typing import MessageEvent, GroupMessageEvent, Message, MessageSegmentSend, Node, OneBotV11API
 
 
-def format_file(file: FileLike) -> str: ...
-def init(is_local: bool):
-    global format_file
-    if is_local:
-        format_file = f2s
-    else:
-        format_file = f2b
-
-
+# def format_file(file: FileLike) -> str: ...
 def int32_id_generator():
     i = 0
     while True:
@@ -55,7 +47,7 @@ def f2b(file: FileLike) -> str:
     return b64url(data)
 
 
-def result2seg(result: OverallResult) -> MessageSegmentSend | None:
+def result2seg(result: OverallResult, format_file: Callable[[FileLike], str]) -> MessageSegmentSend | None:
     match result.key:
         case "text":
             return {"type": "text", "data": {"text": result.data}}
@@ -79,15 +71,19 @@ async def send_private_msg(call: OneBotV11API, recv: MessageEvent, message: Mess
     await call("send_private_msg", {"user_id": recv["user_id"], "message": message})
 
 
-async def send_segmented(send: Callable[[Message], Coroutine[Any, Any, None]], message: SegmentedMessage):
+async def send_segmented(
+    send: Callable[[Message], Coroutine[Any, Any, None]],
+    message: SegmentedMessage,
+    format_file: Callable[[FileLike], str],
+):
     async for result in message:
         match result.key:
             case "list":
-                msg = [seg for single in result.data if (seg := result2seg(single))]
+                msg = [seg for single in result.data if (seg := result2seg(single, format_file))]
                 if not msg:
                     continue
             case "at" | "text" | "image":
-                seg = result2seg(result)
+                seg = result2seg(result, format_file)
                 if not seg:
                     continue
                 msg = [seg]
@@ -104,15 +100,20 @@ async def send_segmented(send: Callable[[Message], Coroutine[Any, Any, None]], m
         await send(msg)
 
 
-def resultlist2nodelist(self_name: str, self_id: int, message: list[SingleResult | SequenceResult]) -> list[Node]:
+def resultlist2nodelist(
+    self_name: str,
+    self_id: int,
+    message: list[SingleResult | SequenceResult],
+    format_file: Callable[[FileLike], str],
+) -> list[Node]:
     messages = []
     for result in message:
         if result.key == "list":
-            msg = [seg for single in result.data if (seg := result2seg(single))]
+            msg = [seg for single in result.data if (seg := result2seg(single, format_file))]
             if not msg:
                 continue
         else:
-            seg = result2seg(result)
+            seg = result2seg(result, format_file)
             if not seg:
                 continue
             msg = [seg]
