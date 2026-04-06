@@ -6,16 +6,9 @@ from clovers_client.onebot.v11 import Client
 from clovers_client.result import FileLike, SequenceMessage, SingleResult, SequenceResult, SegmentedMessage, GroupMessage, PrivateMessage
 from clovers_client.event import MemberInfo
 from .typing import MessageEvent, Message, OneBotV11API
-from .utils import init, format_file, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
+from .utils import format_file, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
 
 ADAPTER = Adapter("OneBot V11")
-
-
-@ADAPTER.setup
-def setup(client: Client):
-    init(client.is_local)
-    global CLIENT
-    CLIENT = client
 
 
 @ADAPTER.send_method("console")
@@ -140,8 +133,8 @@ async def _(message: PrivateMessage, /, call: OneBotV11API):
 
 
 @ADAPTER.send_method("merge_forward")
-async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API, recv: MessageEvent):
-    messages = resultlist2nodelist(CLIENT.BOT_NICKNAME, recv["self_id"], message)
+async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API, recv: MessageEvent, client: Client):
+    messages = resultlist2nodelist(client.BOT_NICKNAME, recv["self_id"], message)
     match recv["message_type"]:
         case "group":
             await call("send_group_forward_msg", {"group_id": recv["group_id"], "messages": messages})
@@ -150,8 +143,8 @@ async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API,
 
 
 @ADAPTER.property_method("Bot_Nickname")
-async def _() -> str:
-    return CLIENT.BOT_NICKNAME
+async def _(client: Client) -> str:
+    return client.BOT_NICKNAME
 
 
 @ADAPTER.property_method("to_me")
@@ -216,8 +209,8 @@ async def _(recv: MessageEvent) -> str | None:
 
 
 @ADAPTER.property_method("permission")
-async def _(recv: MessageEvent) -> int:
-    if str(recv["user_id"]) in CLIENT.SUPERUSERS:
+async def _(recv: MessageEvent, client: Client) -> int:
+    if str(recv["user_id"]) in client.SUPERUSERS:
         return 3
     if role := recv["sender"].get("role"):
         if role == "owner":

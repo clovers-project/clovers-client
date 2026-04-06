@@ -84,7 +84,7 @@ class OneBotV11Client(CloversCore):
                         recv = json.loads(recv_data)
                         if not recv.get("post_type") == "message":
                             continue
-                        self.dispatch(call=self.call_api, recv=recv)
+                        self.dispatch(call=self.call_api, recv=recv, client=self)
                     logger.info("client closed")
                     await asyncio.sleep(5)  # 正常关闭也会尝试重连
                 except (websockets.exceptions.ConnectionClosedError, TimeoutError):
