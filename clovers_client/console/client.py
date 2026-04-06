@@ -53,7 +53,6 @@ class ConsoleClient(CloversCore):
 
     async def download(self, name: str, check: bool = Query(False)):
         filepath = self.load_dir / name
-        print(filepath.resolve())
         if filepath.exists() and filepath.is_file():
             return Response(status_code=200) if check else FileResponse(path=filepath)
         return Response(status_code=404)
@@ -103,7 +102,7 @@ class ConsoleClient(CloversCore):
         reveive_event = self.reveive_event(ws)
         try:
             async for recv, send in reveive_event:
-                self.dispatch(recv=recv, send=send, ws=ws)
+                self.dispatch(recv=recv, send=send, ws=ws, client=self)
         except WebSocketDisconnect:
             logger.info("Client disconnected.")
         except Exception:
