@@ -5,6 +5,7 @@ from fastapi import WebSocket
 from clovers import Adapter
 from clovers.logger import logger
 from clovers_client.console import Client
+from clovers_client.event import PermissionLiteral
 from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, Result, GroupMessage, PrivateMessage
 from .utils import md5, upload, image_url
 from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
@@ -248,8 +249,11 @@ async def _(recv: MessageEvent) -> str:
     return recv["groupAvatar"]
 
 
+from typing import Literal
+
+
 @ADAPTER.property_method("permission")
-async def _(recv: MessageEvent) -> int:
+async def _(recv: MessageEvent) -> PermissionLiteral:
     match recv["permission"]:
         case "SuperUser":
             return 3 if recv["ip"] and recv["ip"].startswith("127.") else 2

@@ -4,6 +4,7 @@ from collections.abc import Coroutine, Sequence
 from .result import FileLike, SequenceMessage, GroupMessage, PrivateMessage, OverallResult
 
 type OptCoro[T] = Coroutine[Any, Any, T] | None
+type PermissionLiteral = Literal[0, 1, 2, 3]
 
 
 class MemberInfo(TypedDict):
@@ -39,7 +40,7 @@ class Event(EventType, Protocol):
     """群组唯一ID，为空时为私聊"""
     group_avatar: str | None
     """群组头像 URL"""
-    permission: Literal[0, 1, 2, 3]
+    permission: PermissionLiteral
     """权限等级\n
     0: 无权限\n
     1: 管理员\n

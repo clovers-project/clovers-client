@@ -24,8 +24,8 @@ class OneBotV11Client(CloversCore):
 
         self.adapter.mixin(ADAPTER)
         # 初始化加载
-        self.adapter.load_adapter(config.adapters, config.adapter_dirs)
-        self.plugins.load_plugin(config.plugins, config.plugin_dirs)
+        self.load_adapter(config.adapters, config.adapter_dirs)
+        self.load_plugin(config.plugins, config.plugin_dirs)
         # inner
         self.message_id = int32_id_generator()
         self.BOT_NICKNAME = config.BOT_NICKNAME
