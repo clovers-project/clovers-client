@@ -204,7 +204,7 @@ async def _(message: PrivateMessage, recv: MessageEvent, ws: WebSocket, client: 
     await send_result(result, redirect, partial(client.unicast, ws), client)
 
 
-@ADAPTER.property_method("Bot_Nickname")
+@ADAPTER.property_method("bot_nickname")
 async def _(client: Client) -> str:
     return client.BOT_NICKNAME
 
@@ -247,9 +247,6 @@ async def _(recv: MessageEvent) -> str | None:
 @ADAPTER.property_method("group_avatar")
 async def _(recv: MessageEvent) -> str:
     return recv["groupAvatar"]
-
-
-from typing import Literal
 
 
 @ADAPTER.property_method("permission")

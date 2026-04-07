@@ -4,7 +4,7 @@ from clovers import Adapter
 from clovers.logger import logger
 from clovers_client.onebot.v11 import Client
 from clovers_client.result import FileLike, SequenceMessage, SingleResult, SequenceResult, SegmentedMessage, GroupMessage, PrivateMessage
-from clovers_client.event import MemberInfo
+from clovers_client.event import MemberInfo, PermissionLiteral, FlatContextUnit
 from .typing import MessageEvent, Message, OneBotV11API
 from .utils import f2s, f2b, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
 
@@ -159,7 +159,7 @@ async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API,
             await call("send_private_forward_msg", {"user_id": recv["user_id"], "messages": messages})
 
 
-@ADAPTER.property_method("Bot_Nickname")
+@ADAPTER.property_method("bot_nickname")
 async def _(client: Client) -> str:
     return client.BOT_NICKNAME
 
@@ -226,7 +226,7 @@ async def _(recv: MessageEvent) -> str | None:
 
 
 @ADAPTER.property_method("permission")
-async def _(recv: MessageEvent, client: Client) -> int:
+async def _(recv: MessageEvent, client: Client) -> PermissionLiteral:
     if str(recv["user_id"]) in client.SUPERUSERS:
         return 3
     if role := recv["sender"].get("role"):
@@ -238,7 +238,7 @@ async def _(recv: MessageEvent, client: Client) -> int:
 
 
 @ADAPTER.property_method("flat_context")
-async def _(call: OneBotV11API, recv: MessageEvent):
+async def _(call: OneBotV11API, recv: MessageEvent) -> list[FlatContextUnit] | None:
     reply_id = next((msg["data"]["id"] for msg in recv["message"] if msg["type"] == "reply"), None)
     if not reply_id:
         return
