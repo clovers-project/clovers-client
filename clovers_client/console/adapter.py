@@ -6,7 +6,8 @@ from clovers import Adapter
 from clovers.logger import logger
 from clovers_client.console import Client
 from clovers_client.event import PermissionLiteral
-from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, Result, GroupMessage, PrivateMessage
+from clovers_client.result import OverallResult, SegmentedResult
+from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, GroupMessage, PrivateMessage
 from .utils import md5, upload, image_url
 from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
 
@@ -153,7 +154,7 @@ async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, cli
     await send(data)
 
 
-async def send_result(result: Result, recv: MessageEvent, send: SendMethod, client: Client):
+async def send_result(result: OverallResult | SegmentedResult, recv: MessageEvent, send: SendMethod, client: Client):
     match result.key:
         case "at":
             await send_at(result.data, recv, send, client)
