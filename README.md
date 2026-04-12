@@ -10,7 +10,7 @@ _✨ 官方 Clovers 机器人客户端 ✨_
 [![pypi](https://img.shields.io/pypi/v/clovers-client.svg)](https://pypi.python.org/pypi/clovers-client)
 [![pypi download](https://img.shields.io/pypi/dm/clovers-client)](https://pypi.python.org/pypi/clovers-client)
 [![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
-[![Github](https://img.shields.io/badge/GitHub-Clovers-00CC33?logo=github)](https://github.com/clovers-project/clovers-client)
+[![Github](https://img.shields.io/badge/GitHub-Clovers-00CC33?logo=github)](https://github.com/clovers-project/clovers)
 [![LICENSE](https://img.shields.io/github/license/clovers-project/clovers-client.svg)](./LICENSE)
 
 [使用文档](https://clovers-project.github.io/#/clovers-client)
