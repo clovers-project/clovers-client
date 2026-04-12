@@ -9,7 +9,8 @@ from clovers import CloversCore
 from clovers.logger import logger
 from clovers_client.logger import init_logger
 from clovers_client.config import ClientConfig
-from .utils import upload, int32_id_generator
+from clovers_client.utils import id_generator
+from .utils import upload
 from .typing import Message, MessageEvent
 
 CONSOLE_PREFIX = b"\x05\x03\x01".decode()
@@ -34,7 +35,7 @@ class ConsoleClient(CloversCore):
         self.load_adapter(config.adapters, config.adapter_dirs)
         self.load_plugin(config.plugins, config.plugin_dirs)
         # inner
-        self.message_id = int32_id_generator()
+        self.message_id = id_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=100)
         self.BOT_NICKNAME = config.BOT_NICKNAME
         self.BOT_AVATAR_URL = config.BOT_AVATAR_URL

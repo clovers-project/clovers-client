@@ -7,7 +7,7 @@ type FileLike = str | bytes | BytesIO | Path
 
 
 # def format_file(file: FileLike) -> str: ...
-def int32_id_generator():
+def id_generator():
     i = 0
     while True:
         yield str(i)

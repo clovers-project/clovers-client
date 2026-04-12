@@ -7,7 +7,7 @@ from clovers.logger import logger
 from clovers_client.logger import init_logger
 from clovers_client.config import ClientConfig
 from clovers_client.result import FileLike
-from clovers_client.utils import int32_id_generator, f2s, f2b
+from clovers_client.utils import id_generator, f2s, f2b
 from .typing import MessageEvent, APIResponse
 
 
@@ -28,7 +28,7 @@ class OneBotV11Client(CloversCore):
         self.load_adapter(config.adapters, config.adapter_dirs)
         self.load_plugin(config.plugins, config.plugin_dirs)
         # inner
-        self.message_id = int32_id_generator()
+        self.message_id = id_generator()
         self.BOT_NICKNAME = config.BOT_NICKNAME
         self.SUPERUSERS = config.SUPERUSERS
         self._length_bot_nickname = len(self.BOT_NICKNAME)
