@@ -39,4 +39,4 @@ class GroupMessage(TypedDict):
     data: OverallResult | SegmentedResult
 
 
-__all__ = ["SingleResult", "OverallResult", "SegmentedResult", "PrivateResult", "GroupResult"]
+__all__ = ["SingleResult", "SequenceResult", "OverallResult", "SegmentedResult", "PrivateResult", "GroupResult", "MergeForwardResult"]
