@@ -14,6 +14,7 @@ type JsonType = JsonBaseType | JsonArray | JsonObject
 
 type SequenceMessage = Sequence[SingleResult]
 type SegmentedMessage = AsyncGenerator[OverallResult, None]
+type MergeForwardMessage = Sequence[SingleResult | SequenceResult]
 
 type AtResult = CloversResult[Literal["at"], str]
 type TextResult = CloversResult[Literal["text"], str]
@@ -26,19 +27,19 @@ type FileResult = CloversResult[Literal["file"], FileLike]
 type ConsoleResult = CloversResult[Literal["console"], list[str]]
 type OverallResult = SingleResult | SequenceResult | FileResult | VoiceResult | VideoResult | ConsoleResult
 type SegmentedResult = CloversResult[Literal["segmented"], SegmentedMessage]
-type Result = OverallResult | SegmentedResult
 type PrivateResult = CloversResult[Literal["private_message"], PrivateMessage]
 type GroupResult = CloversResult[Literal["group_message"], GroupMessage]
+type MergeForwardResult = CloversResult[Literal["merge_forward"], MergeForwardMessage]
 
 
 class PrivateMessage(TypedDict):
     user_id: str
-    data: Result
+    data: OverallResult | SegmentedResult
 
 
 class GroupMessage(TypedDict):
     group_id: str
-    data: Result
+    data: OverallResult | SegmentedResult
 
 
-__all__ = ["SingleResult", "OverallResult", "SegmentedResult", "Result", "PrivateResult", "GroupResult"]
+__all__ = ["SingleResult", "OverallResult", "SegmentedResult", "PrivateResult", "GroupResult"]

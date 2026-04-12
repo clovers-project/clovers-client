@@ -1,7 +1,7 @@
 from clovers import EventType
 from typing import TypedDict, Protocol, Literal, Any, overload
-from collections.abc import Coroutine, Sequence
-from .result import FileLike, SequenceMessage, GroupMessage, PrivateMessage, OverallResult
+from collections.abc import Coroutine
+from .result import FileLike, SequenceMessage, SegmentedResult, GroupMessage, PrivateMessage, MergeForwardMessage
 
 type OptCoro[T] = Coroutine[Any, Any, T] | None
 type PermissionLiteral = Literal[0, 1, 2, 3]
@@ -40,6 +40,8 @@ class Event(EventType, Protocol):
     """群组唯一ID，为空时为私聊"""
     group_avatar: str | None
     """群组头像 URL"""
+    bot_nickname: str
+    """机器人昵称"""
     permission: PermissionLiteral
     """权限等级\n
     0: 无权限\n
@@ -49,37 +51,37 @@ class Event(EventType, Protocol):
     """
 
     @overload
+    async def send(self, key: Literal["at"], message: str): ...
+    @overload
     async def send(self, key: Literal["text"], message: str): ...
-
     @overload
     async def send(self, key: Literal["image"], message: FileLike): ...
-
     @overload
     async def send(self, key: Literal["list"], message: SequenceMessage): ...
-
+    @overload
+    async def send(self, key: Literal["voice"], message: FileLike): ...
+    @overload
+    async def send(self, key: Literal["video"], message: FileLike): ...
     @overload
     async def send(self, key: Literal["file"], message: FileLike): ...
-
     @overload
-    async def send(self, key: Literal["group_message"], message: GroupMessage): ...
-
+    async def send(self, key: Literal["console"], message: list[str]): ...
+    @overload
+    async def send(self, key: Literal["segmented"], message: SegmentedResult): ...
     @overload
     async def send(self, key: Literal["private_message"], message: PrivateMessage): ...
-
     @overload
-    async def send(self, key: Literal["merge_forward"], message: Sequence[OverallResult]): ...
-
+    async def send(self, key: Literal["group_message"], message: GroupMessage): ...
     @overload
-    def call(self, key: Literal["flat_context"]) -> OptCoro[list[FlatContextUnit]]: ...
-
-    @overload
-    def call(self, key: Literal["group_member_info"], group_id: str, user_id: str) -> OptCoro[MemberInfo]: ...
-
-    @overload
-    def call(self, key: Literal["group_member_list"], group_id: str) -> OptCoro[list[MemberInfo]]: ...
-
+    async def send(self, key: Literal["merge_forward"], message: MergeForwardMessage): ...
     def send(self, key: str, message: Any):
         raise NotImplementedError
 
+    @overload
+    def call(self, key: Literal["flat_context"]) -> OptCoro[list[FlatContextUnit]]: ...
+    @overload
+    def call(self, key: Literal["group_member_info"], group_id: str, user_id: str) -> OptCoro[MemberInfo]: ...
+    @overload
+    def call(self, key: Literal["group_member_list"], group_id: str) -> OptCoro[list[MemberInfo]]: ...
     def call(self, key: str, *args: Any, **kwargs):
         raise NotImplementedError

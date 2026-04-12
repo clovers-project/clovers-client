@@ -73,6 +73,8 @@ async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent, client
     match recv["message_type"]:
         case "group":
             await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
+        case "private":
+            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
 
 
 @ADAPTER.send_method("file")
