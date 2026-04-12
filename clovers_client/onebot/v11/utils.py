@@ -1,123 +1,72 @@
-from pathlib import Path
-from io import BytesIO
-from base64 import b64encode
-from collections.abc import Callable, Coroutine
-from typing import Any
-from clovers_client.result import FileLike, SegmentedMessage, SingleResult, SequenceResult, OverallResult
+from typing import TypedDict, Literal
+from collections.abc import Callable
+from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, SingleResult, SequenceResult, OverallResult, SegmentedResult
 from clovers_client.event import FlatContextUnit
-from .typing import MessageEvent, GroupMessageEvent, Message, MessageSegmentSend, Node, OneBotV11API
+from clovers_client.utils import format_filename
+from .typing import MessageEvent, Message, Node, OneBotV11API
 
 
-# def format_file(file: FileLike) -> str: ...
-def int32_id_generator():
-    i = 0
-    while True:
-        yield str(i)
-        i = (i + 1) & 0xFFFFFFFF
+def list2message(message: SequenceMessage, format_file: Callable[[FileLike], str]) -> Message:
+    msg = []
+    for seg in message:
+        match seg.key:
+            case "text":
+                msg.append({"type": "text", "data": {"text": seg.data}})
+            case "image":
+                msg.append({"type": "image", "data": {"file": format_file(seg.data)}})
+            case "at":
+                msg.append({"type": "at", "data": {"qq": seg.data}})
+                msg.append({"type": "text", "data": {"text": " "}})
+    return msg
 
 
-def b64url(data: bytes):
-    return f"base64://{b64encode(data).decode()}"
-
-
-def f2s(file: FileLike) -> str:
-    match file:
-        case str():
-            return file
-        case Path():
-            return file.resolve().as_uri()
-        case BytesIO():
-            return b64url(file.getvalue())
-        case _:
-            return b64url(file)
-
-
-def f2b(file: FileLike) -> str:
-    match file:
-        case str():
-            if file.startswith("http") or file.startswith("base64://"):
-                return file
-            data = (Path(file[:7]) if file.startswith("file://") else Path(file)).read_bytes()
-        case Path():
-            data = file.read_bytes()
-        case BytesIO():
-            data = file.getvalue()
-        case _:
-            data = file
-    return b64url(data)
-
-
-def result2seg(result: OverallResult, format_file: Callable[[FileLike], str]) -> MessageSegmentSend | None:
+def to_message(result: OverallResult, format_file: Callable[[FileLike], str]) -> Message | None:
     match result.key:
-        case "text":
-            return {"type": "text", "data": {"text": result.data}}
-        case "image":
-            return {"type": "image", "data": {"file": format_file(result.data)}}
         case "at":
-            return {"type": "at", "data": {"qq": result.data}}
-        case "face":
-            return {"type": "face", "data": {"id": result.data}}
+            return [{"type": "at", "data": {"qq": result.data}}]
+        case "text":
+            return [{"type": "text", "data": {"text": result.data}}]
+        case "image":
+            return [{"type": "image", "data": {"file": format_file(result.data)}}]
+        case "list":
+            return list2message(result.data, format_file)
         case "voice":
-            return {"type": "video", "data": {"file": format_file(result.data)}}
+            return [{"type": "record", "data": {"file": format_file(result.data)}}]
         case "video":
-            return {"type": "video", "data": {"file": format_file(result.data)}}
+            return [{"type": "video", "data": {"file": format_file(result.data)}}]
 
 
-async def send_group_msg(call: OneBotV11API, recv: GroupMessageEvent, message: Message):
-    await call("send_group_msg", {"group_id": recv["group_id"], "message": message})
+class Target(TypedDict):
+    to: Literal["group", "private"]
+    id: int
 
 
-async def send_private_msg(call: OneBotV11API, recv: MessageEvent, message: Message):
-    await call("send_private_msg", {"user_id": recv["user_id"], "message": message})
+async def send_segmented(result: SegmentedMessage, format_file: Callable[[FileLike], str], call: OneBotV11API, target: Target):
+    async for seg in result:
+        if seg.key == "file":
+            await upload_file(format_file(seg.data), format_filename(seg.data), call, target)
+        elif msg := to_message(seg, format_file):
+            await send_message(msg, call, target)
 
 
-async def send_segmented(
-    send: Callable[[Message], Coroutine[Any, Any, None]],
-    message: SegmentedMessage,
-    format_file: Callable[[FileLike], str],
-):
-    async for result in message:
-        match result.key:
-            case "list":
-                msg = [seg for single in result.data if (seg := result2seg(single, format_file))]
-                if not msg:
-                    continue
-            case "at" | "text" | "image":
-                seg = result2seg(result, format_file)
-                if not seg:
-                    continue
-                msg = [seg]
-            case "file":
-                continue
-            case "voice":
-                continue
-            case "video":
-                continue
-            case "console":
-                continue
-            case _:
-                continue
-        await send(msg)
+async def send_result(result: OverallResult | SegmentedResult, format_file: Callable[[FileLike], str], call: OneBotV11API, target: Target):
+    match result.key:
+        case "segmented":
+            await send_segmented(result.data, format_file, call, target)
+        case "file":
+            await upload_file(format_file(result.data), format_filename(result.data), call, target)
+        case _:
+            if msg := to_message(result, format_file):
+                await send_message(msg, call, target)
 
 
 def resultlist2nodelist(
-    self_name: str,
-    self_id: int,
-    message: list[SingleResult | SequenceResult],
-    format_file: Callable[[FileLike], str],
+    self_name: str, self_id: int, message: list[SingleResult | SequenceResult], format_file: Callable[[FileLike], str]
 ) -> list[Node]:
     messages = []
     for result in message:
-        if result.key == "list":
-            msg = [seg for single in result.data if (seg := result2seg(single, format_file))]
-            if not msg:
-                continue
-        else:
-            seg = result2seg(result, format_file)
-            if not seg:
-                continue
-            msg = [seg]
-        messages.append({"type": "node", "data": {"name": self_name, "uin": self_id, "content": msg}})
+        if msg := to_message(result, format_file):
+            messages.append({"type": "node", "data": {"name": self_name, "uin": self_id, "content": msg}})
     return messages
 
 
@@ -153,3 +102,27 @@ async def build_flat_context(call: OneBotV11API, msg_id: str) -> list[FlatContex
                 images.append(x["data"]["url"])
         flat_context.append({"nickname": nickname, "user_id": user_id, "text": "".join(text), "images": images})
     return flat_context
+
+
+async def upload_file(file: str, name: str, call: OneBotV11API, target: Target):
+    match target["to"]:
+        case "group":
+            await call("upload_group_file", {"group_id": target["id"], "file": file, "name": name})
+        case "private":
+            await call("upload_private_file", {"user_id": target["id"], "file": file, "name": name})
+
+
+async def send_message(message: Message, call: OneBotV11API, target: Target):
+    match target["to"]:
+        case "group":
+            await call("send_group_msg", {"group_id": target["id"], "message": message})
+        case "private":
+            await call("send_private_msg", {"user_id": target["id"], "message": message})
+
+
+def to_target(recv: MessageEvent) -> Target:
+    match recv["message_type"]:
+        case "group":
+            return {"to": "group", "id": recv["group_id"]}
+        case "private":
+            return {"to": "private", "id": recv["user_id"]}

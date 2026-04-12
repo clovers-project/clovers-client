@@ -1,12 +1,11 @@
-from datetime import datetime
-from pathlib import Path
 from clovers import Adapter
 from clovers.logger import logger
-from clovers_client.onebot.v11 import Client
 from clovers_client.result import FileLike, SequenceMessage, SingleResult, SequenceResult, SegmentedMessage, GroupMessage, PrivateMessage
 from clovers_client.event import MemberInfo, PermissionLiteral, FlatContextUnit
-from .typing import MessageEvent, Message, OneBotV11API
-from .utils import f2s, f2b, result2seg, send_group_msg, send_private_msg, send_segmented, resultlist2nodelist, build_flat_context
+from clovers_client.utils import format_filename
+from clovers_client.onebot.v11 import Client
+from .typing import MessageEvent, OneBotV11API
+from .utils import list2message, send_message, upload_file, send_segmented, to_target, send_result, resultlist2nodelist, build_flat_context
 
 ADAPTER = Adapter("OneBot V11")
 
@@ -18,142 +17,58 @@ async def send_console(message: list[str], /):
 
 
 @ADAPTER.send_method("at")
-async def _(message: str, /, call: OneBotV11API, recv: MessageEvent):
-    msg: Message = [{"type": "at", "data": {"qq": message}}]
-    match recv["message_type"]:
-        case "group":
-            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
-        case "private":
-            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
+async def _(message: str, /, call: OneBotV11API, recv: MessageEvent) -> None:
+    await send_message([{"type": "at", "data": {"qq": message}}], call, to_target(recv))
 
 
 @ADAPTER.send_method("text")
-async def _(message: str, /, call: OneBotV11API, recv: MessageEvent):
-    msg: Message = [{"type": "text", "data": {"text": message}}]
-    match recv["message_type"]:
-        case "group":
-            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
-        case "private":
-            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
+async def _(message: str, /, call: OneBotV11API, recv: MessageEvent) -> None:
+    await send_message([{"type": "text", "data": {"text": message}}], call, to_target(recv))
 
 
 @ADAPTER.send_method("image")
-async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent, client: Client):
-    msg: Message = [{"type": "image", "data": {"file": (f2s if client.is_local else f2b)(message)}}]
-    match recv["message_type"]:
-        case "group":
-            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
-        case "private":
-            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
+async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent, client: Client) -> None:
+    await send_message([{"type": "image", "data": {"file": client.format_file(message)}}], call, to_target(recv))
 
 
 @ADAPTER.send_method("list")
-async def _(message: SequenceMessage, /, call: OneBotV11API, recv: MessageEvent, client: Client):
-    msg = [seg for single in message if (seg := result2seg(single, f2s if client.is_local else f2b))]
-    match recv["message_type"]:
-        case "group":
-            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
-        case "private":
-            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
+async def _(message: SequenceMessage, /, call: OneBotV11API, recv: MessageEvent, client: Client) -> None:
+    await send_message(list2message(message, client.format_file), call, to_target(recv))
 
 
 @ADAPTER.send_method("voice")
-async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent, client: Client):
-    msg: Message = [{"type": "record", "data": {"file": (f2s if client.is_local else f2b)(message)}}]
-    match recv["message_type"]:
-        case "group":
-            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
-        case "private":
-            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
+async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent, client: Client) -> None:
+    await send_message([{"type": "record", "data": {"file": client.format_file(message)}}], call, to_target(recv))
 
 
 @ADAPTER.send_method("video")
-async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent, client: Client):
-    msg: Message = [{"type": "video", "data": {"file": (f2s if client.is_local else f2b)(message)}}]
-    match recv["message_type"]:
-        case "group":
-            await call("send_group_msg", {"group_id": recv["group_id"], "message": msg})
-        case "private":
-            await call("send_private_msg", {"user_id": recv["user_id"], "message": msg})
+async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent, client: Client) -> None:
+    await send_message([{"type": "video", "data": {"file": client.format_file(message)}}], call, to_target(recv))
 
 
 @ADAPTER.send_method("file")
 async def _(message: FileLike, /, call: OneBotV11API, recv: MessageEvent, client: Client):
-    format_file = f2s if client.is_local else f2b
-    match message:
-        case str():
-            if "/" in message:
-                name = message.rsplit("/", 1)[-1]
-                if "." not in name:
-                    name += ".txt"
-            elif "\\" in message:
-                name = message.rsplit("\\", 1)[-1]
-                if "." not in name:
-                    name += ".txt"
-            else:
-                name = f"{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt"
-        case Path():
-            name = message.name
-        case _:
-            name = f"{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt"
-    match recv["message_type"]:
-        case "group":
-            await call("upload_group_file", {"group_id": recv["group_id"], "file": format_file(message), "name": name})
-        case "private":
-            await call("upload_private_file", {"user_id": recv["user_id"], "file": format_file(message), "name": name})
+    await upload_file(client.format_file(message), format_filename(message), call, to_target(recv))
 
 
 @ADAPTER.send_method("segmented")
 async def _(message: SegmentedMessage, /, call: OneBotV11API, recv: MessageEvent, client: Client):
-    match recv["message_type"]:
-        case "group":
-            await send_segmented(lambda msg: send_group_msg(call, recv, msg), message, f2s if client.is_local else f2b)
-        case "private":
-            await send_segmented(lambda msg: send_private_msg(call, recv, msg), message, f2s if client.is_local else f2b)
+    await send_segmented(message, client.format_file, call, to_target(recv))
 
 
 @ADAPTER.send_method("group_message")
 async def _(message: GroupMessage, /, call: OneBotV11API, client: Client):
-    print(f"GroupMessage {message}")
-    result = message["data"]
-    group_id = int(message["group_id"])
-    if result.key == "segmented":
-        await send_segmented(
-            lambda msg: call("send_group_msg", {"group_id": group_id, "message": msg}),
-            result.data,
-            f2s if client.is_local else f2b,
-        )
-    elif result.key == "list":
-        msg = [seg for single in result.data if (seg := result2seg(single, f2s if client.is_local else f2b))]
-        if msg:
-            await call("send_group_msg", {"group_id": group_id, "message": msg})
-    else:
-        if seg := result2seg(result, f2s if client.is_local else f2b):
-            await call("send_group_msg", {"group_id": group_id, "message": [seg]})
+    await send_result(message["data"], client.format_file, call, {"to": "group", "id": int(message["group_id"])})
 
 
 @ADAPTER.send_method("private_message")
 async def _(message: PrivateMessage, /, call: OneBotV11API, client: Client):
-    result = message["data"]
-    user_id = int(message["user_id"])
-    if result.key == "segmented":
-        await send_segmented(
-            lambda msg: call("send_private_msg", {"user_id": user_id, "message": msg}),
-            result.data,
-            f2s if client.is_local else f2b,
-        )
-    elif result.key == "list":
-        msg = [seg for single in result.data if (seg := result2seg(single, f2s if client.is_local else f2b))]
-        if msg:
-            await call("send_private_msg", {"user_id": user_id, "message": msg})
-    else:
-        if seg := result2seg(result, f2s if client.is_local else f2b):
-            await call("send_private_msg", {"user_id": user_id, "message": [seg]})
+    await send_result(message["data"], client.format_file, call, {"to": "private", "id": int(message["user_id"])})
 
 
 @ADAPTER.send_method("merge_forward")
 async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API, recv: MessageEvent, client: Client):
-    messages = resultlist2nodelist(client.BOT_NICKNAME, recv["self_id"], message, f2s if client.is_local else f2b)
+    messages = resultlist2nodelist(client.BOT_NICKNAME, recv["self_id"], message, client.format_file)
     match recv["message_type"]:
         case "group":
             await call("send_group_forward_msg", {"group_id": recv["group_id"], "messages": messages})

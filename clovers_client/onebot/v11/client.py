@@ -6,7 +6,8 @@ from clovers import CloversCore
 from clovers.logger import logger
 from clovers_client.logger import init_logger
 from clovers_client.config import ClientConfig
-from .utils import int32_id_generator
+from clovers_client.result import FileLike
+from clovers_client.utils import int32_id_generator, f2s, f2b
 from .typing import MessageEvent, APIResponse
 
 
@@ -17,7 +18,7 @@ class Config(ClientConfig):
 
 
 class OneBotV11Client(CloversCore):
-    def __init__(self, config: Config = Config.sync_config()):
+    def __init__(self, config: Config = Config.sync_config("clovers")):
         super().__init__("OneBot V11")
         init_logger(logger, log_file=config.LOG_FILE, log_level=config.LOG_LEVEL)
         from .adapter import ADAPTER
@@ -34,9 +35,11 @@ class OneBotV11Client(CloversCore):
         # OneBot V11
         self.ws_url = config.ws_url
         self.ws_token = config.ws_token
-        self.is_local = urlparse(config.ws_url).hostname in ("127.0.0.1", "::1", "localhost")
+        self.format_file = f2s if urlparse(config.ws_url).hostname in ("127.0.0.1", "::1", "localhost") else f2b
         self.api_futures: dict[str, asyncio.Future] = {}
 
+    @staticmethod
+    def format_file(file: FileLike) -> str: ...
     async def run_api_connect(self, headers: dict | None):
         self.ws_api = await websockets.connect(f"{self.ws_url}/api", additional_headers=headers)
         async for recv_data in self.ws_api:

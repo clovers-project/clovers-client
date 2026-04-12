@@ -7,7 +7,7 @@ class Config(BaseModel):
     ...
 
     @classmethod
-    def sync_config(cls, config_key: str = "clovers"):
+    def sync_config(cls, config_key: str):
         clovers_config: dict = CloversConfig.environ().setdefault(config_key, {})
         clovers_config.update((__config := cls.model_validate(clovers_config)).model_dump())
         return __config

@@ -1,10 +1,7 @@
 from typing import TypedDict, Literal
 from collections.abc import AsyncGenerator, Sequence
-from pathlib import Path
-from io import BytesIO
 from clovers import Result as CloversResult
-
-type FileLike = str | bytes | BytesIO | Path
+from .utils import FileLike
 
 type JsonBaseType = str | int | float | bool | None
 type JsonArray = list[JsonBaseType]
