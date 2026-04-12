@@ -15,7 +15,7 @@ console = [
     "python-multipart>=0.0.22",
     "websockets>=16.0",
 ]
-onebot = ["websockets>=15.0.0"]
+onebot-v11 = ["websockets>=15.0.0"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
