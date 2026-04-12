@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://clovers-project.github.io/"><img src="./attachment/icon.svg" width="180" height="180" alt="clovers"></a>
+<a href="https://clovers-project.github.io/"><img src="https://raw.githubusercontent.com/KarisAya/clovers/refs/heads/master/attachment/icon.svg" width="180" height="180" alt="clovers"></a>
 
 # clovers-client
 
@@ -25,4 +25,4 @@ _✨ 官方 Clovers 机器人客户端 ✨_
 
 永恒之城（测试群） 724024810
 
-![群号](./attachment/qrcode.svg)
+![群号](https://raw.githubusercontent.com/KarisAya/clovers/refs/heads/master/attachment/qrcode.svg)
