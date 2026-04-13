@@ -1,6 +1,6 @@
 from clovers import Adapter
 from clovers.logger import logger
-from clovers_client.result import FileLike, SequenceMessage, SingleResult, SequenceResult, SegmentedMessage, GroupMessage, PrivateMessage
+from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, GroupMessage, PrivateMessage, MergeForwardMessage
 from clovers_client.event import MemberInfo, PermissionLiteral, FlatContextUnit
 from clovers_client.utils import format_filename
 from clovers_client.onebot.v11 import Client
@@ -67,7 +67,7 @@ async def _(message: PrivateMessage, /, call: OneBotV11API, client: Client):
 
 
 @ADAPTER.send_method("merge_forward")
-async def _(message: list[SingleResult | SequenceResult], /, call: OneBotV11API, recv: MessageEvent, client: Client):
+async def _(message: MergeForwardMessage, /, call: OneBotV11API, recv: MessageEvent, client: Client):
     messages = resultlist2nodelist(client.BOT_NICKNAME, recv["self_id"], message, client.format_file)
     match recv["message_type"]:
         case "group":

@@ -1,6 +1,7 @@
 from typing import TypedDict, Literal
 from collections.abc import Callable
-from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, SingleResult, SequenceResult, OverallResult, SegmentedResult
+from clovers_client.result import OverallResult, SegmentedResult
+from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, MergeForwardMessage
 from clovers_client.event import FlatContextUnit
 from clovers_client.utils import format_filename
 from .typing import MessageEvent, Message, Node, OneBotV11API
@@ -60,9 +61,7 @@ async def send_result(result: OverallResult | SegmentedResult, format_file: Call
                 await send_message(msg, call, target)
 
 
-def resultlist2nodelist(
-    self_name: str, self_id: int, message: list[SingleResult | SequenceResult], format_file: Callable[[FileLike], str]
-) -> list[Node]:
+def resultlist2nodelist(self_name: str, self_id: int, message: MergeForwardMessage, format_file: Callable[[FileLike], str]) -> list[Node]:
     messages = []
     for result in message:
         if msg := to_message(result, format_file):
