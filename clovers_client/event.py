@@ -49,6 +49,7 @@ class Event(EventType, Protocol):
     2: 群主\n
     3: 超级管理员
     """
+    flat_context: list[FlatContextUnit] | None
 
     @overload
     async def send(self, key: Literal["at"], message: str): ...
