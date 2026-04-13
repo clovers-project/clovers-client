@@ -1,7 +1,7 @@
 from clovers import EventType
 from typing import TypedDict, Protocol, Literal, Any, overload
 from collections.abc import Coroutine
-from .result import FileLike, SequenceMessage, SegmentedResult, GroupMessage, PrivateMessage, MergeForwardMessage
+from .result import FileLike, SequenceMessage, SegmentedMessage, GroupMessage, PrivateMessage, MergeForwardMessage
 
 type OptCoro[T] = Coroutine[Any, Any, T] | None
 type PermissionLiteral = Literal[0, 1, 2, 3]
@@ -68,7 +68,7 @@ class Event(EventType, Protocol):
     @overload
     async def send(self, key: Literal["console"], message: list[str]): ...
     @overload
-    async def send(self, key: Literal["segmented"], message: SegmentedResult): ...
+    async def send(self, key: Literal["segmented"], message: SegmentedMessage): ...
     @overload
     async def send(self, key: Literal["private_message"], message: PrivateMessage): ...
     @overload
