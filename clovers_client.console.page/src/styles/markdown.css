@@ -17,13 +17,20 @@
   font-size: 0.8rem;
   margin: 0;
 }
-.message-content code {
-  font-size: 0.85rem;
+
+.message-content {
+  --inline-font-size: 1em;
+  --inline-code-padding: 0 0.725em;
 }
+
+.message-content code {
+  font-size: var(--inline-font-size);
+}
+
 .message-content code:not(.code-block code) {
   color: var(--text-primary);
   background-color: var(--standard-bg);
-  padding: 0.225em 0.725em;
+  padding: var(--inline-code-padding);
   border-radius: var(--radius-small);
 }
 
