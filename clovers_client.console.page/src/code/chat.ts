@@ -84,6 +84,9 @@ renderer.code = ({ text, lang }: { text: string; lang?: string }) => {
         `</pre>`
     );
 };
+renderer.link = ({ href, title, text }) => {
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer" title="${title || ''}">${text}</a>`;
+};
 
 chatWindow.addEventListener("click", async (e) => {
     const target = e.target as Element;
