@@ -64,14 +64,18 @@ class ConsoleClient(CloversCore):
             return Response(status_code=404)
         return Response(status_code=200, content=message, media_type="application/json")
 
-    def unicast(self, ws: WebSocket, data: Message):
+    def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
         data["messageId"] = next(self.message_id)
+        if "echo" in recv:
+            data["echo"] = recv["echo"]
         payload = json.dumps(data)
         self.messages.append((data["messageId"], payload))
         return ws.send_text(payload)
 
-    def broadcast(self, data: Message):
+    def broadcast(self, recv: MessageEvent, data: Message):
         data["messageId"] = next(self.message_id)
+        if "echo" in recv:
+            data["echo"] = recv["echo"]
         payload = json.dumps(data)
         self.messages.append((data["messageId"], payload))
         return self.boardcast_payload(payload)
@@ -83,9 +87,9 @@ class ConsoleClient(CloversCore):
         while True:
             recv: MessageEvent = json.loads(await ws.receive_text())
             if recv["groupId"] == "private":
-                send = partial(self.unicast, ws)
+                send = partial(self.unicast, ws, recv)
             else:
-                send = self.broadcast
+                send = partial(self.broadcast, recv)
             if recv["at"] and recv["at"][-1] == "":
                 del recv["at"][-1]
                 recv["to_me"] = True

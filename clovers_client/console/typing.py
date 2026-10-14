@@ -15,12 +15,14 @@ class ChatMessage(TypedDict):
     groupAvatar: str
     permission: Literal["SuperUser", "Owner", "Admin", "Member"]
     messageId: NotRequired[str]
+    echo: NotRequired[str]
 
 
 class ConsoleMessage(TypedDict):
     type: Literal["system"]
     data: list
     messageId: NotRequired[str]
+    echo: NotRequired[str]
 
 
 type Message = ChatMessage | ConsoleMessage
