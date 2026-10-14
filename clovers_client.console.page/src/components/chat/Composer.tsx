@@ -12,17 +12,17 @@ import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/cn';
 import { mentionCandidates, useCurrentUser } from '@/store/session';
 
-const EMOJIS = [
-    '😀', '😄', '😁', '😊', '🙂', '😉', '😍', '🤔', '😅', '😂',
-    '🥳', '😴', '😭', '😡', '👍', '👎', '👌', '🙏', '👏', '💪',
-    '🎉', '🔥', '✨', '❤️', '💔', '✅', '❌', '⚠️', '⭐', '🚀',
-];
+// const EMOJIS = [
+//     '😀', '😄', '😁', '😊', '🙂', '😉', '😍', '🤔', '😅', '😂',
+//     '🥳', '😴', '😭', '😡', '👍', '👎', '👌', '🙏', '👏', '💪',
+//     '🎉', '🔥', '✨', '❤️', '💔', '✅', '❌', '⚠️', '⭐', '🚀',
+// ];
 
 export function Composer({ groupId }: { groupId: string }) {
     const [value, setValue] = useState(() => drafts.get(groupId));
     const [uploading, setUploading] = useState(false);
     const [dragging, setDragging] = useState(false);
-    const [emojiOpen, setEmojiOpen] = useState(false);
+    // const [emojiOpen, setEmojiOpen] = useState(false);
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState(0);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -57,7 +57,7 @@ export function Composer({ groupId }: { groupId: string }) {
     useEffect(() => {
         setValue(drafts.get(groupId));
         setMentionQuery(null);
-        setEmojiOpen(false);
+        // setEmojiOpen(false);
         const el = textareaRef.current;
         if (el) {
             el.style.height = 'auto';
@@ -125,7 +125,7 @@ export function Composer({ groupId }: { groupId: string }) {
         useChat.getState().send(text, images, at, replyTo);
         updateValue('');
         resetComposer();
-        setEmojiOpen(false);
+        // setEmojiOpen(false);
         textareaRef.current?.focus();
     };
 
@@ -237,7 +237,7 @@ export function Composer({ groupId }: { groupId: string }) {
             )}
 
             {/* 表情面板 */}
-            {emojiOpen && (
+            {/* {emojiOpen && (
                 <div className="absolute bottom-full right-[var(--pad-panel)] z-20 mb-2 grid w-64 animate-pop-in grid-cols-10 gap-0.5 rounded-[var(--r-md)] border border-line bg-elevated p-2 shadow-lg">
                     {EMOJIS.map((emoji) => (
                         <button
@@ -253,7 +253,7 @@ export function Composer({ groupId }: { groupId: string }) {
                         </button>
                     ))}
                 </div>
-            )}
+            )} */}
 
             <div className="flex items-end gap-2 rounded-[var(--r-lg)] border border-line bg-surface2 p-2 transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-[var(--c-accent-ring)]">
                 <div className="flex items-center gap-0.5 pb-0.5">
@@ -262,12 +262,12 @@ export function Composer({ groupId }: { groupId: string }) {
                         tip="上传图片（也可拖拽 / 粘贴）"
                         onClick={() => fileRef.current?.click()}
                     />
-                    <IconButton
+                    {/* <IconButton
                         icon={<Smile size={17} />}
                         tip="表情"
                         active={emojiOpen}
                         onClick={() => setEmojiOpen((v) => !v)}
-                    />
+                    /> */}
                     <IconButton
                         icon={<AtSign size={17} />}
                         tip="提及某人（输入 @ 也可触发）"
@@ -275,6 +275,7 @@ export function Composer({ groupId }: { groupId: string }) {
                             const el = textareaRef.current;
                             if (!el) return;
                             const caret = el.selectionStart;
+                            if (caret > 0 && value[caret - 1] === '@') {el.focus(); return;}
                             updateValue(`${value.slice(0, caret)}@${value.slice(caret)}`);
                             setMentionQuery('');
                             requestAnimationFrame(() => {

@@ -24,7 +24,7 @@ const defaultUser = (userId: string): UserInfo => {
     if (!cached) {
         cached = {
             userId,
-            userName: userId === '1' ? '我' : `用户 ${userId.slice(-4)}`,
+            userName: userId === '1' ? '用户' : `用户 ${userId.slice(-4)}`,
             avatar: '',
             permission: 'Member',
         };
