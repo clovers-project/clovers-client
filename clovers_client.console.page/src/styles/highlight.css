@@ -1,0 +1,105 @@
+/* =============================================================================
+ * highlight.css —— 代码高亮配色
+ * 没有引入 highlight.js 自带的单模式主题，而是自己写一套：
+ * 这样亮色/暗色可以共用同一份 HTML，切换主题时不需要重新渲染代码块。
+ * ========================================================================== */
+
+.md-body .hljs {
+  color: var(--c-fg);
+  background: transparent;
+}
+
+[data-mode='dark'] .md-body .hljs-comment,
+[data-mode='dark'] .md-body .hljs-quote {
+  color: oklch(0.60 0.02 var(--accent-h));
+  font-style: italic;
+}
+[data-mode='dark'] .md-body .hljs-keyword,
+[data-mode='dark'] .md-body .hljs-selector-tag,
+[data-mode='dark'] .md-body .hljs-literal,
+[data-mode='dark'] .md-body .hljs-section,
+[data-mode='dark'] .md-body .hljs-doctag,
+[data-mode='dark'] .md-body .hljs-name {
+  color: oklch(0.76 0.15 calc(var(--accent-h) + 40));
+}
+[data-mode='dark'] .md-body .hljs-string,
+[data-mode='dark'] .md-body .hljs-regexp,
+[data-mode='dark'] .md-body .hljs-addition,
+[data-mode='dark'] .md-body .hljs-attribute,
+[data-mode='dark'] .md-body .hljs-meta .hljs-string {
+  color: oklch(0.80 0.13 150);
+}
+[data-mode='dark'] .md-body .hljs-number,
+[data-mode='dark'] .md-body .hljs-symbol,
+[data-mode='dark'] .md-body .hljs-bullet,
+[data-mode='dark'] .md-body .hljs-variable,
+[data-mode='dark'] .md-body .hljs-template-variable {
+  color: oklch(0.82 0.13 70);
+}
+[data-mode='dark'] .md-body .hljs-title,
+[data-mode='dark'] .md-body .hljs-title.class_,
+[data-mode='dark'] .md-body .hljs-title.function_,
+[data-mode='dark'] .md-body .hljs-built_in,
+[data-mode='dark'] .md-body .hljs-type {
+  color: oklch(0.80 0.12 calc(var(--accent-h) - 30));
+}
+[data-mode='dark'] .md-body .hljs-attr,
+[data-mode='dark'] .md-body .hljs-selector-attr,
+[data-mode='dark'] .md-body .hljs-selector-class,
+[data-mode='dark'] .md-body .hljs-selector-id {
+  color: oklch(0.80 0.10 200);
+}
+[data-mode='dark'] .md-body .hljs-deletion {
+  color: oklch(0.72 0.17 25);
+}
+
+[data-mode='light'] .md-body .hljs-comment,
+[data-mode='light'] .md-body .hljs-quote {
+  color: oklch(0.58 0.02 var(--accent-h));
+  font-style: italic;
+}
+[data-mode='light'] .md-body .hljs-keyword,
+[data-mode='light'] .md-body .hljs-selector-tag,
+[data-mode='light'] .md-body .hljs-literal,
+[data-mode='light'] .md-body .hljs-section,
+[data-mode='light'] .md-body .hljs-doctag,
+[data-mode='light'] .md-body .hljs-name {
+  color: oklch(0.47 0.19 calc(var(--accent-h) + 35));
+}
+[data-mode='light'] .md-body .hljs-string,
+[data-mode='light'] .md-body .hljs-regexp,
+[data-mode='light'] .md-body .hljs-addition,
+[data-mode='light'] .md-body .hljs-attribute,
+[data-mode='light'] .md-body .hljs-meta .hljs-string {
+  color: oklch(0.47 0.13 150);
+}
+[data-mode='light'] .md-body .hljs-number,
+[data-mode='light'] .md-body .hljs-symbol,
+[data-mode='light'] .md-body .hljs-bullet,
+[data-mode='light'] .md-body .hljs-variable,
+[data-mode='light'] .md-body .hljs-template-variable {
+  color: oklch(0.50 0.14 55);
+}
+[data-mode='light'] .md-body .hljs-title,
+[data-mode='light'] .md-body .hljs-title.class_,
+[data-mode='light'] .md-body .hljs-title.function_,
+[data-mode='light'] .md-body .hljs-built_in,
+[data-mode='light'] .md-body .hljs-type {
+  color: oklch(0.45 0.16 calc(var(--accent-h) - 25));
+}
+[data-mode='light'] .md-body .hljs-attr,
+[data-mode='light'] .md-body .hljs-selector-attr,
+[data-mode='light'] .md-body .hljs-selector-class,
+[data-mode='light'] .md-body .hljs-selector-id {
+  color: oklch(0.45 0.11 215);
+}
+[data-mode='light'] .md-body .hljs-deletion {
+  color: oklch(0.52 0.19 25);
+}
+
+.md-body .hljs-emphasis {
+  font-style: italic;
+}
+.md-body .hljs-strong {
+  font-weight: 700;
+}

@@ -1,0 +1,254 @@
+/* =============================================================================
+ * themes.css —— 设计令牌（Design Tokens）
+ *
+ * 整个界面只用这里的 CSS 变量着色，组件里不出现任何硬编码颜色。
+ * 三层结构：
+ *   1) 调色板（palette）：只决定「色相 --accent-h」和「彩度 --accent-c」
+ *   2) 明暗模式（mode）：决定中性色的明度，并用色相给灰阶染色
+ *   3) 修饰开关：直角/圆润（corner）、是否有自定义背景图（bg）
+ *
+ * 想新增一套主题色：在下面复制一段 [data-palette='xxx'] 改两个数字即可，
+ * 不需要改任何组件代码。详细说明见 docs/THEMING.md。
+ * ========================================================================== */
+
+/* ---------- 调色板：色相 + 彩度（oklch） ---------- */
+:root,
+[data-palette='indigo'] {
+    --accent-h: 268;
+    --accent-c: 0.17;
+}
+[data-palette='ocean'] {
+    --accent-h: 232;
+    --accent-c: 0.16;
+}
+[data-palette='mint'] {
+    --accent-h: 168;
+    --accent-c: 0.14;
+}
+[data-palette='forest'] {
+    --accent-h: 148;
+    --accent-c: 0.15;
+}
+[data-palette='amber'] {
+    --accent-h: 68;
+    --accent-c: 0.15;
+}
+[data-palette='rose'] {
+    --accent-h: 12;
+    --accent-c: 0.17;
+}
+[data-palette='violet'] {
+    --accent-h: 312;
+    --accent-c: 0.16;
+}
+[data-palette='graphite'] {
+    --accent-h: 255;
+    --accent-c: 0.02;
+}
+/* 「跟随背景图」：色相由 JS 写到 <html> 的行内样式上，这里只给彩度 */
+[data-palette='auto'] {
+    --accent-c: 0.16;
+}
+
+/* ---------- 与明暗无关的刻度 ---------- */
+:root {
+    --app-font-size: 15px;
+
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dur-fast: 110ms;
+    --dur-base: 170ms;
+    --dur-slow: 280ms;
+
+    --z-shell: 1;
+    --z-sticky: 20;
+    --z-drawer: 60;
+    --z-overlay: 80;
+    --z-toast: 100;
+}
+
+/* ---------- 圆角风格 ----------
+ * 默认是 Windows 10 那种直棱直角 + 扁平化；
+ * 想要以前那种圆润卡片感，把 corner 切成 'round' 即可。 */
+:root,
+[data-corner='square'] {
+    --r-xs: 0px;
+    --r-sm: 0px;
+    --r-md: 0px;
+    --r-lg: 0px;
+    --r-xl: 0px;
+    --r-pill: 999px;
+}
+[data-corner='round'] {
+    --r-xs: 6px;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 22px;
+    --r-pill: 999px;
+}
+
+/* ---------- 密度：决定留白 ---------- */
+:root,
+[data-density='comfortable'] {
+    --pad-panel: 14px;
+    --pad-row: 9px;
+    --gap-msg: 18px;
+    --pad-bubble-y: 10px;
+    --pad-bubble-x: 14px;
+    --pad-composer: 12px;
+    --sidebar-w: 292px;
+}
+[data-density='compact'] {
+    --pad-panel: 10px;
+    --pad-row: 6px;
+    --gap-msg: 10px;
+    --pad-bubble-y: 7px;
+    --pad-bubble-x: 11px;
+    --pad-composer: 8px;
+    --sidebar-w: 268px;
+}
+
+/* =============================================================================
+ * 暗色模式（默认）
+ * ========================================================================== */
+[data-mode='dark'] {
+    color-scheme: dark;
+
+    --c-app: oklch(0.155 0.012 var(--accent-h));
+    --c-surface: oklch(0.196 0.013 var(--accent-h));
+    --c-surface-2: oklch(0.228 0.014 var(--accent-h));
+    --c-elevated: oklch(0.248 0.015 var(--accent-h));
+    --c-hover: oklch(0.3 0.016 var(--accent-h));
+    --c-active: oklch(0.34 0.018 var(--accent-h));
+
+    --c-line: oklch(0.315 0.014 var(--accent-h));
+    --c-line-soft: oklch(0.32 0.014 var(--accent-h) / 0.5);
+    --c-line-strong: oklch(0.44 0.018 var(--accent-h));
+
+    --c-fg: oklch(0.965 0.005 var(--accent-h));
+    --c-fg-muted: oklch(0.775 0.012 var(--accent-h));
+    --c-fg-subtle: oklch(0.615 0.014 var(--accent-h));
+
+    --accent-l: 0.745;
+    --c-accent: oklch(var(--accent-l) var(--accent-c) var(--accent-h));
+    --c-accent-fg: oklch(0.16 0.02 var(--accent-h));
+    --c-accent-soft: oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.16);
+    --c-accent-ring: oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.45);
+
+    --c-bubble-in: oklch(0.262 0.014 var(--accent-h));
+    --c-bubble-in-fg: var(--c-fg);
+    /* 用 --accent-c（而不是写死的彩度），这样「石墨」这类低彩度主题才是真正的灰调 */
+    --c-bubble-out: oklch(0.5 calc(var(--accent-c) * 0.95) var(--accent-h));
+    --c-bubble-out-fg: oklch(0.99 0.005 var(--accent-h));
+
+    --c-danger: oklch(0.7 0.18 25);
+    --c-success: oklch(0.76 0.16 155);
+    --c-warning: oklch(0.8 0.15 75);
+
+    --c-overlay: oklch(0.12 0.012 var(--accent-h) / 0.72);
+    --c-glass: oklch(0.205 0.014 var(--accent-h) / 0.88);
+
+    /* 扁平化：主要靠 1px 描边区分层级，阴影只做极轻的抬升 */
+    --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.35);
+    --shadow-md: 0 4px 12px -4px oklch(0 0 0 / 0.45);
+    --shadow-lg: 0 10px 30px -10px oklch(0 0 0 / 0.55);
+    --shadow-glow: 0 0 0 1px oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.3);
+
+    --scrollbar-thumb: oklch(0.44 0.016 var(--accent-h) / 0.75);
+    --scrollbar-thumb-hover: oklch(0.56 0.02 var(--accent-h) / 0.95);
+}
+
+/* =============================================================================
+ * 亮色模式
+ * ========================================================================== */
+[data-mode='light'] {
+    color-scheme: light;
+
+    --c-app: oklch(0.965 0.008 var(--accent-h));
+    --c-surface: oklch(1 0 0);
+    --c-surface-2: oklch(0.962 0.007 var(--accent-h));
+    --c-elevated: oklch(1 0 0);
+    --c-hover: oklch(0.938 0.01 var(--accent-h));
+    --c-active: oklch(0.905 0.014 var(--accent-h));
+
+    --c-line: oklch(0.885 0.009 var(--accent-h));
+    --c-line-soft: oklch(0.925 0.007 var(--accent-h));
+    --c-line-strong: oklch(0.82 0.013 var(--accent-h));
+
+    --c-fg: oklch(0.225 0.014 var(--accent-h));
+    --c-fg-muted: oklch(0.475 0.014 var(--accent-h));
+    --c-fg-subtle: oklch(0.615 0.012 var(--accent-h));
+
+    --accent-l: 0.555;
+    --c-accent: oklch(var(--accent-l) var(--accent-c) var(--accent-h));
+    --c-accent-fg: oklch(0.995 0 0);
+    --c-accent-soft: oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.12);
+    --c-accent-ring: oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.35);
+
+    --c-bubble-in: oklch(0.955 0.007 var(--accent-h));
+    --c-bubble-in-fg: var(--c-fg);
+    --c-bubble-out: oklch(0.62 calc(var(--accent-c) * 0.95) var(--accent-h));
+    --c-bubble-out-fg: oklch(0.995 0 0);
+
+    --c-danger: oklch(0.55 0.2 25);
+    --c-success: oklch(0.58 0.15 155);
+    --c-warning: oklch(0.65 0.15 70);
+
+    --c-overlay: oklch(0.35 0.03 var(--accent-h) / 0.38);
+    --c-glass: oklch(1 0 0 / 0.86);
+
+    --shadow-sm: 0 1px 2px oklch(0.3 0.02 var(--accent-h) / 0.08);
+    --shadow-md: 0 4px 14px -6px oklch(0.3 0.02 var(--accent-h) / 0.22);
+    --shadow-lg: 0 14px 40px -18px oklch(0.3 0.02 var(--accent-h) / 0.3);
+    --shadow-glow: 0 0 0 1px oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.3);
+
+    --scrollbar-thumb: oklch(0.78 0.012 var(--accent-h) / 0.85);
+    --scrollbar-thumb-hover: oklch(0.66 0.016 var(--accent-h) / 0.95);
+}
+
+/* =============================================================================
+ * 自定义背景图：把各层表面改成半透明亚克力色
+ * 面板不透明度由 JS 写到 --panel-alpha 上。
+ * ========================================================================== */
+:root {
+    --panel-alpha: 0.72;
+}
+
+[data-bg='on'][data-mode='dark'] {
+    --c-app: oklch(0.13 0.012 var(--accent-h));
+    --c-surface: oklch(0.185 0.013 var(--accent-h) / var(--panel-alpha));
+    --c-surface-2: oklch(0.215 0.014 var(--accent-h) / calc(var(--panel-alpha) * 0.86));
+    --c-elevated: oklch(0.245 0.015 var(--accent-h) / 0.96);
+    --c-hover: oklch(0.32 0.016 var(--accent-h) / 0.6);
+    --c-active: oklch(0.38 0.018 var(--accent-h) / 0.7);
+    --c-line: oklch(0.46 0.016 var(--accent-h) / 0.5);
+    --c-line-strong: oklch(0.55 0.02 var(--accent-h) / 0.6);
+    --c-glass: oklch(0.19 0.013 var(--accent-h) / calc(var(--panel-alpha) * 0.8));
+    --c-bubble-in: oklch(0.24 0.014 var(--accent-h) / 0.9);
+}
+
+[data-bg='on'][data-mode='light'] {
+    --c-app: oklch(0.9 0.01 var(--accent-h));
+    --c-surface: oklch(1 0 0 / var(--panel-alpha));
+    --c-surface-2: oklch(0.99 0.004 var(--accent-h) / calc(var(--panel-alpha) * 0.9));
+    --c-elevated: oklch(1 0 0 / 0.97);
+    --c-hover: oklch(0.55 0.02 var(--accent-h) / 0.12);
+    --c-active: oklch(0.55 0.02 var(--accent-h) / 0.2);
+    --c-line: oklch(0.6 0.02 var(--accent-h) / 0.3);
+    --c-line-strong: oklch(0.5 0.02 var(--accent-h) / 0.42);
+    --c-glass: oklch(1 0 0 / calc(var(--panel-alpha) * 0.86));
+    --c-bubble-in: oklch(1 0 0 / 0.92);
+}
+
+/* ---------- 毛玻璃开关：关闭时让所有半透明面板回归实色 ---------- */
+[data-glass='off'] {
+    --c-glass: var(--c-surface-2);
+    --c-overlay: oklch(0.2 0.02 var(--accent-h) / 0.55);
+}
+[data-glass='off'] .glass {
+    backdrop-filter: none !important;
+}
+[data-glass='off'][data-bg='on'] .app-shell {
+    backdrop-filter: none !important;
+}

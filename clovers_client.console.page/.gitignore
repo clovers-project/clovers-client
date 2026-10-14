@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# 本地构建用的缓存与临时目录（沙箱/离线环境用得上）
+.npm-cache
+.tmp
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

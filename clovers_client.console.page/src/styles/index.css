@@ -1,0 +1,419 @@
+@import 'tailwindcss';
+@import './themes.css';
+@import './markdown.css';
+@import './highlight.css';
+
+/* =============================================================================
+ * 把设计令牌暴露成 Tailwind 语义色板。
+ * 用 inline 是为了让 bg-surface 直接编译成 var(--c-surface)，
+ * 这样 data-mode / data-palette 一动，全部工具类立刻跟着变。
+ * ========================================================================== */
+@theme inline {
+  --color-app: var(--c-app);
+  --color-surface: var(--c-surface);
+  --color-surface2: var(--c-surface-2);
+  --color-elevated: var(--c-elevated);
+  --color-hover: var(--c-hover);
+  --color-active: var(--c-active);
+
+  --color-line: var(--c-line);
+  --color-linesoft: var(--c-line-soft);
+  --color-linestrong: var(--c-line-strong);
+
+  --color-fg: var(--c-fg);
+  --color-muted: var(--c-fg-muted);
+  --color-subtle: var(--c-fg-subtle);
+
+  --color-accent: var(--c-accent);
+  --color-accentfg: var(--c-accent-fg);
+  --color-accentsoft: var(--c-accent-soft);
+  --color-bubblein: var(--c-bubble-in);
+  --color-bubbleinfg: var(--c-bubble-in-fg);
+  --color-bubbleout: var(--c-bubble-out);
+  --color-bubbleoutfg: var(--c-bubble-out-fg);
+
+  --color-danger: var(--c-danger);
+  --color-success: var(--c-success);
+  --color-warning: var(--c-warning);
+  --color-overlay: var(--c-overlay);
+
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, Monaco, monospace;
+
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+}
+
+/* dark: 变体跟随我们自己的 data-mode，而不是系统的 prefers-color-scheme */
+@custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
+
+@layer base {
+  * {
+    border-color: var(--c-line);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  html {
+    font-size: var(--app-font-size);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--c-fg);
+    background: var(--c-app);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--c-accent-soft);
+    color: var(--c-fg);
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* 统一的细滚动条。直角风格下也保持直角 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--r-xs);
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* 焦点环只给真正可交互的元素；浮层容器用 tabindex=-1 接焦点时不显示 */
+  :focus-visible:not([tabindex='-1']) {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 2px;
+  }
+}
+
+/* =============================================================================
+ * 可复用的语义类
+ * ========================================================================== */
+@layer components {
+  /* 亚克力/毛玻璃面板。
+     注意：这里只写标准属性 backdrop-filter，不手写 -webkit- 前缀。
+     Vite 的 CSS 压缩（Lightning CSS）会按构建目标自动补前缀；
+     如果同时手写两份，它反而会把标准属性删掉只留前缀版，
+     导致 Firefox 这类只认标准属性的浏览器完全没有毛玻璃效果。 */
+  .glass {
+    background: var(--c-glass);
+    backdrop-filter: blur(30px) saturate(170%);
+  }
+
+  .surface-hairline {
+    box-shadow: inset 0 0 0 1px var(--c-line);
+  }
+
+  /* 应用背景上缓慢漂移的极光光斑，颜色跟随主题色 */
+  .aurora {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .aurora::before,
+  .aurora::after {
+    content: '';
+    position: absolute;
+    width: 62vmax;
+    height: 62vmax;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.5;
+  }
+  .aurora::before {
+    top: -26vmax;
+    left: -14vmax;
+    background: radial-gradient(
+      circle,
+      oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.45),
+      transparent 64%
+    );
+    animation: drift-a 38s var(--ease-out) infinite alternate;
+  }
+  .aurora::after {
+    right: -22vmax;
+    bottom: -30vmax;
+    background: radial-gradient(
+      circle,
+      oklch(var(--accent-l) calc(var(--accent-c) * 1.1) calc(var(--accent-h) + 55) / 0.4),
+      transparent 64%
+    );
+    animation: drift-b 52s var(--ease-out) infinite alternate;
+  }
+  [data-mode='light'] .aurora::before,
+  [data-mode='light'] .aurora::after {
+    opacity: 0.3;
+  }
+  /* 有自定义背景图时不再叠极光，避免糊成一团 */
+  [data-bg='on'] .aurora {
+    display: none;
+  }
+}
+
+@keyframes drift-a {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(8vmax, 6vmax, 0) scale(1.15);
+  }
+}
+@keyframes drift-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.1);
+  }
+  to {
+    transform: translate3d(-7vmax, -5vmax, 0) scale(0.95);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes flash-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--c-accent-ring);
+  }
+  30% {
+    box-shadow: 0 0 0 6px var(--c-accent-ring);
+  }
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@utility animate-fade-in {
+  animation: fade-in var(--dur-fast) var(--ease-out) both;
+}
+@utility animate-fade-up {
+  animation: fade-up var(--dur-slow) var(--ease-out) both;
+}
+@utility animate-pop-in {
+  animation: pop-in var(--dur-base) var(--ease-out) both;
+}
+@utility animate-flash-ring {
+  animation: flash-ring 1.2s var(--ease-out);
+}
+@utility animate-spin-slow {
+  animation: spin 1s linear infinite;
+}
+@utility animate-pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+/* =============================================================================
+ * 扁平滑块（设置面板里的模糊度 / 蒙版 / 不透明度）
+ * 原生 range 在各浏览器长得都不一样，这里统一成 Win10 那种细轨道 + 方块滑块。
+ * ========================================================================== */
+.flat-range {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+}
+.flat-range:focus {
+  box-shadow: none;
+}
+.flat-range::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--c-line-strong);
+}
+.flat-range::-moz-range-track {
+  height: 4px;
+  background: var(--c-line-strong);
+}
+.flat-range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 20px;
+  margin-top: -8px;
+  background: var(--c-accent);
+  border: none;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-out);
+}
+.flat-range::-moz-range-thumb {
+  width: 12px;
+  height: 20px;
+  background: var(--c-accent);
+  border: none;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+.flat-range:hover::-webkit-slider-thumb {
+  filter: brightness(1.15);
+}
+.flat-range:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+/* 会话内搜索的匹配高亮 */
+mark[data-search-hit] {
+  background: color-mix(in oklab, var(--c-warning) 42%, transparent);
+  color: inherit;
+  border-radius: var(--r-xs);
+  padding: 0 1px;
+}
+mark[data-search-hit].is-active {
+  background: var(--c-accent);
+  color: var(--c-accent-fg);
+}
+
+/* 聊天区滚动容器 */
+.chat-scroll {
+  overscroll-behavior: contain;
+  /* 注意：这里不要写 scroll-behavior: smooth，
+     否则首次进入会话时的「跳到底部」也会变成动画，看起来像没对齐。
+     平滑滚动交给 useAutoScroll 在需要时显式指定。 */
+}
+
+/* =============================================================================
+ * 自定义背景图
+ * ========================================================================== */
+.page-backdrop,
+.page-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+[data-bg='off'] .page-backdrop,
+[data-bg='off'] .page-scrim {
+  display: none;
+}
+.page-backdrop {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* 略微放大，避免模糊后边缘出现透明的虚边 */
+  transform: scale(1.06);
+  will-change: filter;
+}
+.page-scrim {
+  /* 压暗程度由 JS 通过内联样式给出 */
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+
+/* =============================================================================
+ * 应用主体的骨架
+ * ========================================================================== */
+.app-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  max-width: 1680px;
+  margin-inline: auto;
+  overflow: hidden;
+  background: var(--c-surface);
+}
+
+/* 有背景图时外壳变成一整块亚克力，让图片透出来 */
+[data-bg='on'] .app-shell {
+  background: var(--c-glass);
+  backdrop-filter: blur(34px) saturate(180%);
+}
+
+@media (min-width: 900px) {
+  .app-shell {
+    height: calc(100% - 32px);
+    margin-block: 16px;
+    border: 1px solid var(--c-line);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--r-lg);
+  }
+}
+
+/* 尊重系统的「减少动态效果」设置 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
