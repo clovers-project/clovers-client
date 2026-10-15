@@ -77,8 +77,6 @@ interface SessionState {
 
     learnUser: (groupId: string, userId: string, userName: string, avatar: string, permission: Permission) => void;
     learnGroup: (groupId: string, groupName: string, avatar?: string) => void;
-
-    updateUsers: (users: UserInfo[]) => void;
 }
 
 function loadList<T>(key: string): T[] {
@@ -266,12 +264,6 @@ export const useSession = create<SessionState>((set, get) => ({
             });
         }
     },
-
-    updateUsers: (users) => {
-        const known = get().knownUsers
-        known.clear();
-        for (const u of users) { known.set(u.userId, u); }
-    },
 }));
 
 /* ------------------------------ 派生读取 ------------------------------ */
@@ -320,13 +312,14 @@ export function resolveUserName(userId: string): string {
 /** 用于 @提及 自动补全的候选列表：本机身份 + 已认识的人 */
 export function mentionCandidates(): { userId: string; userName: string; avatar: string }[] {
     const state = useSession.getState();
-    const groupMembers = state.knownGroupMembers.get(state.currentGroupId);
-    if (!groupMembers) { return []; }
-    const map = new Map<string, { userId: string; userName: string; avatar: string }>();
+    const currentGroupMembers = state.knownGroupMembers.get(state.currentGroupId);
+    if (!currentGroupMembers) { return []; }
     // state.users.forEach((u) => map.set(u.userId, { userId: u.userId, userName: u.userName, avatar: u.avatar }));
-
-    Object.entries(state.knownUsers).forEach(([userId, person]) => {
-        if (!map.has(userId)) map.set(userId, { userId, userName: person.name, avatar: person.avatar });
-    });
-    return [...map.values()];
+    const arr = new Array()
+    for (const userId of currentGroupMembers) {
+        const person = state.knownUsers.get(userId);
+        if (!person) continue;
+        arr.push({ userId, userName: person.userName, avatar: person.avatar });
+    }
+    return arr;
 }

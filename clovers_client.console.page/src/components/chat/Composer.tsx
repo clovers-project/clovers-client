@@ -44,12 +44,7 @@ export function Composer({ groupId }: { groupId: string }) {
         const query = mentionQuery.toLowerCase();
         return mentionCandidates()
             .filter((c) => c.userId !== currentUser.userId)
-            .filter(
-                (c) =>
-                    !query ||
-                    c.userName.toLowerCase().includes(query) ||
-                    c.userId.toLowerCase().includes(query),
-            )
+            .filter((c) => !query || c.userName.toLowerCase().includes(query) || c.userId.toLowerCase().includes(query))
             .slice(0, 6);
     }, [mentionQuery, currentUser.userId]);
 
@@ -275,7 +270,7 @@ export function Composer({ groupId }: { groupId: string }) {
                             const el = textareaRef.current;
                             if (!el) return;
                             const caret = el.selectionStart;
-                            if (caret > 0 && value[caret - 1] === '@') {el.focus(); return;}
+                            if (caret > 0 && value[caret - 1] === '@') { el.focus(); return; }
                             updateValue(`${value.slice(0, caret)}@${value.slice(caret)}`);
                             setMentionQuery('');
                             requestAnimationFrame(() => {
