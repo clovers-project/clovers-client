@@ -9,13 +9,11 @@ import {
     X,
 } from 'lucide-react';
 import { useChat } from '@/store/chat';
-import { useConnection, CONNECTION_LABEL } from '@/store/connection';
 import { useCurrentUser, useSession } from '@/store/session';
 import { useUi } from '@/store/ui';
 import { actions } from '@/store/bridge';
 import { Avatar } from '@/components/ui/Avatar';
 import { IconButton } from '@/components/ui/IconButton';
-import { StatusDot } from '@/components/ui/Badge';
 import { GroupListItem } from './GroupListItem';
 import { cn } from '@/lib/cn';
 import { kbdLabel } from '@/lib/platform';
@@ -25,7 +23,6 @@ export function Sidebar() {
     const currentGroupId = useSession((s) => s.currentGroupId);
     const summaries = useChat((s) => s.summaries);
     const unread = useChat((s) => s.unread);
-    const connection = useConnection((s) => s.state);
     const currentUser = useCurrentUser();
     const sidebarOpen = useUi((s) => s.sidebarOpen);
     const toggleSidebar = useUi((s) => s.toggleSidebar);
@@ -72,10 +69,6 @@ export function Sidebar() {
                     </div>
                     <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold leading-tight">clovers 终端</p>
-                        <p className="flex items-center gap-1.5 text-[11px] text-muted">
-                            <StatusDot state={connection} />
-                            {CONNECTION_LABEL[connection]}
-                        </p>
                     </div>
                     <IconButton
                         icon={<Command size={16} />}

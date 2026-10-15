@@ -73,7 +73,7 @@ export function ChatHeader() {
             <Avatar seed={group.groupId} name={group.groupName} src={group.avatar} size={38} ring />
 
             <div className="min-w-0 flex-1 overflow-hidden">
-                <h1 className="truncate text-sm font-semibold leading-tight">{group.groupName}</h1>
+                <p className="truncate text-sm font-semibold leading-tight">{group.groupName}</p>
                 <p className="mt-0.5 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] text-muted">
                     <span className="flex shrink-0 items-center gap-1">
                         <StatusDot state={connection} />
