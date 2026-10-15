@@ -55,6 +55,12 @@ class ConsoleClient(CloversCore):
         return Response(status_code=404)
 
     async def find_message(self, message_id: str):
+        message = next((msg for msg_id, msg in self.messages if msg_id == message_id), None)
+        if message is None:
+            return Response(status_code=404)
+        return Response(status_code=200, content=message, media_type="application/json")
+
+    async def find_message_history(self, message_id: str):
         flag = False
         payloads = []
         for i, message_payload in enumerate(self.messages):
@@ -67,14 +73,14 @@ class ConsoleClient(CloversCore):
         return Response(status_code=200, content=payloads, media_type="application/json")
 
     def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
-        data["messageId"] = f"unicast_{next(self.unicast_id)}"
+        data["messageId"] = f"unicast:{next(self.unicast_id)}"
         if "echo" in recv:
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
         return ws.send_text(payload)
 
     def broadcast(self, recv: MessageEvent, data: Message):
-        data["messageId"] = f"broadcast_{next(self.broadcast_id)}"
+        data["messageId"] = f"broadcast:{next(self.broadcast_id)}"
         if "echo" in recv:
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
@@ -83,7 +89,7 @@ class ConsoleClient(CloversCore):
 
     async def console_broadcast(self, data: list[str]):
         console_message: ConsoleMessage = {"type": "system", "data": data}
-        return self.boardcast_payload(json.dumps(console_message))
+        await self.boardcast_payload(json.dumps(console_message))
 
     async def boardcast_payload(self, payload: str):
         await asyncio.gather(*(ws.send_text(payload) for ws in self.ws_connects))
@@ -142,6 +148,7 @@ class ConsoleClient(CloversCore):
         app.post("/upload")(self.upload)
         app.get("/download/{name:path}")(self.download)
         app.get("/message/{message_id}")(self.find_message)
+        app.get("/message_history/{message_id}")(self.find_message_history)
         app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
         config = uvicorn.Config(app, host=self.host, port=self.port, log_level="info")
         server = uvicorn.Server(config)

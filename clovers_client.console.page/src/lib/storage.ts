@@ -6,15 +6,13 @@
  * 新增的键统一带 `clovers.` 前缀。
  */
 
-export const LEGACY_KEYS = {
-    userId: 'userId',
-    groupId: 'groupId',
-    userList: 'userList',
-    groupList: 'groupList',
-    atbot: 'atbot',
-} as const;
-
 export const KEYS = {
+    userId: 'clovers.userId',
+    groupId: 'clovers.groupId',
+    userList: 'clovers.userList',
+    groupList: 'clovers.groupList',
+    atbot: 'clovers.atbot',
+    lastMessageId: 'clovers.lastMessageId',
     appearance: 'clovers.appearance',
     preferences: 'clovers.preferences',
     sidebarWidth: 'clovers.sidebarWidth',

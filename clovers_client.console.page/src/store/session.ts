@@ -9,7 +9,7 @@
  */
 import { create } from 'zustand';
 import type { GroupInfo, Permission, UserInfo } from '@/types/protocol';
-import { LEGACY_KEYS, readJSON, readText, writeJSON, writeText } from '@/lib/storage';
+import { KEYS, readJSON, readText, writeJSON, writeText } from '@/lib/storage';
 
 /*
  * defaultUser / defaultGroup 做了记忆化：
@@ -57,6 +57,7 @@ interface SessionState {
     /** groupId -> 名称/头像 */
     knownGroups: Map<string, GroupInfo>;
     onlineUsers: string;
+    lastMessageId: string;
 
     selectUser: (userId: string) => void;
     selectGroup: (groupId: string) => void;
@@ -77,6 +78,7 @@ interface SessionState {
 
     learnUser: (groupId: string, userId: string, userName: string, avatar: string, permission: Permission) => void;
     learnGroup: (groupId: string, groupName: string, avatar?: string) => void;
+    setLastMessageId: (lastMessageId: string) => void;
 }
 
 function loadList<T>(key: string): T[] {
@@ -99,10 +101,11 @@ function ensurePresent<T>(list: T[], id: string, read: (item: T) => string, crea
     return [create(id), ...list];
 }
 
-const initialUsers = loadList<UserInfo>(LEGACY_KEYS.userList);
-const initialGroups = loadList<GroupInfo>(LEGACY_KEYS.groupList);
-const initialUserId = readText(LEGACY_KEYS.userId, '1');
-const initialGroupId = readText(LEGACY_KEYS.groupId, '1');
+const initialUsers = loadList<UserInfo>(KEYS.userList);
+const initialGroups = loadList<GroupInfo>(KEYS.groupList);
+const initialUserId = readText(KEYS.userId, '1');
+const initialGroupId = readText(KEYS.groupId, '1');
+const initialLastMessageId = readText(KEYS.lastMessageId, '');
 
 export const useSession = create<SessionState>((set, get) => ({
     users: ensurePresent(initialUsers, initialUserId, (u) => u.userId, defaultUser),
@@ -113,6 +116,7 @@ export const useSession = create<SessionState>((set, get) => ({
     knownGroupMembers: new Map(),
     knownGroups: new Map(),
     onlineUsers: '0',
+    lastMessageId: initialLastMessageId,
 
     selectUser: (userId) => {
         const users = moveTop(
@@ -120,8 +124,8 @@ export const useSession = create<SessionState>((set, get) => ({
             (u) => u.userId === userId,
         );
         set({ users, currentUserId: userId });
-        writeText(LEGACY_KEYS.userId, userId);
-        writeJSON(LEGACY_KEYS.userList, users);
+        writeText(KEYS.userId, userId);
+        writeJSON(KEYS.userList, users);
     },
 
     selectGroup: (groupId) => {
@@ -130,8 +134,8 @@ export const useSession = create<SessionState>((set, get) => ({
             (g) => g.groupId === groupId,
         );
         set({ groups, currentGroupId: groupId });
-        writeText(LEGACY_KEYS.groupId, groupId);
-        writeJSON(LEGACY_KEYS.groupList, groups);
+        writeText(KEYS.groupId, groupId);
+        writeJSON(KEYS.groupList, groups);
     },
 
     upsertUser: (user) => {
@@ -140,19 +144,19 @@ export const useSession = create<SessionState>((set, get) => ({
         if (index === -1) users.unshift(user);
         else users[index] = { ...users[index], ...user };
         set({ users });
-        writeJSON(LEGACY_KEYS.userList, users);
+        writeJSON(KEYS.userList, users);
     },
 
     updateUser: (userId, patch) => {
         const users = get().users.map((u) => (u.userId === userId ? { ...u, ...patch } : u));
         set({ users });
-        writeJSON(LEGACY_KEYS.userList, users);
+        writeJSON(KEYS.userList, users);
     },
 
     removeUser: (userId) => {
         const remaining = get().users.filter((u) => u.userId !== userId);
         set({ users: remaining });
-        writeJSON(LEGACY_KEYS.userList, remaining);
+        writeJSON(KEYS.userList, remaining);
         if (get().currentUserId === userId) {
             get().selectUser(remaining[0]?.userId ?? '1');
         }
@@ -162,21 +166,21 @@ export const useSession = create<SessionState>((set, get) => ({
         const keep = resolveCurrentUser(get());
         const users = [keep];
         set({ users });
-        writeJSON(LEGACY_KEYS.userList, users);
+        writeJSON(KEYS.userList, users);
     },
 
     addBlankUser: () => {
         const user = defaultUser(Date.now().toString());
         const users = [...get().users, user];
         set({ users });
-        writeJSON(LEGACY_KEYS.userList, users);
+        writeJSON(KEYS.userList, users);
         return user;
     },
 
     updateGroup: (groupId, patch) => {
         const groups = get().groups.map((g) => (g.groupId === groupId ? { ...g, ...patch } : g));
         set({ groups });
-        writeJSON(LEGACY_KEYS.groupList, groups);
+        writeJSON(KEYS.groupList, groups);
     },
 
     renameGroup: (oldId, newId, patch) => {
@@ -185,14 +189,14 @@ export const useSession = create<SessionState>((set, get) => ({
         );
         const currentGroupId = get().currentGroupId === oldId ? newId : get().currentGroupId;
         set({ groups, currentGroupId });
-        writeJSON(LEGACY_KEYS.groupList, groups);
-        writeText(LEGACY_KEYS.groupId, currentGroupId);
+        writeJSON(KEYS.groupList, groups);
+        writeText(KEYS.groupId, currentGroupId);
     },
 
     removeGroup: (groupId) => {
         const remaining = get().groups.filter((g) => g.groupId !== groupId);
         set({ groups: remaining });
-        writeJSON(LEGACY_KEYS.groupList, remaining);
+        writeJSON(KEYS.groupList, remaining);
         if (get().currentGroupId === groupId) {
             get().selectGroup(remaining[0]?.groupId ?? '1');
         }
@@ -209,7 +213,7 @@ export const useSession = create<SessionState>((set, get) => ({
         }
         const groups = [...get().groups, group];
         set({ groups });
-        writeJSON(LEGACY_KEYS.groupList, groups);
+        writeJSON(KEYS.groupList, groups);
         return group;
     },
 
@@ -217,7 +221,7 @@ export const useSession = create<SessionState>((set, get) => ({
         const group = defaultGroup(Date.now().toString());
         const groups = [...get().groups, group];
         set({ groups });
-        writeJSON(LEGACY_KEYS.groupList, groups);
+        writeJSON(KEYS.groupList, groups);
         return group;
     },
 
@@ -264,6 +268,7 @@ export const useSession = create<SessionState>((set, get) => ({
             });
         }
     },
+    setLastMessageId: (lastMessageId) => { writeText(KEYS.lastMessageId, lastMessageId); }
 }));
 
 /* ------------------------------ 派生读取 ------------------------------ */

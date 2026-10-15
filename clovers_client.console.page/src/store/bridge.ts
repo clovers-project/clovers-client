@@ -23,13 +23,17 @@ export function getClient(): CloversClient | null {
 export function startApp(): void {
     if (installed) return;
     installed = true;
-
+    const lastMessageId = useSession.getState().lastMessageId;
     client = new CloversClient({
         onMessage: (message) => {
             if (message.type === 'system') {
                 useChat.getState().handleSystemMessage(message);
             } else {
                 useChat.getState().handleUserMessage(message);
+            }
+            const messageId = message.messageId
+            if (messageId && messageId.startsWith('broadcast:')) {
+                useSession.getState().setLastMessageId(messageId)
             }
         },
         onStateChange: (state) => {
@@ -43,6 +47,21 @@ export function startApp(): void {
             }
         },
     });
+    client.fetchMessageHistory(lastMessageId).then(
+        (messages) => {
+            if (!messages) return;
+            for (const message of messages) {
+                if (message.type === 'system') {
+                    useChat.getState().handleSystemMessage(message);
+                } else {
+                    useChat.getState().handleUserMessage(message);
+                }
+            }
+        },
+    )
+
+
+
 
     // chat store 通过这里把消息真正发出去、以及按 ID 查消息
     setTransport({
@@ -59,7 +78,6 @@ export function startApp(): void {
         },
         fetchMessage: (messageId) => client?.fetchMessage(messageId) ?? Promise.resolve(null),
     });
-
     client.connect();
 }
 

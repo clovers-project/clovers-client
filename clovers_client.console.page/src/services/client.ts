@@ -34,7 +34,8 @@ export class CloversClient {
     private readonly wsUrl = '/ws';
     private readonly uploadUrl = '/upload';
     private readonly downloadUrl = '/download';
-    private readonly messageUrl = '/message';
+    private readonly messageMessageUrl = '/message';
+    private readonly messageMessageHistoryUrl = '/message_history';
     private static readonly MAX_DELAY = 15000;
 
     constructor(options: ClientOptions) {
@@ -185,14 +186,25 @@ export class CloversClient {
     async fetchMessage(messageId: string): Promise<ServerUserMessage | null> {
         if (!messageId) return null;
         try {
-            const res = await fetch(`${this.messageUrl}/${encodeURIComponent(messageId)}`);
+            const res = await fetch(`${this.messageMessageUrl}/${encodeURIComponent(messageId)}`);
             if (res.status !== 200) return null;
-            const data = (await res.json()) as ServerUserMessage | { message?: ServerUserMessage };
-            // 兼容两种返回：直接是消息本体，或者包了一层 { message: ... }
-            const message = 'message' in data && data.message ? data.message : (data as ServerUserMessage);
-            return message?.type === 'user' ? message : null;
+            const message = (await res.json()) as ServerMessage;
+            return message.type !== 'system' ? message : null;
         } catch (err) {
             console.error('[message] 查询失败', err);
+            return null;
+        }
+    }
+
+    async fetchMessageHistory(messageId: string): Promise<ServerMessage[] | null> {
+        if (!messageId) return null;
+        try {
+            const res = await fetch(`${this.messageMessageHistoryUrl}/${encodeURIComponent(messageId)}`);
+            if (res.status !== 200) return null;
+            const data = (await res.json()) as string[];
+            return data.map(payload => JSON.parse(payload) as ServerMessage);
+        } catch (err) {
+            console.error('[message_history] 查询失败', err);
             return null;
         }
     }
