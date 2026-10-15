@@ -62,7 +62,10 @@ export function MessageContextMenu() {
         {
             label: '回复',
             icon: <CornerUpLeft size={14} />,
-            run: () => setReplyTo(item.id),
+            run: () => {
+                setReplyTo(item.id);
+                addMention(item.senderId);
+            },
         },
         {
             label: `@ ${item.senderName}`,
