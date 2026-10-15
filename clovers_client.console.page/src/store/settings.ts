@@ -10,8 +10,8 @@
 import { create } from 'zustand';
 import { KEYS, readJSON, writeJSON } from '@/lib/storage';
 
-type BaseThemeMode = 'light' | 'dark';
-export type ThemeMode = BaseThemeMode | 'system';
+
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type PaletteId =
     | 'indigo'
