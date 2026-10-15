@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn';
 import { useChat } from '@/store/chat';
 import { useUi } from '@/store/ui';
 
-const COMPACT_WINDOW = 5 * 60 * 1000;
+const COMPACT_WINDOW = 60 * 1000;
 
 export function MessageList({ groupId }: { groupId: string }) {
     const feed = useChat((s) => s.feeds[groupId]);
