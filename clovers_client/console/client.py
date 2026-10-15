@@ -63,7 +63,7 @@ class ConsoleClient(CloversCore):
             elif message_id == i:
                 flag = True
         if flag == False:
-            return Response(status_code=404)
+            payloads.extend(x[1] for x in self.messages)
         return Response(status_code=200, content=payloads, media_type="application/json")
 
     def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
