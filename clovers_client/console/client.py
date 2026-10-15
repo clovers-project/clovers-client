@@ -40,7 +40,7 @@ class ConsoleClient(CloversCore):
         self.broadcast_id = id_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=config.message_history_limit)
         self.public_sessions = set(config.public_sessions)
-        self.load_dir = Path(config.load_dir)
+        self.load_dir = Path(config.load_dir).resolve()
         self.load_dir.mkdir(parents=True, exist_ok=True)
 
     async def upload(self, file: UploadFile = File(...)):
@@ -50,6 +50,8 @@ class ConsoleClient(CloversCore):
 
     async def download(self, name: str, check: bool = Query(False)):
         filepath = self.load_dir / name
+        if not filepath.is_relative_to(self.load_dir):  # 防止目录遍历漏洞
+            return Response(status_code=403)
         if filepath.exists() and filepath.is_file():
             return Response(status_code=200) if check else FileResponse(path=filepath)
         return Response(status_code=404)
