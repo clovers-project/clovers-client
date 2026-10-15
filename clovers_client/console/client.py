@@ -66,7 +66,8 @@ class ConsoleClient(CloversCore):
             if i == message_id:
                 break
             payloads.append(message_payload)
-        return Response(status_code=200, content=json.dumps(reversed(payloads)), media_type="application/json")
+        payloads.reverse()
+        return Response(status_code=200, content=json.dumps(payloads), media_type="application/json")
 
     def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
         data["messageId"] = f"unicast_{next(self.unicast_id)}"
