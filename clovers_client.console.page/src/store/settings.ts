@@ -10,8 +10,8 @@
 import { create } from 'zustand';
 import { KEYS, readJSON, writeJSON } from '@/lib/storage';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
-export type AutoThemeMode = 'light' | 'dark' | 'keep';
+type BaseThemeMode = 'light' | 'dark';
+export type ThemeMode = BaseThemeMode | 'system';
 
 export type PaletteId =
     | 'indigo'
@@ -52,7 +52,6 @@ export interface Appearance {
     glass: boolean;
     /** palette === 'auto' 时实际使用的色相 */
     autoHue: number;
-    autoMode: AutoThemeMode;
     background: BackgroundSettings;
 }
 
@@ -93,7 +92,6 @@ export const DEFAULT_APPEARANCE: Appearance = {
     fontSize: 15,
     glass: false,
     autoHue: 268,
-    autoMode: "keep",
     background: {
         enabled: false,
         blur: 12,
@@ -128,7 +126,7 @@ interface SettingsState {
  */
 export function applyAppearance(appearance: Appearance, systemDark: boolean): void {
     const root = document.documentElement;
-    const resolved = appearance.autoMode === 'keep' ? appearance.mode === 'system' ? (systemDark ? 'dark' : 'light') : appearance.mode : appearance.autoMode;
+    const resolved = appearance.mode === 'system' ? (systemDark ? 'dark' : 'light') : appearance.mode;
     root.dataset.mode = resolved;
     root.dataset.palette = appearance.palette;
     root.dataset.corner = appearance.corner;
@@ -212,14 +210,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         set({ systemDark: dark });
     },
 }));
-
-/** 当前实际生效的明暗（把 system 解析掉） */
-export function useResolvedMode(): 'light' | 'dark' {
-    const mode = useSettings((s) => s.appearance.mode);
-    const systemDark = useSettings((s) => s.systemDark);
-    if (mode === 'system') return systemDark ? 'dark' : 'light';
-    return mode;
-}
 
 /** 启动时同步一次 + 监听系统主题变化 */
 export function initSystemThemeWatch(): void {
