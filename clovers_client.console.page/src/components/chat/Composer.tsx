@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { AtSign, Bot, ImagePlus, Send, Smile, Trash2 } from 'lucide-react';
+import { AtSign, Bot, ImagePlus, Send, Trash2 } from 'lucide-react';
 import { useChat } from '@/store/chat';
 import { drafts, toast, useUi } from '@/store/ui';
 import { useSettings } from '@/store/settings';
