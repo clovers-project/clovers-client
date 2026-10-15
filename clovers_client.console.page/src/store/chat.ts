@@ -60,8 +60,6 @@ interface PendingEntry {
 
 type UserFeedItem = Extract<FeedItem, { kind: 'user' }>;
 
-const ECHO_TIMEOUT = 12000;
-
 interface ChatState {
     feeds: Record<string, FeedItem[]>;
     loading: Record<string, boolean>;
@@ -171,17 +169,6 @@ function summarizeItem(item: FeedItem): string {
     return item.kind === 'system'
         ? summarize(item.text)
         : summarize(item.text || (item.images.length ? '[图片]' : ''));
-}
-
-/** 超时兜底：服务端没有回显时把气泡从「发送中」放行 */
-const echoTimers = new Map<string, number>();
-
-function clearEchoTimer(echo: string) {
-    const timer = echoTimers.get(echo);
-    if (timer !== undefined) {
-        window.clearTimeout(timer);
-        echoTimers.delete(echo);
-    }
 }
 
 /**
@@ -326,7 +313,6 @@ export const useChat = create<ChatState>((set, get) => ({
         // 先按 echo 精确匹配；服务端没回传 echo 时，退化成按内容匹配本地占位气泡。
         let pendingEntry = record.echo ? get().pending[record.echo] : undefined;
         let pendingEcho = record.echo;
-        if (record.echo) clearEchoTimer(record.echo);
 
         if (!pendingEntry && record.self) {
             const fallback = findPendingByContent(get(), record);
@@ -500,22 +486,6 @@ export const useChat = create<ChatState>((set, get) => ({
         };
 
         transport?.send(payload, localId, group.groupId);
-
-        // 服务端不支持 echo 时的兜底：超时就把「发送中」放行。
-        // 注意 pending 映射不删，迟到的回显仍然能对账，不会多出一个气泡。
-        clearEchoTimer(echo);
-        echoTimers.set(
-            echo,
-            window.setTimeout(() => {
-                echoTimers.delete(echo);
-                const entry = useChat.getState().pending[echo];
-                if (!entry) return;
-                markMessageStatus(entry.groupId, entry.localId, 'sent');
-                useChat.setState((s) => ({
-                    pending: { ...s.pending, [echo]: { ...entry, settled: true } },
-                }));
-            }, ECHO_TIMEOUT),
-        );
     },
 
     markRead: (groupId) =>
