@@ -40,18 +40,11 @@ const defaultGroup = (groupId: string): GroupInfo => {
             groupId,
             groupName: groupId === '1' ? '默认会话' : `会话 ${groupId.slice(-4)}`,
             avatar: '',
-            flag: true,
         };
         groupCache.set(groupId, cached);
     }
     return cached;
 };
-
-/** 从后端消息里学到的人物目录（相当于旧版的 UserStubs / GroupStubs） */
-export interface KnownPerson {
-    name: string;
-    avatar: string;
-}
 
 interface SessionState {
     users: UserInfo[];
@@ -59,9 +52,9 @@ interface SessionState {
     currentUserId: string;
     currentGroupId: string;
     /** userId -> 名称/头像，用于 @提及 展示与自动补全 */
-    knownUsers: Record<string, KnownPerson>;
+    knownUsers: Map<string, UserInfo>;
     /** groupId -> 名称/头像 */
-    knownGroups: Record<string, KnownPerson>;
+    knownGroups: Map<string, GroupInfo>;
 
     selectUser: (userId: string) => void;
     selectGroup: (groupId: string) => void;
@@ -80,8 +73,10 @@ interface SessionState {
     ensureGroup: (group: GroupInfo) => GroupInfo;
     addBlankGroup: () => GroupInfo;
 
-    learnUser: (userId: string, name: string, avatar?: string) => void;
-    learnGroup: (groupId: string, name: string, avatar?: string) => void;
+    learnUser: (userId: string, userName: string, avatar: string, permission: Permission) => void;
+    learnGroup: (groupId: string, groupName: string, avatar?: string) => void;
+
+    updateUsers: (users: UserInfo[]) => void;
 }
 
 function loadList<T>(key: string): T[] {
@@ -114,8 +109,8 @@ export const useSession = create<SessionState>((set, get) => ({
     groups: ensurePresent(initialGroups, initialGroupId, (g) => g.groupId, defaultGroup),
     currentUserId: initialUserId,
     currentGroupId: initialGroupId,
-    knownUsers: {},
-    knownGroups: {},
+    knownUsers: new Map(),
+    knownGroups: new Map(),
 
     selectUser: (userId) => {
         const users = moveTop(
@@ -224,24 +219,50 @@ export const useSession = create<SessionState>((set, get) => ({
         return group;
     },
 
-    learnUser: (userId, name, avatar) => {
+    learnUser: (userId, userName, avatar, permission) => {
         if (!userId) return;
         const known = get().knownUsers;
-        const prev = known[userId];
-        const nextName = name || prev?.name || userId;
-        const nextAvatar = avatar || prev?.avatar || '';
-        if (prev && prev.name === nextName && prev.avatar === nextAvatar) return;
-        set({ knownUsers: { ...known, [userId]: { name: nextName, avatar: nextAvatar } } });
+        const prev = known.get(userId);
+        if (prev) {
+            known.set(userId, {
+                userId,
+                userName: userName || prev["userName"],
+                avatar: avatar || prev["avatar"],
+                permission: permission || prev["permission"],
+            });
+        } else {
+            known.set(userId, {
+                userId,
+                userName: userName || userId,
+                avatar: avatar || '',
+                permission: permission || 'Member',
+            });
+        }
     },
 
-    learnGroup: (groupId, name, avatar) => {
+    learnGroup: (groupId, groupName, avatar) => {
         if (!groupId) return;
         const known = get().knownGroups;
-        const prev = known[groupId];
-        const nextName = name || prev?.name || groupId;
-        const nextAvatar = avatar || prev?.avatar || '';
-        if (prev && prev.name === nextName && prev.avatar === nextAvatar) return;
-        set({ knownGroups: { ...known, [groupId]: { name: nextName, avatar: nextAvatar } } });
+        const prev = known.get(groupId);
+        if (prev) {
+            known.set(groupId, {
+                groupId,
+                groupName: groupName || prev["groupName"],
+                avatar: avatar || prev["avatar"],
+            });
+        } else {
+            known.set(groupId, {
+                groupId,
+                groupName: groupName || groupId,
+                avatar: avatar || '',
+            });
+        }
+    },
+
+    updateUsers: (users) => {
+        const known = get().knownUsers
+        known.clear();
+        for (const u of users) { known.set(u.userId, u); }
     },
 }));
 
@@ -282,7 +303,7 @@ export function resolveUserName(userId: string): string {
     if (!userId) return 'BOT';
     const state = useSession.getState();
     return (
-        state.knownUsers[userId]?.name ??
+        state.knownUsers.get(userId)?.userName ??
         state.users.find((u) => u.userId === userId)?.userName ??
         userId
     );
@@ -292,7 +313,7 @@ export function resolveUserName(userId: string): string {
 export function mentionCandidates(): { userId: string; userName: string; avatar: string }[] {
     const state = useSession.getState();
     const map = new Map<string, { userId: string; userName: string; avatar: string }>();
-    state.users.forEach((u) => map.set(u.userId, { userId: u.userId, userName: u.userName, avatar: u.avatar }));
+    // state.users.forEach((u) => map.set(u.userId, { userId: u.userId, userName: u.userName, avatar: u.avatar }));
     Object.entries(state.knownUsers).forEach(([userId, person]) => {
         if (!map.has(userId)) map.set(userId, { userId, userName: person.name, avatar: person.avatar });
     });

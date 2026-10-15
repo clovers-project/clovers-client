@@ -293,7 +293,7 @@ export const useChat = create<ChatState>((set, get) => ({
         const record = toRecord(message, selfId);
 
         // 更新「认识的人」目录，供 @提及 使用
-        useSession.getState().learnUser(record.senderId, record.senderName, record.avatar);
+        useSession.getState().learnUser(record.senderId, record.senderName, record.avatar, record.permission);
         useSession.getState().learnGroup(record.groupId, message.groupName, message.groupAvatar);
 
         // 会话可能还不在列表里（别人新建的会话）
@@ -303,7 +303,6 @@ export const useChat = create<ChatState>((set, get) => ({
                 groupId: record.groupId,
                 groupName: message.groupName || record.groupId,
                 avatar: message.groupAvatar || '',
-                flag: true,
             };
             useSession.getState().ensureGroup(group);
         } else if (
@@ -409,15 +408,13 @@ export const useChat = create<ChatState>((set, get) => ({
 
         const prefs = useSettings.getState().preferences;
         if (!isActive && !record.self) {
-            const groupName =
-                useSession.getState().knownGroups[record.groupId]?.name ?? record.groupId;
             if (prefs.notify) {
-                notifyDesktop(
-                    `${record.senderName} · ${groupName}`,
-                    summarize(record.text || '[图片]', 80),
-                );
+                const groupName = useSession.getState().knownGroups.get(record.groupId)?.groupName ?? record.groupId;
+                notifyDesktop(`${record.senderName} · ${groupName}`, summarize(record.text || '[图片]', 80),);
             }
-            if (prefs.soundOnMessage) playBeep();
+            if (prefs.soundOnMessage) {
+                playBeep();
+            }
         }
     },
 
@@ -570,9 +567,9 @@ export const useChat = create<ChatState>((set, get) => ({
                 ...s.quotes,
                 [messageId]: fetched
                     ? {
-                          name: fetched.senderName || fetched.senderId,
-                          text: summarize(fetched.text || '[图片]', 120),
-                      }
+                        name: fetched.senderName || fetched.senderId,
+                        text: summarize(fetched.text || '[图片]', 120),
+                    }
                     : null, // null 表示「确实查不到」
             },
         }));

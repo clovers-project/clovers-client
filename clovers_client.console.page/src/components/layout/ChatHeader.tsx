@@ -32,9 +32,7 @@ export function ChatHeader() {
     const setSearchOpen = useUi((s) => s.setSearchOpen);
     const toggleSidebar = useUi((s) => s.toggleSidebar);
     const knownUsers = useSession((s) => s.knownUsers);
-    const userCount = useSession((s) => s.users.length);
-
-    const members = Math.max(Object.keys(knownUsers).length, userCount);
+    const members = Object.keys(knownUsers).length;
 
     const exportAs = (kind: 'md' | 'json') => {
         const items = feed ?? [];

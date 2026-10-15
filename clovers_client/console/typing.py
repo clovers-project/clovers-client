@@ -25,6 +25,13 @@ class ConsoleMessage(TypedDict):
     echo: NotRequired[str]
 
 
+class UserInfo(TypedDict):
+    userId: str
+    userName: str
+    avatar: str
+    permission: Literal["SuperUser", "Owner", "Admin", "Member"]
+
+
 type Message = ChatMessage | ConsoleMessage
 type SendMethod = Callable[[Message], Coroutine[Any, Any, None]]
 

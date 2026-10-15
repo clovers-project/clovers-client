@@ -26,8 +26,6 @@ export interface GroupInfo {
     groupId: string;
     groupName: string;
     avatar: string;
-    /** 本地会话标记位，沿用旧版语义（未读/待处理），新版用 unread 计数替代。 */
-    flag: boolean;
 }
 
 /* ------------------------------ 服务端 -> 客户端 ------------------------------ */

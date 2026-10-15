@@ -64,6 +64,14 @@ class ConsoleClient(CloversCore):
             return Response(status_code=404)
         return Response(status_code=200, content=message, media_type="application/json")
 
+    async def userlist(self, group_id: str = Query(None)):
+        if group_id is None:
+            return Response(status_code=400, content="Invalid group_id")
+        return Response(status_code=200, content=self.adapter.get_userlist(group_id))
+
+    async def userinfo(self, uid: str):
+        return Response(status_code=200, content=self.adapter.get_userinfo(uid))
+
     def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
         data["messageId"] = next(self.message_id)
         if "echo" in recv:
@@ -131,6 +139,8 @@ class ConsoleClient(CloversCore):
         app = FastAPI()
         app.websocket("/ws")(self.websocket_handler)
         app.post("/upload")(self.upload)
+        app.post("/userlist")(self.userlist)
+        app.post("/userinfo/{uid}")(self.userinfo)
         app.get("/download/{name:path}")(self.download)
         app.get("/message/{message_id}")(self.find_message)
         app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
