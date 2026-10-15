@@ -11,7 +11,7 @@ from clovers_client.logger import init_logger
 from clovers_client.config import ClientConfig
 from clovers_client.utils import id_generator
 from .utils import upload
-from .typing import Message, MessageEvent
+from .typing import ConsoleMessage, Message, MessageEvent
 
 CONSOLE_PREFIX = b"\x05\x03\x01".decode()
 PAGE_RESOURCE = Path(__file__).parent / "page"
@@ -64,21 +64,25 @@ class ConsoleClient(CloversCore):
             return Response(status_code=404)
         return Response(status_code=200, content=message, media_type="application/json")
 
-    def unicast(self, ws: WebSocket, data: Message, echo: str | None = None):
+    def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
         data["messageId"] = next(self.message_id)
-        if echo:
-            data["echo"] = echo
+        if "echo" in recv:
+            data["echo"] = recv["echo"]
         payload = json.dumps(data)
         self.messages.append((data["messageId"], payload))
         return ws.send_text(payload)
 
-    def broadcast(self, data: Message, echo: str | None = None):
+    def broadcast(self, recv: MessageEvent, data: Message):
         data["messageId"] = next(self.message_id)
-        if echo:
-            data["echo"] = echo
+        if "echo" in recv:
+            data["echo"] = recv["echo"]
         payload = json.dumps(data)
         self.messages.append((data["messageId"], payload))
         return self.boardcast_payload(payload)
+
+    async def console_broadcast(self, data: list[str]):
+        console_message: ConsoleMessage = {"type": "system", "data": data}
+        return self.boardcast_payload(json.dumps(console_message))
 
     async def boardcast_payload(self, payload: str):
         await asyncio.gather(*(ws.send_text(payload) for ws in self.ws_connects))
@@ -87,9 +91,9 @@ class ConsoleClient(CloversCore):
         while True:
             recv: MessageEvent = json.loads(await ws.receive_text())
             if recv["groupId"] == "private":
-                send = partial(self.unicast, ws, echo=recv.get("echo"))
+                send = partial(self.unicast, ws, recv)
             else:
-                send = partial(self.broadcast, echo=recv.get("echo"))
+                send = partial(self.broadcast, recv)
             if recv["at"] and recv["at"][-1] == "":
                 del recv["at"][-1]
                 recv["to_me"] = True
@@ -104,7 +108,7 @@ class ConsoleClient(CloversCore):
         await ws.accept()
         self.ws_connects.add(ws)
         online_users = str(len(self.ws_connects))
-        await self.broadcast({"type": "system", "data": ["onlineUsers", online_users]})
+        await self.console_broadcast(["onlineUsers", online_users])
         logger.info(f"New client connected. Total: {online_users}")
         reveive_event = self.reveive_event(ws)
         try:
@@ -116,7 +120,7 @@ class ConsoleClient(CloversCore):
             logger.exception("Error in websocket_handler")
         self.ws_connects.discard(ws)
         online_users = str(len(self.ws_connects))
-        await self.broadcast({"type": "system", "data": ["onlineUsers", online_users]})
+        await self.console_broadcast(["onlineUsers", online_users])
         logger.info(f"Client remaining: {online_users}")
 
     def extract_message(self, recv: MessageEvent, **ignore):

@@ -187,7 +187,7 @@ async def _(message: GroupMessage, recv: MessageEvent, client: Client):
         "groupName": "",
         "groupAvatar": "",
     }  # type: ignore
-    await send_result(result, redirect, client.broadcast, client)
+    await send_result(result, redirect, partial(client.broadcast, recv), client)
 
 
 @ADAPTER.send_method("private_message")
@@ -201,7 +201,7 @@ async def _(message: PrivateMessage, recv: MessageEvent, ws: WebSocket, client: 
         "groupName": client.BOT_NICKNAME,
         "groupAvatar": client.BOT_AVATAR_URL,
     }  # type: ignore
-    await send_result(result, redirect, partial(client.unicast, ws), client)
+    await send_result(result, redirect, partial(client.unicast, ws, recv), client)
 
 
 @ADAPTER.property_method("bot_nickname")
