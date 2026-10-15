@@ -32,7 +32,7 @@ export function startApp(): void {
                 useChat.getState().handleUserMessage(message);
             }
             const messageId = message.messageId
-            if (messageId && messageId.startsWith('broadcast:')) {
+            if (messageId && messageId.startsWith('broadcast_')) {
                 useSession.getState().setLastMessageId(messageId)
             }
         },
@@ -57,6 +57,7 @@ export function startApp(): void {
                     useChat.getState().handleUserMessage(message);
                 }
             }
+            useSession.getState().setLastMessageId(messages.at(-1)!.messageId!)
         },
     )
 

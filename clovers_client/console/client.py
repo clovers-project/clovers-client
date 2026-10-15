@@ -61,30 +61,26 @@ class ConsoleClient(CloversCore):
         return Response(status_code=200, content=message, media_type="application/json")
 
     async def find_message_history(self, message_id: str):
-        flag = False
         payloads = []
-        for i, message_payload in enumerate(self.messages):
-            if flag == True:
-                payloads.append(message_payload)
-            elif message_id == i:
-                flag = True
-        if flag == False:
-            payloads.extend(x[1] for x in self.messages)
-        return Response(status_code=200, content=payloads, media_type="application/json")
+        for i, message_payload in self.messages:
+            if i == message_id:
+                break
+            payloads.append(message_payload)
+        return Response(status_code=200, content=json.dumps(reversed(payloads)), media_type="application/json")
 
     def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
-        data["messageId"] = f"unicast:{next(self.unicast_id)}"
+        data["messageId"] = f"unicast_{next(self.unicast_id)}"
         if "echo" in recv:
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
         return ws.send_text(payload)
 
     def broadcast(self, recv: MessageEvent, data: Message):
-        data["messageId"] = f"broadcast:{next(self.broadcast_id)}"
+        data["messageId"] = f"broadcast_{next(self.broadcast_id)}"
         if "echo" in recv:
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
-        self.messages.append((data["messageId"], payload))
+        self.messages.appendleft((data["messageId"], payload))
         return self.boardcast_payload(payload)
 
     async def console_broadcast(self, data: list[str]):
@@ -98,9 +94,9 @@ class ConsoleClient(CloversCore):
         while True:
             recv: MessageEvent = json.loads(await ws.receive_text())
             if recv["groupId"] in self.public_sessions:
-                send = partial(self.unicast, ws, recv)
-            else:
                 send = partial(self.broadcast, recv)
+            else:
+                send = partial(self.unicast, ws, recv)
             if recv["at"] and recv["at"][-1] == "":
                 del recv["at"][-1]
                 recv["to_me"] = True
