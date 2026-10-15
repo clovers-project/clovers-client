@@ -98,10 +98,13 @@ export const useBackground = create<BackgroundState>((set, get) => ({
         const settings = useSettings.getState();
         const { background } = settings.appearance;
         // 记下色相，不管当前有没有启用 auto 主题都存着，用户切过去就立刻生效
-        settings.setAppearance({
-            autoHue: palette.hue,
-            autoMode: palette.lightness > LIGHT_THRESHOLD ? 'light' : palette.lightness < DARK_THRESHOLD ? 'dark' : 'keep',
-        });
+        if (palette.lightness > LIGHT_THRESHOLD) {
+            settings.setAppearance({ autoHue: palette.hue, mode: 'light' });
+        } else if (palette.lightness < DARK_THRESHOLD) {
+            settings.setAppearance({ autoHue: palette.hue, mode: 'dark' });
+        } else {
+            settings.setAppearance({ autoHue: palette.hue });
+        }
         if (background.autoTheme && settings.appearance.palette !== AUTO_PALETTE_ID) {
             settings.setAppearance({ palette: AUTO_PALETTE_ID });
         }
