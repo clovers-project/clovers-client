@@ -180,14 +180,19 @@ async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: Se
 
 
 @ADAPTER.send_method("group_message")
-async def _(message: GroupMessage, recv: MessageEvent, client: Client):
+async def _(message: GroupMessage, recv: MessageEvent, ws: WebSocket, client: Client):
     result = message["data"]
+    group_id = message["group_id"]
     redirect: MessageEvent = {
-        "groupId": message["group_id"],
+        "groupId": group_id,
         "groupName": "",
         "groupAvatar": "",
     }  # type: ignore
-    await send_result(result, redirect, partial(client.broadcast, recv), client)
+    if group_id in client.public_sessions:
+        send = partial(client.broadcast, recv)
+    else:
+        send = partial(client.unicast, ws, recv)
+    await send_result(result, redirect, send, client)
 
 
 @ADAPTER.send_method("private_message")

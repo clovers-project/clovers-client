@@ -8,20 +8,13 @@ from fastapi.responses import Response, FileResponse
 from clovers import CloversCore
 from clovers.logger import logger
 from clovers_client.logger import init_logger
-from clovers_client.config import ClientConfig
 from clovers_client.utils import id_generator
 from .utils import upload
 from .typing import ConsoleMessage, Message, MessageEvent
+from .config import Config
 
 CONSOLE_PREFIX = b"\x05\x03\x01".decode()
 PAGE_RESOURCE = Path(__file__).parent / "page"
-
-
-class Config(ClientConfig):
-    BOT_AVATAR_URL: str = "/download/bot_avatar.png"
-    host: str = "127.0.0.1"
-    port: int = 11000
-    load_dir: str = "./load_dir"
 
 
 class ConsoleClient(CloversCore):
@@ -35,8 +28,6 @@ class ConsoleClient(CloversCore):
         self.load_adapter(config.adapters, config.adapter_dirs)
         self.load_plugin(config.plugins, config.plugin_dirs)
         # inner
-        self.message_id = id_generator()
-        self.messages: deque[tuple[str, str]] = deque(maxlen=100)
         self.BOT_NICKNAME = config.BOT_NICKNAME
         self.BOT_AVATAR_URL = config.BOT_AVATAR_URL
         self._length_bot_nickname = len(self.BOT_NICKNAME)
@@ -44,6 +35,11 @@ class ConsoleClient(CloversCore):
         self.host = config.host
         self.port = config.port
         self.ws_connects: set[WebSocket] = set()
+        # Server
+        self.unicast_id = id_generator()
+        self.broadcast_id = id_generator()
+        self.messages: deque[tuple[str, str]] = deque(maxlen=config.message_history_limit)
+        self.public_sessions = set(config.public_sessions)
         self.load_dir = Path(config.load_dir)
         self.load_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,21 +55,26 @@ class ConsoleClient(CloversCore):
         return Response(status_code=404)
 
     async def find_message(self, message_id: str):
-        message = next((msg for msg_id, msg in self.messages if msg_id == message_id), None)
-        if message is None:
+        flag = False
+        payloads = []
+        for i, message_payload in enumerate(self.messages):
+            if flag == True:
+                payloads.append(message_payload)
+            elif message_id == i:
+                flag = True
+        if flag == False:
             return Response(status_code=404)
-        return Response(status_code=200, content=message, media_type="application/json")
+        return Response(status_code=200, content=payloads, media_type="application/json")
 
     def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
-        data["messageId"] = next(self.message_id)
+        data["messageId"] = f"unicast_{next(self.unicast_id)}"
         if "echo" in recv:
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
-        self.messages.append((data["messageId"], payload))
         return ws.send_text(payload)
 
     def broadcast(self, recv: MessageEvent, data: Message):
-        data["messageId"] = next(self.message_id)
+        data["messageId"] = f"broadcast_{next(self.broadcast_id)}"
         if "echo" in recv:
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
@@ -90,7 +91,7 @@ class ConsoleClient(CloversCore):
     async def reveive_event(self, ws: WebSocket):
         while True:
             recv: MessageEvent = json.loads(await ws.receive_text())
-            if recv["groupId"] == "private":
+            if recv["groupId"] in self.public_sessions:
                 send = partial(self.unicast, ws, recv)
             else:
                 send = partial(self.broadcast, recv)
