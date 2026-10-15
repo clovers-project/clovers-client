@@ -19,8 +19,6 @@ export interface ExtractedPalette {
     lightness: number;
     /** 加权主色的十六进制表示，用于在设置里给个色块 */
     hex: string;
-    /** 整张图偏暗 → 建议用暗色模式 */
-    suggestDark: boolean;
 }
 
 const SAMPLE_SIZE = 64;
@@ -199,6 +197,5 @@ export async function extractPalette(blob: Blob): Promise<ExtractedPalette | nul
         saturation: boosted,
         lightness: avgLightness,
         hex: hslToHex(hue, boosted, avgLightness < 0.5 ? 0.62 : 0.52),
-        suggestDark: avgLightness < 0.5,
     };
 }

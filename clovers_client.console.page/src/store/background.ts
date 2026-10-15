@@ -14,6 +14,8 @@ import { extractPalette } from '@/lib/imageColor';
 import { AUTO_PALETTE_ID, useSettings } from './settings';
 import { toast } from './ui';
 
+const DARK_THRESHOLD = 0.35;
+const LIGHT_THRESHOLD = 0.65;
 interface BackgroundState {
     /** 当前背景图的 object URL（没有则为 null） */
     url: string | null;
@@ -96,8 +98,10 @@ export const useBackground = create<BackgroundState>((set, get) => ({
         const settings = useSettings.getState();
         const { background } = settings.appearance;
         // 记下色相，不管当前有没有启用 auto 主题都存着，用户切过去就立刻生效
-        settings.setAppearance({ autoHue: palette.hue });
-
+        settings.setAppearance({
+            autoHue: palette.hue,
+            autoMode: palette.lightness > LIGHT_THRESHOLD ? 'light' : palette.lightness < DARK_THRESHOLD ? 'dark' : 'keep',
+        });
         if (background.autoTheme && settings.appearance.palette !== AUTO_PALETTE_ID) {
             settings.setAppearance({ palette: AUTO_PALETTE_ID });
         }

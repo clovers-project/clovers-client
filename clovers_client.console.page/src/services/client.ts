@@ -195,6 +195,7 @@ export class CloversClient {
             return null;
         }
     }
+    /* ------------------------------ 消息历史查询 ------------------------------ */
 
     async fetchMessageHistory(messageId: string): Promise<ServerMessage[] | null> {
         if (!messageId) return null;

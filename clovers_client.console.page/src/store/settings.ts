@@ -11,6 +11,7 @@ import { create } from 'zustand';
 import { KEYS, readJSON, writeJSON } from '@/lib/storage';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
+export type AutoThemeMode = 'light' | 'dark' | 'keep';
 
 export type PaletteId =
     | 'indigo'
@@ -51,6 +52,7 @@ export interface Appearance {
     glass: boolean;
     /** palette === 'auto' 时实际使用的色相 */
     autoHue: number;
+    autoMode: AutoThemeMode;
     background: BackgroundSettings;
 }
 
@@ -91,6 +93,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
     fontSize: 15,
     glass: false,
     autoHue: 268,
+    autoMode: "keep",
     background: {
         enabled: false,
         blur: 12,
@@ -125,7 +128,7 @@ interface SettingsState {
  */
 export function applyAppearance(appearance: Appearance, systemDark: boolean): void {
     const root = document.documentElement;
-    const resolved = appearance.mode === 'system' ? (systemDark ? 'dark' : 'light') : appearance.mode;
+    const resolved = appearance.autoMode === 'keep' ? appearance.mode === 'system' ? (systemDark ? 'dark' : 'light') : appearance.mode : appearance.autoMode;
     root.dataset.mode = resolved;
     root.dataset.palette = appearance.palette;
     root.dataset.corner = appearance.corner;
