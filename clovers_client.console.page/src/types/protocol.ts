@@ -47,8 +47,8 @@ export interface ServerUserMessage {
     echo?: string;
 }
 
-/** 系统消息的 data 是 [指令, 会话 ID, 内容] 三元组 */
-export type ConsoleMessageData = [string, string, string];
+
+export type ConsoleMessageData = string[];
 
 export interface ServerSystemMessage {
     type: 'system';

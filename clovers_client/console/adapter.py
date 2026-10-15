@@ -11,7 +11,6 @@ from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, G
 from .utils import md5, upload, image_url
 from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
 
-
 ADAPTER = Adapter("CONSOLE")
 
 
@@ -181,7 +180,7 @@ async def send_segmented(message: SegmentedMessage, recv: MessageEvent, send: Se
 
 
 @ADAPTER.send_method("group_message")
-async def _(message: GroupMessage, client: Client):
+async def _(message: GroupMessage, recv: MessageEvent, client: Client):
     result = message["data"]
     redirect: MessageEvent = {
         "groupId": message["group_id"],

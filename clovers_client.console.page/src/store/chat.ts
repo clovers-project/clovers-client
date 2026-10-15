@@ -27,7 +27,7 @@ import type {
     ClientUserMessage,
     FeedItem,
     GroupInfo,
-    ServerMessage,
+    ServerSystemMessage,
     ServerUserMessage,
     SystemRecord,
 } from '@/types/protocol';
@@ -77,7 +77,8 @@ interface ChatState {
 
     ensureLoaded: (groupId: string) => Promise<void>;
     /** 处理一条来自服务端的消息 */
-    ingest: (message: ServerMessage) => void;
+    handleSystemMessage: (message: ServerSystemMessage) => void;
+    handleUserMessage: (message: ServerUserMessage) => void;
     localSystem: (groupId: string, text: string) => void;
     send: (text: string, images: string[], at: string[], reply: string | null) => void;
     markRead: (groupId: string) => void;
@@ -275,25 +276,31 @@ export const useChat = create<ChatState>((set, get) => ({
             );
         }
     },
-
-    ingest: (message) => {
-        if (message.type === 'system') {
-            const [command, groupId, payload] = message.data;
-            if (command === 'title') {
-                // 旧版语义：payload 才是新标题
+    handleSystemMessage: (message) => {
+        const [command, ...data] = message.data;
+        switch (command) {
+            case 'title': {
+                const [groupId, payload] = data;
                 useSession.getState().updateGroup(groupId, { groupName: payload });
                 useSession.getState().learnGroup(groupId, payload);
+                get().localSystem(groupId, payload);
                 return;
             }
-            get().localSystem(groupId, payload);
-            return;
+            case 'onlineUsers': {
+                const onlineUsers = data[0];
+                useSession.setState({ onlineUsers });
+                return;
+            }
         }
+    },
 
+
+    handleUserMessage: (message) => {
         const selfId = currentUser().userId;
         const record = toRecord(message, selfId);
 
         // 更新「认识的人」目录，供 @提及 使用
-        useSession.getState().learnUser(record.senderId, record.senderName, record.avatar, record.permission);
+        useSession.getState().learnUser(record.groupId, record.senderId, record.senderName, record.avatar, record.permission);
         useSession.getState().learnGroup(record.groupId, message.groupName, message.groupAvatar);
 
         // 会话可能还不在列表里（别人新建的会话）

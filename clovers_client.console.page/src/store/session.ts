@@ -53,8 +53,10 @@ interface SessionState {
     currentGroupId: string;
     /** userId -> 名称/头像，用于 @提及 展示与自动补全 */
     knownUsers: Map<string, UserInfo>;
+    knownGroupMembers: Map<string, Set<string>>;
     /** groupId -> 名称/头像 */
     knownGroups: Map<string, GroupInfo>;
+    onlineUsers: string;
 
     selectUser: (userId: string) => void;
     selectGroup: (groupId: string) => void;
@@ -73,7 +75,7 @@ interface SessionState {
     ensureGroup: (group: GroupInfo) => GroupInfo;
     addBlankGroup: () => GroupInfo;
 
-    learnUser: (userId: string, userName: string, avatar: string, permission: Permission) => void;
+    learnUser: (groupId: string, userId: string, userName: string, avatar: string, permission: Permission) => void;
     learnGroup: (groupId: string, groupName: string, avatar?: string) => void;
 
     updateUsers: (users: UserInfo[]) => void;
@@ -110,7 +112,9 @@ export const useSession = create<SessionState>((set, get) => ({
     currentUserId: initialUserId,
     currentGroupId: initialGroupId,
     knownUsers: new Map(),
+    knownGroupMembers: new Map(),
     knownGroups: new Map(),
+    onlineUsers: '0',
 
     selectUser: (userId) => {
         const users = moveTop(
@@ -219,8 +223,12 @@ export const useSession = create<SessionState>((set, get) => ({
         return group;
     },
 
-    learnUser: (userId, userName, avatar, permission) => {
+    learnUser: (groupId, userId, userName, avatar, permission) => {
         if (!userId) return;
+        if (!groupId || groupId === "private") return;
+        const knownGroupMembers = get().knownGroupMembers;
+        if (!knownGroupMembers.has(groupId)) knownGroupMembers.set(groupId, new Set());
+        knownGroupMembers.get(groupId)!.add(userId);
         const known = get().knownUsers;
         const prev = known.get(userId);
         if (prev) {
@@ -312,8 +320,11 @@ export function resolveUserName(userId: string): string {
 /** 用于 @提及 自动补全的候选列表：本机身份 + 已认识的人 */
 export function mentionCandidates(): { userId: string; userName: string; avatar: string }[] {
     const state = useSession.getState();
+    const groupMembers = state.knownGroupMembers.get(state.currentGroupId);
+    if (!groupMembers) { return []; }
     const map = new Map<string, { userId: string; userName: string; avatar: string }>();
     // state.users.forEach((u) => map.set(u.userId, { userId: u.userId, userName: u.userName, avatar: u.avatar }));
+
     Object.entries(state.knownUsers).forEach(([userId, person]) => {
         if (!map.has(userId)) map.set(userId, { userId, userName: person.name, avatar: person.avatar });
     });

@@ -31,8 +31,7 @@ export function ChatHeader() {
     const openOverlay = useUi((s) => s.openOverlay);
     const setSearchOpen = useUi((s) => s.setSearchOpen);
     const toggleSidebar = useUi((s) => s.toggleSidebar);
-    const knownUsers = useSession((s) => s.knownUsers);
-    const members = Object.keys(knownUsers).length;
+    const onlineUsers = useSession((s) => s.onlineUsers);
 
     const exportAs = (kind: 'md' | 'json') => {
         const items = feed ?? [];
@@ -83,7 +82,7 @@ export function ChatHeader() {
                     <span className="shrink-0 text-subtle">·</span>
                     <span className="flex min-w-0 items-center gap-1">
                         <Users size={11} className="shrink-0" />
-                        <span className="truncate">{members} 位成员</span>
+                        <span className="truncate">{onlineUsers} 位成员</span>
                     </span>
                 </p>
             </div>

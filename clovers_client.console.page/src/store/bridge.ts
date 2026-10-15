@@ -26,7 +26,11 @@ export function startApp(): void {
 
     client = new CloversClient({
         onMessage: (message) => {
-            useChat.getState().ingest(message);
+            if (message.type === 'system') {
+                useChat.getState().handleSystemMessage(message);
+            } else {
+                useChat.getState().handleUserMessage(message);
+            }
         },
         onStateChange: (state) => {
             const previous = useConnection.getState().state;

@@ -64,26 +64,18 @@ class ConsoleClient(CloversCore):
             return Response(status_code=404)
         return Response(status_code=200, content=message, media_type="application/json")
 
-    async def userlist(self, group_id: str = Query(None)):
-        if group_id is None:
-            return Response(status_code=400, content="Invalid group_id")
-        return Response(status_code=200, content=self.adapter.get_userlist(group_id))
-
-    async def userinfo(self, uid: str):
-        return Response(status_code=200, content=self.adapter.get_userinfo(uid))
-
-    def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
+    def unicast(self, ws: WebSocket, data: Message, echo: str | None = None):
         data["messageId"] = next(self.message_id)
-        if "echo" in recv:
-            data["echo"] = recv["echo"]
+        if echo:
+            data["echo"] = echo
         payload = json.dumps(data)
         self.messages.append((data["messageId"], payload))
         return ws.send_text(payload)
 
-    def broadcast(self, recv: MessageEvent, data: Message):
+    def broadcast(self, data: Message, echo: str | None = None):
         data["messageId"] = next(self.message_id)
-        if "echo" in recv:
-            data["echo"] = recv["echo"]
+        if echo:
+            data["echo"] = echo
         payload = json.dumps(data)
         self.messages.append((data["messageId"], payload))
         return self.boardcast_payload(payload)
@@ -95,9 +87,9 @@ class ConsoleClient(CloversCore):
         while True:
             recv: MessageEvent = json.loads(await ws.receive_text())
             if recv["groupId"] == "private":
-                send = partial(self.unicast, ws, recv)
+                send = partial(self.unicast, ws, echo=recv.get("echo"))
             else:
-                send = partial(self.broadcast, recv)
+                send = partial(self.broadcast, echo=recv.get("echo"))
             if recv["at"] and recv["at"][-1] == "":
                 del recv["at"][-1]
                 recv["to_me"] = True
@@ -111,7 +103,9 @@ class ConsoleClient(CloversCore):
     async def websocket_handler(self, ws: WebSocket):
         await ws.accept()
         self.ws_connects.add(ws)
-        logger.info(f"New client connected. Total: {len(self.ws_connects)}")
+        online_users = str(len(self.ws_connects))
+        await self.broadcast({"type": "system", "data": ["onlineUsers", online_users]})
+        logger.info(f"New client connected. Total: {online_users}")
         reveive_event = self.reveive_event(ws)
         try:
             async for recv, send in reveive_event:
@@ -121,7 +115,9 @@ class ConsoleClient(CloversCore):
         except Exception:
             logger.exception("Error in websocket_handler")
         self.ws_connects.discard(ws)
-        logger.info(f"Client remaining: {len(self.ws_connects)}")
+        online_users = str(len(self.ws_connects))
+        await self.broadcast({"type": "system", "data": ["onlineUsers", online_users]})
+        logger.info(f"Client remaining: {online_users}")
 
     def extract_message(self, recv: MessageEvent, **ignore):
         text = recv["text"]
@@ -139,8 +135,6 @@ class ConsoleClient(CloversCore):
         app = FastAPI()
         app.websocket("/ws")(self.websocket_handler)
         app.post("/upload")(self.upload)
-        app.post("/userlist")(self.userlist)
-        app.post("/userinfo/{uid}")(self.userinfo)
         app.get("/download/{name:path}")(self.download)
         app.get("/message/{message_id}")(self.find_message)
         app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
