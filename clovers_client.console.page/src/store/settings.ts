@@ -59,8 +59,6 @@ export interface Preferences {
     sendWithEnter: boolean;
     /** 桌面通知 */
     notify: boolean;
-    /** 消息时间戳 */
-    showTimestamps: boolean;
     /** 收到其他会话的消息时播放提示音（需要用户已与页面交互过） */
     soundOnMessage: boolean;
 }
@@ -105,7 +103,6 @@ export const DEFAULT_APPEARANCE: Appearance = {
 export const DEFAULT_PREFERENCES: Preferences = {
     sendWithEnter: true,
     notify: false,
-    showTimestamps: true,
     soundOnMessage: false,
 };
 

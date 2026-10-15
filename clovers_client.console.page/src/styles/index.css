@@ -1,7 +1,7 @@
-@import 'tailwindcss';
-@import './themes.css';
-@import './markdown.css';
-@import './highlight.css';
+@import "tailwindcss";
+@import "./themes.css";
+@import "./markdown.css";
+@import "./highlight.css";
 
 /* =============================================================================
  * 把设计令牌暴露成 Tailwind 语义色板。
@@ -37,9 +37,8 @@
   --color-warning: var(--c-warning);
   --color-overlay: var(--c-overlay);
 
-  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, Monaco, monospace;
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, Monaco, monospace;
 
   --radius-xs: var(--r-xs);
   --radius-sm: var(--r-sm);
@@ -121,7 +120,7 @@
   }
 
   /* 焦点环只给真正可交互的元素；浮层容器用 tabindex=-1 接焦点时不显示 */
-  :focus-visible:not([tabindex='-1']) {
+  :focus-visible:not([tabindex="-1"]) {
     outline: 2px solid var(--c-accent);
     outline-offset: 2px;
   }
@@ -155,7 +154,7 @@
   }
   .aurora::before,
   .aurora::after {
-    content: '';
+    content: "";
     position: absolute;
     width: 62vmax;
     height: 62vmax;
@@ -166,11 +165,7 @@
   .aurora::before {
     top: -26vmax;
     left: -14vmax;
-    background: radial-gradient(
-      circle,
-      oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.45),
-      transparent 64%
-    );
+    background: radial-gradient(circle, oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.45), transparent 64%);
     animation: drift-a 38s var(--ease-out) infinite alternate;
   }
   .aurora::after {
@@ -183,12 +178,12 @@
     );
     animation: drift-b 52s var(--ease-out) infinite alternate;
   }
-  [data-mode='light'] .aurora::before,
-  [data-mode='light'] .aurora::after {
+  [data-mode="light"] .aurora::before,
+  [data-mode="light"] .aurora::after {
     opacity: 0.3;
   }
   /* 有自定义背景图时不再叠极光，避免糊成一团 */
-  [data-bg='on'] .aurora {
+  [data-bg="on"] .aurora {
     display: none;
   }
 }
@@ -359,8 +354,8 @@ mark[data-search-hit].is-active {
   z-index: 0;
   pointer-events: none;
 }
-[data-bg='off'] .page-backdrop,
-[data-bg='off'] .page-scrim {
+[data-bg="off"] .page-backdrop,
+[data-bg="off"] .page-scrim {
   display: none;
 }
 .page-backdrop {
@@ -392,7 +387,7 @@ mark[data-search-hit].is-active {
 }
 
 /* 有背景图时外壳变成一整块亚克力，让图片透出来 */
-[data-bg='on'] .app-shell {
+[data-bg="on"] .app-shell {
   background: var(--c-glass);
   backdrop-filter: blur(34px) saturate(180%);
 }

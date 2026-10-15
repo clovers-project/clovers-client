@@ -346,11 +346,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                             />
                         </div>
                         <Switch
-                            checked={preferences.showTimestamps}
-                            onChange={(v) => setPreference('showTimestamps', v)}
-                            label="显示消息时间"
-                        />
-                        <Switch
                             checked={preferences.notify}
                             onChange={(v) => void actions.setNotify(v)}
                             label="桌面通知"

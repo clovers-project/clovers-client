@@ -6,7 +6,6 @@ import { IconButton } from '@/components/ui/IconButton';
 import { Markdown } from './Markdown';
 import { cn } from '@/lib/cn';
 import { formatTime } from '@/lib/format';
-import { useSettings } from '@/store/settings';
 import { useSession, resolveUserName } from '@/store/session';
 import { useUi } from '@/store/ui';
 import { copyText } from '@/lib/download';
@@ -37,7 +36,6 @@ export const MessageItem = memo(function MessageItem({
     repliedPreview,
     onJumpTo,
 }: MessageItemProps) {
-    const showTimestamps = useSettings((s) => s.preferences.showTimestamps);
     const openContextMenu = useUi((s) => s.openContextMenu);
     const openLightbox = useUi((s) => s.openLightbox);
     const setReplyTo = useUi((s) => s.setReplyTo);
@@ -72,12 +70,7 @@ export const MessageItem = memo(function MessageItem({
                 )}
             </div>
 
-            <div
-                className={cn(
-                    'flex min-w-0 max-w-[min(72ch,82%)] flex-col',
-                    item.self ? 'items-end' : 'items-start',
-                )}
-            >
+            <div className={cn('flex min-w-0 max-w-[min(72ch,82%)] flex-col', item.self ? 'items-end' : 'items-start',)}>
                 {!compact && (
                     <div className="mb-1 flex items-center gap-2 px-0.5 text-xs">
                         <span className="font-medium text-fg">{item.senderName}</span>
@@ -91,9 +84,7 @@ export const MessageItem = memo(function MessageItem({
                                 {PERMISSION_LABEL[item.permission]}
                             </span>
                         )}
-                        {showTimestamps && (
-                            <span className="text-subtle">{formatTime(item.time)}</span>
-                        )}
+                        {<span className="text-subtle">{formatTime(item.time)}</span>}
                     </div>
                 )}
 
@@ -108,9 +99,8 @@ export const MessageItem = memo(function MessageItem({
                     <div
                         className={cn(
                             'relative min-w-0 max-w-full rounded-[var(--r-lg)] px-[var(--pad-bubble-x)] py-[var(--pad-bubble-y)] shadow-sm',
-                            item.self
-                                ? 'rounded-br-[var(--r-xs)] bg-bubbleout text-bubbleoutfg'
-                                : 'rounded-bl-[var(--r-xs)] bg-bubblein text-bubbleinfg border border-linesoft',
+                            item.self ? 'rounded-tr-[var(--r-xs)] bg-bubbleout text-bubbleoutfg' : 'rounded-tl-[var(--r-xs)] bg-bubblein text-bubbleinfg border border-linesoft',
+                            // item.self ? 'rounded-tr-[var(--r-xs)] bg-bubbleout text-bubbleoutfg' : 'rounded-tl-[var(--r-xs)] bg-bubblein text-bubbleinfg border border-linesoft',
                         )}
                         onContextMenu={(e) => {
                             e.preventDefault();
@@ -124,9 +114,7 @@ export const MessageItem = memo(function MessageItem({
                                 onClick={() => onJumpTo(item.reply!)}
                                 className={cn(
                                     'mb-1.5 flex w-full flex-col items-start gap-0.5 rounded-[var(--r-xs)] border-l-2 px-2 py-1 text-left text-xs transition-opacity hover:opacity-80',
-                                    item.self
-                                        ? 'border-white/60 bg-black/15'
-                                        : 'border-accent bg-black/5 dark:bg-white/5',
+                                    item.self ? 'border-white/60 bg-black/15' : 'border-accent bg-black/5 dark:bg-white/5',
                                 )}
                             >
                                 <span className="flex items-center gap-1 font-medium opacity-90">
@@ -181,13 +169,6 @@ export const MessageItem = memo(function MessageItem({
                                     </button>
                                 ))}
                             </div>
-                        )}
-
-                        {/* 时间戳跟随在气泡内右下角，暗色/亮色都能读 */}
-                        {showTimestamps && compact && (
-                            <span className="ml-2 align-bottom text-[10px] opacity-55">
-                                {formatTime(item.time)}
-                            </span>
                         )}
                     </div>
 
