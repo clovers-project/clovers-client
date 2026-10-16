@@ -27,6 +27,7 @@ const PERMISSION_STYLE: Record<string, string | null> = {
     SuperUser: 'bg-danger/15 text-danger',
     Owner: 'bg-warning/15 text-warning',
     Admin: 'bg-accent/15 text-accent',
+    // Member: 'bg-muted/15 text-muted-foreground',
     Member: null,
 };
 

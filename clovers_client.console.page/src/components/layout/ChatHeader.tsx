@@ -67,7 +67,12 @@ export function ChatHeader() {
                 icon={<MenuIcon size={18} />}
                 tip="会话列表"
                 className="min-[900px]:hidden"
-                onClick={() => toggleSidebar()}
+                onClick={
+                    (e) => {
+                        e.currentTarget.blur();
+                        toggleSidebar();
+                    }
+                }
             />
 
             <Avatar seed={group.groupId} name={group.groupName} src={group.avatar} size={38} ring />

@@ -9,7 +9,12 @@ from clovers_client.event import PermissionLiteral
 from clovers_client.result import OverallResult, SegmentedResult
 from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, GroupMessage, PrivateMessage
 from .utils import md5, upload, image_url
-from .typing import MessageEvent, ConsoleMessage, ChatMessage, SendMethod
+from typing import Any
+from collections.abc import Callable, Coroutine
+from .protocol import MessageEvent, ConsoleMessage, ChatMessage, Message
+
+type SendMethod = Callable[[Message], Coroutine[Any, Any, None]]
+
 
 ADAPTER = Adapter("CONSOLE")
 
@@ -188,7 +193,7 @@ async def _(message: GroupMessage, recv: MessageEvent, ws: WebSocket, client: Cl
         "groupName": "",
         "groupAvatar": "",
     }  # type: ignore
-    if group_id in client.public_sessions:
+    if group_id in client.public_groups:
         send = partial(client.broadcast, recv)
     else:
         send = partial(client.unicast, ws, recv)

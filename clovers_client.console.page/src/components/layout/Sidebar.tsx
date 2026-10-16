@@ -73,18 +73,27 @@ export function Sidebar() {
                     <IconButton
                         icon={<Command size={16} />}
                         tip={`命令面板 (${kbdLabel('mod+k')})`}
-                        onClick={() => openOverlay('command')}
+                        onClick={(e) => {
+                            e.currentTarget.blur();
+                            openOverlay('command');
+                        }}
                     />
                     <IconButton
                         icon={<Settings size={16} />}
                         tip="设置"
-                        onClick={() => openOverlay('settings')}
+                        onClick={(e) => {
+                            e.currentTarget.blur();
+                            openOverlay('settings');
+                        }}
                     />
                     <IconButton
                         icon={<X size={16} />}
                         tip="关闭"
                         className="min-[900px]:hidden"
-                        onClick={() => toggleSidebar(false)}
+                        onClick={(e) => {
+                            e.currentTarget.blur();
+                            toggleSidebar(false);
+                        }}
                     />
                 </header>
 

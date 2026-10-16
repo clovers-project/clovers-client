@@ -99,10 +99,9 @@ export function Composer({ groupId }: { groupId: string }) {
     const send = async () => {
         const text = value.trim();
         const at = [...mentions];
-        if (atBot) at.push('');
-        if (!text && attachments.length === 0 && at.length === 0) return;
+        if (!text && attachments.length === 0) return;
         if (uploading) return;
-
+        if (atBot) at.push('');
         let images: string[] = [];
         if (attachments.length > 0) {
             setUploading(true);

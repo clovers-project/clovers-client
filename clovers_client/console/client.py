@@ -10,11 +10,37 @@ from clovers.logger import logger
 from clovers_client.logger import init_logger
 from clovers_client.utils import id_generator
 from .utils import upload
-from .typing import ConsoleMessage, Message, MessageEvent
+from typing import cast
+from .protocol import GroupInfo, ConsoleMessage, Message, MessageEvent
 from .config import Config
 
 CONSOLE_PREFIX = b"\x05\x03\x01".decode()
 PAGE_RESOURCE = Path(__file__).parent / "page"
+
+
+def load_groups(file: str) -> dict[str, GroupInfo]:
+    f = Path(file)
+    if not f.exists():
+        return {}
+    try:
+        with f.open("r") as f:
+            groups = json.load(f)
+        if not isinstance(groups, list):
+            return {}
+
+        def valid_g(g: dict) -> bool:
+            for k in ("groupName", "groupId", "groupAvatar"):
+                if k not in g:
+                    return False
+                if not g[k]:
+                    continue
+                if not isinstance(g[k], str):
+                    return False
+            return True
+
+        return {g["groupId"]: g for g in groups if valid_g(g)}
+    except Exception:
+        return {}
 
 
 class ConsoleClient(CloversCore):
@@ -39,7 +65,7 @@ class ConsoleClient(CloversCore):
         self.unicast_id = id_generator()
         self.broadcast_id = id_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=config.message_history_limit)
-        self.public_sessions = set(config.public_sessions)
+        self.public_groups = load_groups(config.public_groups)
         self.load_dir = Path(config.load_dir).resolve()
         self.load_dir.mkdir(parents=True, exist_ok=True)
 
@@ -95,8 +121,9 @@ class ConsoleClient(CloversCore):
 
     async def reveive_event(self, ws: WebSocket):
         while True:
-            recv: MessageEvent = json.loads(await ws.receive_text())
-            if recv["groupId"] in self.public_sessions:
+            recv = cast(MessageEvent, json.loads(await ws.receive_text()))
+            if group := self.public_groups.get(recv["groupId"]):
+                recv.update(group)  # type: ignore GroupInfo 包含 MessageEvent 的所有键
                 send = partial(self.broadcast, recv)
             else:
                 send = partial(self.unicast, ws, recv)
