@@ -18,31 +18,6 @@ CONSOLE_PREFIX = b"\x05\x03\x01".decode()
 PAGE_RESOURCE = Path(__file__).parent / "page"
 
 
-def load_groups(file: str) -> dict[str, GroupInfo]:
-    f = Path(file)
-    if not f.exists():
-        return {}
-    try:
-        with f.open("r") as f:
-            groups = json.load(f)
-        if not isinstance(groups, list):
-            return {}
-
-        def valid_g(g: dict) -> bool:
-            for k in ("groupName", "groupId", "groupAvatar"):
-                if k not in g:
-                    return False
-                if not g[k]:
-                    continue
-                if not isinstance(g[k], str):
-                    return False
-            return True
-
-        return {g["groupId"]: g for g in groups if valid_g(g)}
-    except Exception:
-        return {}
-
-
 class ConsoleClient(CloversCore):
     def __init__(self, config: Config = Config.sync_config("clovers")):
         super().__init__("CONSOLE")
@@ -65,9 +40,33 @@ class ConsoleClient(CloversCore):
         self.unicast_id = id_generator()
         self.broadcast_id = id_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=config.message_history_limit)
-        self.public_groups = load_groups(config.public_groups)
+        self.public_groups: dict[str, GroupInfo] = {}
+        self.load_public_groups(Path(config.public_groups_config))
         self.load_dir = Path(config.load_dir).resolve()
         self.load_dir.mkdir(parents=True, exist_ok=True)
+
+    def load_public_groups(self, file: Path):
+        self.public_groups.clear()
+        if not file.exists():
+            file.write_text(json.dumps([{"groupName": "", "groupId": "", "groupAvatar": ""}]))
+            return
+        with file.open("r") as f:
+            groups = json.load(f)
+        if not isinstance(groups, list):
+            return
+
+        def valid_g(g: dict) -> bool:
+            for k in ("groupName", "groupId", "groupAvatar"):
+                if k not in g:
+                    return False
+                if not g[k]:
+                    continue
+                if not isinstance(g[k], str):
+                    return False
+            return True
+
+        self.public_groups.update((g["groupId"], g) for g in groups if valid_g(g))
+        return
 
     async def upload(self, file: UploadFile = File(...)):
         if not file.content_type:
