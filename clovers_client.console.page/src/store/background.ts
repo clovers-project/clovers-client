@@ -11,7 +11,7 @@
 import { create } from 'zustand';
 import { ASSET_BACKGROUND, assetsStore } from '@/services/assets';
 import { extractPalette } from '@/lib/imageColor';
-import { AUTO_PALETTE_ID, useSettings } from './settings';
+import { AUTO_PALETTE_ID, useSettings, DEFAULT_APPEARANCE } from './settings';
 import { toast } from './ui';
 
 const DARK_THRESHOLD = 0.35;
@@ -98,10 +98,14 @@ export const useBackground = create<BackgroundState>((set, get) => ({
         const settings = useSettings.getState();
         const { background } = settings.appearance;
         // 记下色相，不管当前有没有启用 auto 主题都存着，用户切过去就立刻生效
-        if (palette.lightness > LIGHT_THRESHOLD) {
-            settings.setAppearance({ autoHue: palette.hue, mode: 'light' });
-        } else if (palette.lightness < DARK_THRESHOLD) {
-            settings.setAppearance({ autoHue: palette.hue, mode: 'dark' });
+        if (settings.appearance.mode === DEFAULT_APPEARANCE.mode) {
+            if (palette.lightness > LIGHT_THRESHOLD) {
+                settings.setAppearance({ autoHue: palette.hue, mode: 'light' });
+            } else if (palette.lightness < DARK_THRESHOLD) {
+                settings.setAppearance({ autoHue: palette.hue, mode: 'dark' });
+            } else {
+                settings.setAppearance({ autoHue: palette.hue });
+            }
         } else {
             settings.setAppearance({ autoHue: palette.hue });
         }

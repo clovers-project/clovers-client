@@ -100,9 +100,14 @@ class ConsoleClient(CloversCore):
                 send = partial(self.broadcast, recv)
             else:
                 send = partial(self.unicast, ws, recv)
-            if recv["at"] and recv["at"][-1] == "":
-                del recv["at"][-1]
-                recv["to_me"] = True
+            if recv["at"]:
+                if recv["at"][-1] == "":
+                    recv["at"][-1] = self.BOT_NICKNAME
+                    recv["to_me"] = True
+                elif self.BOT_NICKNAME in recv["at"]:
+                    recv["to_me"] = True
+                else:
+                    recv["to_me"] = False
             else:
                 recv["to_me"] = False
             if not recv["text"].startswith(CONSOLE_PREFIX):
