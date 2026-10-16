@@ -3,7 +3,7 @@ import asyncio
 from pathlib import Path
 from functools import partial
 from collections import deque
-from fastapi import FastAPI, File, UploadFile, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, Header, Query, UploadFile, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response, FileResponse
 from clovers import CloversCore
 from clovers.logger import logger
@@ -40,18 +40,33 @@ class ConsoleClient(CloversCore):
         self.unicast_id = id_generator()
         self.broadcast_id = id_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=config.message_history_limit)
+        self.data_dir = Path(config.data_dir).resolve()
+        self.stores_dir = self.data_dir / "stores_dir"
+        self._public_groups_config_file = self.data_dir / "public_groups_config.json"
+        self._auth_tokens_config_file = self.data_dir / "auth_tokens.json"
+        # stores
+        self.stores_dir.mkdir(parents=True, exist_ok=True)
+        # public_groups
+        self.public_groups_json: str = ""
         self.public_groups: dict[str, GroupInfo] = {}
-        self.load_public_groups(Path(config.public_groups_config))
-        self.load_dir = Path(config.load_dir).resolve()
-        self.load_dir.mkdir(parents=True, exist_ok=True)
+        self.reload_public_groups()
+        # auth_tokens
+        self.auth_tokens: set[str] = set()
+        self.reload_auth_tokens()
 
-    def load_public_groups(self, file: Path):
+    async def verify_token(self, x_token: str = Header(...)):
+        if x_token not in self.auth_tokens:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+    def reload_public_groups(self):
+        file = self._public_groups_config_file
+        self.public_groups_json = ""
         self.public_groups.clear()
         if not file.exists():
             file.write_text(json.dumps([{"groupName": "", "groupId": "", "groupAvatar": ""}]))
             return
-        with file.open("r") as f:
-            groups = json.load(f)
+        self.public_groups_json = file.read_text("utf-8")
+        groups = json.loads(self.public_groups_json)
         if not isinstance(groups, list):
             return
 
@@ -68,26 +83,43 @@ class ConsoleClient(CloversCore):
         self.public_groups.update((g["groupId"], g) for g in groups if valid_g(g))
         return
 
-    async def upload(self, file: UploadFile = File(...)):
+    def reload_auth_tokens(self):
+        self.auth_tokens.clear()
+        if not self._auth_tokens_config_file.exists():
+            self._auth_tokens_config_file.write_text(json.dumps([]))
+        else:
+            with self._auth_tokens_config_file.open("r", encoding="utf-8") as f:
+                self.auth_tokens.update(json.load(f))
+
+    async def handle_action(self, action: str, args: str = ""):
+        match action:
+            case "reload_public_groups":
+                self.reload_public_groups()
+            case "reload_auth_tokens":
+                self.reload_auth_tokens()
+            case "broadcast":
+                await self.console_broadcast(json.loads(args))
+
+    async def handle_upload(self, file: UploadFile = File(...)):
         if not file.content_type:
             return Response(status_code=400, content="Invalid Content-Type")
-        return Response(status_code=200, content=upload(self.load_dir, await file.read()))
+        return Response(status_code=200, content=upload(self.stores_dir, await file.read()))
 
-    async def download(self, name: str, check: bool = Query(False)):
-        filepath = self.load_dir / name
-        if not filepath.is_relative_to(self.load_dir):  # 防止目录遍历漏洞
+    async def handle_download(self, name: str, check: bool = Query(False)):
+        filepath = self.stores_dir / name
+        if not filepath.is_relative_to(self.stores_dir):  # 防止目录遍历漏洞
             return Response(status_code=403)
         if filepath.exists() and filepath.is_file():
             return Response(status_code=200) if check else FileResponse(path=filepath)
         return Response(status_code=404)
 
-    async def find_message(self, message_id: str):
+    async def get_message(self, message_id: str):
         message = next((msg for msg_id, msg in self.messages if msg_id == message_id), None)
         if message is None:
             return Response(status_code=404)
         return Response(status_code=200, content=message, media_type="application/json")
 
-    async def find_message_history(self, message_id: str):
+    async def get_message_history(self, message_id: str):
         payloads = []
         for i, message_payload in self.messages:
             if i == message_id:
@@ -147,6 +179,8 @@ class ConsoleClient(CloversCore):
         online_users = str(len(self.ws_connects))
         await self.console_broadcast(["onlineUsers", online_users])
         logger.info(f"New client connected. Total: {online_users}")
+        if self.public_groups_json:
+            await self.console_broadcast(["publicGroups", self.public_groups_json])
         reveive_event = self.reveive_event(ws)
         try:
             async for recv, send in reveive_event:
@@ -175,10 +209,11 @@ class ConsoleClient(CloversCore):
 
         app = FastAPI()
         app.websocket("/ws")(self.websocket_handler)
-        app.post("/upload")(self.upload)
-        app.get("/download/{name:path}")(self.download)
-        app.get("/message/{message_id}")(self.find_message)
-        app.get("/message_history/{message_id}")(self.find_message_history)
+        app.get("/action")(self.handle_action)
+        app.post("/upload")(self.handle_upload)
+        app.get("/download/{name:path}")(self.handle_download)
+        app.get("/message/{message_id}")(self.get_message)
+        app.get("/message_history/{message_id}")(self.get_message_history)
         app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
         config = uvicorn.Config(app, host=self.host, port=self.port, log_level="info")
         server = uvicorn.Server(config)

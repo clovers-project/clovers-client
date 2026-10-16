@@ -266,16 +266,28 @@ export const useChat = create<ChatState>((set, get) => ({
     handleSystemMessage: (message) => {
         const [command, ...data] = message.data;
         switch (command) {
+            case 'message': {
+                const message = data[0];
+                const groups = useSession.getState().groups;
+                for (const group of groups) { get().localSystem(group.groupId, message); }
+                return;
+            }
             case 'title': {
                 const [groupId, payload] = data;
-                useSession.getState().updateGroup(groupId, { groupName: payload });
-                useSession.getState().learnGroup(groupId, payload);
+                const state = useSession.getState()
+                state.updateGroup(groupId, { groupName: payload });
+                state.learnGroup(groupId, payload);
                 get().localSystem(groupId, payload);
                 return;
             }
             case 'onlineUsers': {
                 const onlineUsers = data[0];
                 useSession.setState({ onlineUsers });
+                return;
+            }
+            case 'publicGroups': {
+                const publicGroups = JSON.parse(data[0]) as { groupId: string; groupName: string; groupAvatar: string; }[];
+                useSession.getState().upsertGroups(publicGroups.map((g) => ({ groupId: g.groupId, groupName: g.groupName, avatar: g.groupAvatar })));
                 return;
             }
         }

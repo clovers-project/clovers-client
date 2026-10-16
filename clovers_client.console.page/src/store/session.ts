@@ -68,6 +68,8 @@ interface SessionState {
     clearUsers: () => void;
     addBlankUser: () => UserInfo;
 
+    upsertGroups: (groupInfos: GroupInfo[]) => void;
+
     updateGroup: (groupId: string, patch: Partial<GroupInfo>) => void;
     /** 改会话 ID：同时更新当前选中项与持久化数据 */
     renameGroup: (oldId: string, newId: string, patch: Partial<GroupInfo>) => void;
@@ -175,6 +177,21 @@ export const useSession = create<SessionState>((set, get) => ({
         set({ users });
         writeJSON(KEYS.userList, users);
         return user;
+    },
+
+    upsertGroups: (groupInfos) => {
+        const groups = get().groups
+        for (const groupInfo of groupInfos) {
+            const group = groups.find((g) => g.groupId === groupInfo.groupId);
+            if (group) {
+                group.groupName = groupInfo.groupName;
+                group.avatar = groupInfo.avatar;
+            } else {
+                groups.push(groupInfo);
+            }
+        }
+        set({ groups });
+        writeJSON(KEYS.groupList, groups);
     },
 
     updateGroup: (groupId, patch) => {
