@@ -135,7 +135,7 @@ class ConsoleClient(CloversCore):
         except Exception:
             pass
 
-    async def _boardcast_payload(self, payload: str):
+    async def _broadcast_payload(self, payload: str):
         await asyncio.gather(*(self._unicast_payload(ws, payload) for ws in self.ws_connects))
 
     def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
@@ -151,10 +151,10 @@ class ConsoleClient(CloversCore):
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
         self.messages.appendleft((data["messageId"], payload))
-        return self._boardcast_payload(payload)
+        return self._broadcast_payload(payload)
 
     async def console_broadcast(self, data: list[str]):
-        await self._boardcast_payload(json.dumps({"type": "system", "data": data}))
+        await self._broadcast_payload(json.dumps({"type": "system", "data": data}))
 
     async def websocket_handler(self, ws: WebSocket):
         await ws.accept()
