@@ -267,9 +267,13 @@ export const useChat = create<ChatState>((set, get) => ({
         const [command, ...data] = message.data;
         switch (command) {
             case 'message': {
-                const message = data[0];
+                const [groupId, message] = data;
                 const groups = useSession.getState().groups;
-                for (const group of groups) { get().localSystem(group.groupId, message); }
+                if (groupId === 'All') {
+                    for (const group of groups) { get().localSystem(group.groupId, message); }
+                } else if (groups.some(g => g.groupId === groupId)) {
+                    get().localSystem(groupId, message);
+                }
                 return;
             }
             case 'title': {
