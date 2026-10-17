@@ -17,6 +17,7 @@ export const KEYS = {
     preferences: 'clovers.preferences',
     sidebarWidth: 'clovers.sidebarWidth',
     drafts: 'clovers.drafts',
+    authToken: 'clovers.authToken',
 } as const;
 
 export function readJSON<T>(key: string, fallback: T): T {

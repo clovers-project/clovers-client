@@ -263,7 +263,7 @@ async def _(recv: MessageEvent) -> str:
 async def _(recv: MessageEvent) -> PermissionLiteral:
     match recv["permission"]:
         case "SuperUser":
-            return 3 if recv["ip"] and recv["ip"].startswith("127.") else 2
+            return 3
         case "Owner":
             return 2
         case "Admin":

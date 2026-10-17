@@ -38,6 +38,7 @@ export function Composer({ groupId }: { groupId: string }) {
     const addMention = useUi((s) => s.addMention);
     const resetComposer = useUi((s) => s.resetComposer);
     const sendWithEnter = useSettings((s) => s.preferences.sendWithEnter);
+    const authToken = useSettings((s) => s.authToken);;
 
     const candidates = useMemo(() => {
         if (mentionQuery === null) return [];
@@ -115,8 +116,7 @@ export function Composer({ groupId }: { groupId: string }) {
                 return;
             }
         }
-
-        useChat.getState().send(text, images, at, replyTo);
+        useChat.getState().send(text, images, at, replyTo, authToken);
         updateValue('');
         resetComposer();
         // setEmojiOpen(false);

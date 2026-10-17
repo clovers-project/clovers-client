@@ -112,11 +112,13 @@ interface SettingsState {
     preferences: Preferences;
     /** mode='system' 时系统当前是亮还是暗 */
     systemDark: boolean;
+    authToken?: string;
     setAppearance: (patch: Partial<Appearance>) => void;
     setBackground: (patch: Partial<BackgroundSettings>) => void;
     setPreference: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void;
     resetAppearance: () => void;
     setSystemDark: (dark: boolean) => void;
+    setAuthToken: (token: string) => void;
 }
 
 /**
@@ -153,6 +155,7 @@ const initialSystemDark =
         ? window.matchMedia('(prefers-color-scheme: dark)').matches
         : true;
 
+
 /** 合并存储值时要把嵌套的 background 也补齐，否则老数据会缺字段 */
 function loadAppearance(): Appearance {
     const stored = readJSON<Partial<Appearance>>(KEYS.appearance, {});
@@ -165,11 +168,13 @@ function loadAppearance(): Appearance {
 
 const storedAppearance = loadAppearance();
 const storedPreferences = { ...DEFAULT_PREFERENCES, ...readJSON(KEYS.preferences, {}) };
+const authToken = localStorage.getItem(KEYS.authToken) || undefined;
 
 export const useSettings = create<SettingsState>((set, get) => ({
     appearance: storedAppearance,
     preferences: storedPreferences,
     systemDark: initialSystemDark,
+    authToken: authToken,
 
     setAppearance: (patch) => {
         const appearance = { ...get().appearance, ...patch };
@@ -208,6 +213,16 @@ export const useSettings = create<SettingsState>((set, get) => ({
     setSystemDark: (dark) => {
         applyAppearance(get().appearance, dark);
         set({ systemDark: dark });
+    },
+
+    setAuthToken: (token) => {
+        if (token) {
+            localStorage.setItem(KEYS.authToken, token);
+            set({ authToken: token });
+        } else {
+            localStorage.removeItem(KEYS.authToken);
+            set({ authToken: undefined });
+        }
     },
 }));
 

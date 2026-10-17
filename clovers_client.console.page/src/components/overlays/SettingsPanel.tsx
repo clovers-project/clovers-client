@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
     Check,
     Image as ImageIcon,
@@ -6,6 +6,7 @@ import {
     Moon,
     Palette,
     Pipette,
+    Pencil,
     Sun,
     Square,
     Squircle,
@@ -39,6 +40,77 @@ const FONT_LABEL: Record<number, string> = {
     19: '特大',
 };
 
+export function AuthTokenField() {
+    const authToken = useSettings((s) => s.authToken);
+    const setAuthToken = useSettings((s) => s.setAuthToken);
+    const saved = Boolean(authToken?.trim());
+    /** 唯一的本地状态：编辑中的草稿。null = 不在编辑 */
+    const [draft, setDraft] = useState<string | null>(null);
+    const editing = draft !== null || !saved;
+    const save = () => {
+        const token = (draft ?? '').trim();
+        if (!token) {
+            toast.error('请先输入认证令牌');
+            return;
+        }
+        setAuthToken(token);
+        setDraft(null); // 收起编辑态，展示值重新从 store 读
+        toast.success('认证令牌已保存');
+    };
+
+    const remove = () => {
+        setAuthToken('');
+        setDraft(null);
+        toast.success('认证令牌已删除');
+    };
+
+    return (
+        <div className="flex items-center gap-2">
+            <input
+                type="password"
+                value={draft ?? authToken ?? ''}
+                readOnly={!editing}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder={saved ? '已保存' : '请输入认证令牌'}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.nativeEvent.isComposing) return; // 别打断中文输入法
+                    if (e.key === 'Enter' && editing) save();
+                    if (e.key === 'Escape' && draft !== null) setDraft(null);
+                }}
+                className={cn(inputClass, 'flex-1', !editing && 'cursor-default text-subtle')}
+            />
+            {editing ? (
+                <>
+                    {draft !== null && (
+                        <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
+                            取消
+                        </Button>
+                    )}
+                    <Button size="sm" variant="secondary" icon={<Check size={13} />} onClick={save}>
+                        保存
+                    </Button>
+                </>
+            ) : (
+                <>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={<Pencil size={13} />}
+                        onClick={() => setDraft(authToken ?? '')}
+                    >
+                        更换
+                    </Button>
+                    <Button size="sm" variant="danger" icon={<Trash2 size={13} />} onClick={remove}>
+                        删除
+                    </Button>
+                </>
+            )}
+        </div>
+    );
+}
+
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
     const appearance = useSettings((s) => s.appearance);
     const setAppearance = useSettings((s) => s.setAppearance);
@@ -47,7 +119,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     const preferences = useSettings((s) => s.preferences);
     const setPreference = useSettings((s) => s.setPreference);
     const clearAll = useChat((s) => s.clearAll);
-
     const backgroundUrl = useBackground((s) => s.url);
     const extractedHex = useBackground((s) => s.extractedHex);
     const backgroundLoading = useBackground((s) => s.loading);
@@ -358,8 +429,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                         />
                     </div>
                 </section>
-
-                {/* ---------- 数据 ---------- */}
+                {/* ----------身份验证---------- */}
+                <section>
+                    <SectionTitle>身份验证</SectionTitle>
+                    <AuthTokenField />
+                </section>
+                {/* ----------身份验证---------- */}
                 <section>
                     <SectionTitle>数据</SectionTitle>
                     <div className="flex flex-wrap gap-2 pt-1">

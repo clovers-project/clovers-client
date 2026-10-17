@@ -74,6 +74,7 @@ export interface ClientUserMessage {
     groupAvatar: string;
     permission: Permission;
     echo?: string;
+    authToken?: string;
 }
 
 /* ------------------------------ 本地消息模型 ------------------------------ */

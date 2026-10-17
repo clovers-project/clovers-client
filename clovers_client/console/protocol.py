@@ -27,6 +27,7 @@ class ChatMessage(BaseMessage, GroupInfo, SenderInfo):
     text: str
     images: list[str]
     at: list[str]
+    authToken: NotRequired[str]
 
 
 class ConsoleMessage(BaseMessage):
@@ -46,4 +47,3 @@ type Message = ChatMessage | ConsoleMessage
 
 class MessageEvent(ChatMessage):
     to_me: bool
-    ip: str | None

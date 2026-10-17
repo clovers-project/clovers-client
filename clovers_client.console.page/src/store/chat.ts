@@ -78,7 +78,7 @@ interface ChatState {
     handleSystemMessage: (message: ServerSystemMessage) => void;
     handleUserMessage: (message: ServerUserMessage) => void;
     localSystem: (groupId: string, text: string) => void;
-    send: (text: string, images: string[], at: string[], reply: string | null) => void;
+    send: (text: string, images: string[], at: string[], reply: string | null, authToken?: string) => void;
     markRead: (groupId: string) => void;
     removeMessage: (groupId: string, messageId: string) => Promise<void>;
     clearGroup: (groupId: string) => Promise<void>;
@@ -439,7 +439,7 @@ export const useChat = create<ChatState>((set, get) => ({
         void historyStore.append({ kind: 'system', ...record });
     },
 
-    send: (text, images, at, reply) => {
+    send: (text, images, at, reply, authToken) => {
         const user = currentUser();
         const group = currentGroup();
         const echo = uid('echo');
@@ -495,6 +495,7 @@ export const useChat = create<ChatState>((set, get) => ({
             groupAvatar: group.avatar,
             permission: user.permission,
             echo,
+            authToken: authToken,
         };
 
         transport?.send(payload, localId, group.groupId);

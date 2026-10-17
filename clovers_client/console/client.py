@@ -12,13 +12,13 @@ from clovers_client.logger import init_logger
 from clovers_client.utils import id_generator
 from .utils import upload
 from pydantic import TypeAdapter, ValidationError
-from .protocol import GroupInfo, Message, MessageEvent
+from .protocol import GroupInfo, ChatMessage, Message, MessageEvent
 from .config import Config
 
 PAGE_RESOURCE = Path(__file__).parent / "page"
 MAX_UPLOAD_SIZE = 1024 * 1024 * 10
 
-TA_MESSAGE_EVENT = TypeAdapter(MessageEvent)
+TA_CHAT = TypeAdapter(ChatMessage)
 TA_GROUPS = TypeAdapter(list[GroupInfo])
 
 
@@ -155,6 +155,9 @@ class ConsoleClient(CloversCore):
         self.messages.appendleft((data["messageId"], payload))
         return self._broadcast_payload(payload)
 
+    async def console_unicast(self, ws: WebSocket, data: list[str]):
+        await self._unicast_payload(ws, json.dumps({"type": "system", "data": data}))
+
     async def console_broadcast(self, data: list[str]):
         await self._broadcast_payload(json.dumps({"type": "system", "data": data}))
 
@@ -168,8 +171,32 @@ class ConsoleClient(CloversCore):
             await self.console_broadcast(["publicGroups", self.public_groups_json])
         while True:
             try:
-                recv = TA_MESSAGE_EVENT.validate_python(json.loads(await ws.receive_text()))
-                group_id = recv["groupId"]
+                recv: MessageEvent = TA_CHAT.validate_python(json.loads(await ws.receive_text()))  # type: ignore
+                if auth_token := recv.get("authToken"):
+                    del recv["authToken"]
+                    superuser = auth_token in self.auth_tokens
+                else:
+                    superuser = False
+                if recv["permission"] == "SuperUser":
+                    if not superuser:
+                        recv["permission"] = "Member"
+                if recv["at"]:
+                    if recv["at"][-1] == "":
+                        recv["at"][-1] = self.BOT_NICKNAME
+                        recv["to_me"] = True
+                    elif self.BOT_NICKNAME in recv["at"]:
+                        recv["to_me"] = True
+                    else:
+                        recv["to_me"] = False
+                else:
+                    recv["to_me"] = False
+                if group := self.public_groups.get(recv["groupId"]):
+                    recv.update(group)  # type: ignore GroupInfo 包含 MessageEvent 的所有键
+                    send = partial(self.broadcast, recv)
+                else:
+                    send = partial(self.unicast, ws, recv)
+                asyncio.create_task(send(recv))
+                self.dispatch(recv=recv, send=send, ws=ws, client=self)
             except WebSocketDisconnect:
                 if not self.shutdown_fut.done():
                     logger.info("Client disconnected.")
@@ -178,26 +205,8 @@ class ConsoleClient(CloversCore):
                     await self.console_broadcast(["onlineUsers", online_users])
                     logger.info(f"Client remaining: {online_users}")
                 return
-            except (json.JSONDecodeError, ValidationError):
+            except (json.JSONDecodeError, TypeError, ValidationError):
                 continue
-            if group := self.public_groups.get(group_id):
-                recv.update(group)  # type: ignore GroupInfo 包含 MessageEvent 的所有键
-                send = partial(self.broadcast, recv)
-            else:
-                send = partial(self.unicast, ws, recv)
-            if recv["at"]:
-                if recv["at"][-1] == "":
-                    recv["at"][-1] = self.BOT_NICKNAME
-                    recv["to_me"] = True
-                elif self.BOT_NICKNAME in recv["at"]:
-                    recv["to_me"] = True
-                else:
-                    recv["to_me"] = False
-            else:
-                recv["to_me"] = False
-            asyncio.create_task(send(recv))
-            recv["ip"] = ws.client.host if ws.client else None
-            self.dispatch(recv=recv, send=send, ws=ws, client=self)
 
     def extract_message(self, recv: MessageEvent, **ignore):
         text = recv["text"]
