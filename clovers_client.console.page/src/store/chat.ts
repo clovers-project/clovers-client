@@ -273,11 +273,16 @@ export const useChat = create<ChatState>((set, get) => ({
                 return;
             }
             case 'title': {
-                const [groupId, payload] = data;
+                const [groupId, title] = data;
                 const state = useSession.getState()
-                state.updateGroup(groupId, { groupName: payload });
-                state.learnGroup(groupId, payload);
-                get().localSystem(groupId, payload);
+                state.updateGroup(groupId, { groupName: title });
+                state.learnGroup(groupId, title);
+                get().localSystem(groupId, title);
+                return;
+            }
+            case 'notice': {
+                const [level, title, message] = data;
+                toast[level as keyof typeof toast](title, message);
                 return;
             }
             case 'onlineUsers': {

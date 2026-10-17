@@ -155,9 +155,6 @@ class ConsoleClient(CloversCore):
         self.messages.appendleft((data["messageId"], payload))
         return self._broadcast_payload(payload)
 
-    async def console_unicast(self, ws: WebSocket, data: list[str]):
-        await self._unicast_payload(ws, json.dumps({"type": "system", "data": data}))
-
     async def console_broadcast(self, data: list[str]):
         await self._broadcast_payload(json.dumps({"type": "system", "data": data}))
 
@@ -179,6 +176,8 @@ class ConsoleClient(CloversCore):
                     superuser = False
                 if recv["permission"] == "SuperUser":
                     if not superuser:
+                        data = ["notice", "warning", "Permission Denied", "Insufficient SuperUser privileges. Downgraded to Member."]
+                        await self._unicast_payload(ws, json.dumps({"type": "system", "data": data}))
                         recv["permission"] = "Member"
                 if recv["at"]:
                     if recv["at"][-1] == "":
