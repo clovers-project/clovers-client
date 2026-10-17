@@ -96,6 +96,8 @@ class ConsoleClient(CloversCore):
                 self.reload_auth_tokens()
             case "broadcast":
                 await self.console_broadcast(json.loads(args))
+            case "shutdown":
+                self.shutdown_fut.set_result(args or "Server shutdown")
 
     async def handle_upload(self, file: UploadFile = File(...)):
         if not file.content_type:
@@ -169,13 +171,15 @@ class ConsoleClient(CloversCore):
                 recv = TA_MESSAGE_EVENT.validate_python(json.loads(await ws.receive_text()))
                 group_id = recv["groupId"]
             except WebSocketDisconnect:
-                logger.info("Client disconnected.")
-                break
+                if not self.shutdown_fut.done():
+                    logger.info("Client disconnected.")
+                    self.ws_connects.discard(ws)
+                    online_users = str(len(self.ws_connects))
+                    await self.console_broadcast(["onlineUsers", online_users])
+                    logger.info(f"Client remaining: {online_users}")
+                return
             except (json.JSONDecodeError, ValidationError):
                 continue
-            except Exception:
-                logger.exception("Error in websocket_handler")
-                break
             if group := self.public_groups.get(group_id):
                 recv.update(group)  # type: ignore GroupInfo 包含 MessageEvent 的所有键
                 send = partial(self.broadcast, recv)
@@ -194,10 +198,6 @@ class ConsoleClient(CloversCore):
             asyncio.create_task(send(recv))
             recv["ip"] = ws.client.host if ws.client else None
             self.dispatch(recv=recv, send=send, ws=ws, client=self)
-        self.ws_connects.discard(ws)
-        online_users = str(len(self.ws_connects))
-        await self.console_broadcast(["onlineUsers", online_users])
-        logger.info(f"Client remaining: {online_users}")
 
     def extract_message(self, recv: MessageEvent, **ignore):
         text = recv["text"]
@@ -219,8 +219,13 @@ class ConsoleClient(CloversCore):
         app.get("/message/{message_id}")(self.get_message)
         app.get("/message_history/{message_id}")(self.get_message_history)
         app.mount("/", StaticFiles(directory=PAGE_RESOURCE.as_posix(), html=True), name="static")
-        config = uvicorn.Config(app, host=self.host, port=self.port, log_level="info")
+        config = uvicorn.Config(app, host=self.host, port=self.port, log_level="info", timeout_graceful_shutdown=10)
         server = uvicorn.Server(config)
-        await self.startup()
-        await server.serve()
-        await self.shutdown()
+        async with self:
+            server_task = asyncio.create_task(server.serve())
+            self.shutdown_fut = asyncio.Future[str]()
+            reason = await self.shutdown_fut
+            server.should_exit = True
+            await asyncio.gather(*(asyncio.create_task(ws.close(code=1000, reason=reason)) for ws in self.ws_connects))
+            self.ws_connects.clear()
+            await server_task
