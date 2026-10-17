@@ -12,7 +12,7 @@ from clovers_client.logger import init_logger
 from clovers_client.utils import id_generator
 from .utils import upload
 from pydantic import TypeAdapter, ValidationError
-from .protocol import GroupInfo, ConsoleMessage, Message, MessageEvent
+from .protocol import GroupInfo, Message, MessageEvent
 from .config import Config
 
 PAGE_RESOURCE = Path(__file__).parent / "page"
@@ -70,7 +70,7 @@ class ConsoleClient(CloversCore):
         except (json.JSONDecodeError, ValidationError):
             return
         self.public_groups_json = public_groups_json
-        self.public_groups.update((g["groupId"], g) for g in groups if g["groupId"])
+        self.public_groups.update((group_id, g) for g in groups if (group_id := g["groupId"]))
         return
 
     def reload_auth_tokens(self):
