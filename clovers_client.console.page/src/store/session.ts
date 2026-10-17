@@ -180,7 +180,7 @@ export const useSession = create<SessionState>((set, get) => ({
     },
 
     upsertGroups: (groupInfos) => {
-        const groups = get().groups
+        const groups = [...get().groups];
         for (const groupInfo of groupInfos) {
             const group = groups.find((g) => g.groupId === groupInfo.groupId);
             if (group) {

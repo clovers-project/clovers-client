@@ -3,7 +3,8 @@ import asyncio
 from pathlib import Path
 from functools import partial
 from collections import deque
-from fastapi import FastAPI, File, Header, Query, UploadFile, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, Header, Depends, Query, UploadFile, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response, FileResponse
 from clovers import CloversCore
 from clovers.logger import logger
@@ -14,7 +15,6 @@ from typing import cast
 from .protocol import GroupInfo, ConsoleMessage, Message, MessageEvent
 from .config import Config
 
-CONSOLE_PREFIX = b"\x05\x03\x01".decode()
 PAGE_RESOURCE = Path(__file__).parent / "page"
 
 
@@ -31,7 +31,6 @@ class ConsoleClient(CloversCore):
         # inner
         self.BOT_NICKNAME = config.BOT_NICKNAME
         self.BOT_AVATAR_URL = config.BOT_AVATAR_URL
-        self._length_bot_nickname = len(self.BOT_NICKNAME)
         # FastAPI
         self.host = config.host
         self.port = config.port
@@ -40,6 +39,7 @@ class ConsoleClient(CloversCore):
         self.unicast_id = id_generator()
         self.broadcast_id = id_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=config.message_history_limit)
+        # data
         self.data_dir = Path(config.data_dir).resolve()
         self.stores_dir = self.data_dir / "stores_dir"
         self._public_groups_config_file = self.data_dir / "public_groups_config.json"
@@ -53,10 +53,6 @@ class ConsoleClient(CloversCore):
         # auth_tokens
         self.auth_tokens: set[str] = set()
         self.reload_auth_tokens()
-
-    async def verify_token(self, x_token: str = Header(...)):
-        if x_token not in self.auth_tokens:
-            raise HTTPException(status_code=401, detail="Invalid token")
 
     def reload_public_groups(self):
         file = self._public_groups_config_file
@@ -90,6 +86,13 @@ class ConsoleClient(CloversCore):
         else:
             with self._auth_tokens_config_file.open("r", encoding="utf-8") as f:
                 self.auth_tokens.update(json.load(f))
+
+    async def verify_token(self, authorization: str = Header(...)):
+        if authorization.startswith("Bearer "):
+            token = authorization.removeprefix("Bearer ")
+            if token in self.auth_tokens:
+                return
+        raise HTTPException(status_code=401, detail="Invalid Authorization")
 
     async def handle_action(self, action: str, args: str = ""):
         match action:
@@ -168,8 +171,7 @@ class ConsoleClient(CloversCore):
                     recv["to_me"] = False
             else:
                 recv["to_me"] = False
-            if not recv["text"].startswith(CONSOLE_PREFIX):
-                asyncio.create_task(send(recv))
+            asyncio.create_task(send(recv))
             recv["ip"] = ws.client.host if ws.client else None
             yield recv, send
 
@@ -198,18 +200,17 @@ class ConsoleClient(CloversCore):
         text = recv["text"]
         message = "".join(f"@{at} " for at in recv["at"]) + text + "".join(f"[image]({image})" for image in recv["images"])
         logger.info(f"[{recv["senderId"]}][{recv["groupId"]}]: {message}")
-        if text.startswith(self.BOT_NICKNAME):
-            text = text[self._length_bot_nickname :].lstrip()
+        if not recv["to_me"] and text.startswith(self.BOT_NICKNAME):
+            text = text.removeprefix(self.BOT_NICKNAME)
             recv["to_me"] = True
         return text
 
     async def run(self):
         import uvicorn
-        from fastapi.staticfiles import StaticFiles
 
         app = FastAPI()
         app.websocket("/ws")(self.websocket_handler)
-        app.get("/action")(self.handle_action)
+        app.get("/action", dependencies=[Depends(self.verify_token)])(self.handle_action)
         app.post("/upload")(self.handle_upload)
         app.get("/download/{name:path}")(self.handle_download)
         app.get("/message/{message_id}")(self.get_message)
