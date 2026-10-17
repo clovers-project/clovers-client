@@ -224,8 +224,10 @@ class ConsoleClient(CloversCore):
         async with self:
             server_task = asyncio.create_task(server.serve())
             self.shutdown_fut = asyncio.Future[str]()
-            reason = await self.shutdown_fut
-            server.should_exit = True
-            await asyncio.gather(*(asyncio.create_task(ws.close(code=1000, reason=reason)) for ws in self.ws_connects))
-            self.ws_connects.clear()
-            await server_task
+            await asyncio.wait((server_task, self.shutdown_fut), return_when=asyncio.FIRST_COMPLETED)
+            if self.shutdown_fut.done():
+                reason = self.shutdown_fut.result()
+                server.should_exit = True
+                await asyncio.gather(*(ws.close(code=1001, reason=reason) for ws in self.ws_connects), return_exceptions=True)
+                self.ws_connects.clear()
+                await server_task
