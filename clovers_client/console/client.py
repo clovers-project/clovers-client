@@ -11,11 +11,15 @@ from clovers.logger import logger
 from clovers_client.logger import init_logger
 from clovers_client.utils import id_generator
 from .utils import upload
-from typing import cast
+from pydantic import TypeAdapter, ValidationError
 from .protocol import GroupInfo, ConsoleMessage, Message, MessageEvent
 from .config import Config
 
 PAGE_RESOURCE = Path(__file__).parent / "page"
+MAX_UPLOAD_SIZE = 1024 * 1024 * 10
+
+TA_MESSAGE_EVENT = TypeAdapter(MessageEvent)
+TA_GROUPS = TypeAdapter(list[GroupInfo])
 
 
 class ConsoleClient(CloversCore):
@@ -55,28 +59,18 @@ class ConsoleClient(CloversCore):
         self.reload_auth_tokens()
 
     def reload_public_groups(self):
-        file = self._public_groups_config_file
         self.public_groups_json = ""
         self.public_groups.clear()
-        if not file.exists():
-            file.write_text(json.dumps([{"groupName": "", "groupId": "", "groupAvatar": ""}]))
+        if not self._public_groups_config_file.exists():
+            self._public_groups_config_file.write_text(json.dumps([{"groupName": "", "groupId": "", "groupAvatar": ""}]))
             return
-        self.public_groups_json = file.read_text("utf-8")
-        groups = json.loads(self.public_groups_json)
-        if not isinstance(groups, list):
+        public_groups_json = self._public_groups_config_file.read_text("utf-8")
+        try:
+            groups = TA_GROUPS.validate_python(json.loads(public_groups_json))
+        except (json.JSONDecodeError, ValidationError):
             return
-
-        def valid_g(g: dict) -> bool:
-            for k in ("groupName", "groupId", "groupAvatar"):
-                if k not in g:
-                    return False
-                if not g[k]:
-                    continue
-                if not isinstance(g[k], str):
-                    return False
-            return True
-
-        self.public_groups.update((g["groupId"], g) for g in groups if valid_g(g))
+        self.public_groups_json = public_groups_json
+        self.public_groups.update((g["groupId"], g) for g in groups if g["groupId"])
         return
 
     def reload_auth_tokens(self):
@@ -106,7 +100,10 @@ class ConsoleClient(CloversCore):
     async def handle_upload(self, file: UploadFile = File(...)):
         if not file.content_type:
             return Response(status_code=400, content="Invalid Content-Type")
-        return Response(status_code=200, content=upload(self.stores_dir, await file.read()))
+        content = await file.read()
+        if len(content) > MAX_UPLOAD_SIZE:
+            return Response(status_code=413, content="File too large")
+        return Response(status_code=200, content=upload(self.stores_dir, content))
 
     async def handle_download(self, name: str, check: bool = Query(False)):
         filepath = self.stores_dir / name
@@ -131,12 +128,22 @@ class ConsoleClient(CloversCore):
         payloads.reverse()
         return Response(status_code=200, content=json.dumps(payloads), media_type="application/json")
 
+    @staticmethod
+    async def _unicast_payload(ws: WebSocket, payload: str):
+        try:
+            await ws.send_text(payload)
+        except Exception:
+            pass
+
+    async def _boardcast_payload(self, payload: str):
+        await asyncio.gather(*(self._unicast_payload(ws, payload) for ws in self.ws_connects))
+
     def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
         data["messageId"] = f"unicast_{next(self.unicast_id)}"
         if "echo" in recv:
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
-        return ws.send_text(payload)
+        return self._unicast_payload(ws, payload)
 
     def broadcast(self, recv: MessageEvent, data: Message):
         data["messageId"] = f"broadcast_{next(self.broadcast_id)}"
@@ -144,19 +151,32 @@ class ConsoleClient(CloversCore):
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
         self.messages.appendleft((data["messageId"], payload))
-        return self.boardcast_payload(payload)
+        return self._boardcast_payload(payload)
 
     async def console_broadcast(self, data: list[str]):
-        console_message: ConsoleMessage = {"type": "system", "data": data}
-        await self.boardcast_payload(json.dumps(console_message))
+        await self._boardcast_payload(json.dumps({"type": "system", "data": data}))
 
-    async def boardcast_payload(self, payload: str):
-        await asyncio.gather(*(ws.send_text(payload) for ws in self.ws_connects))
-
-    async def reveive_event(self, ws: WebSocket):
+    async def websocket_handler(self, ws: WebSocket):
+        await ws.accept()
+        self.ws_connects.add(ws)
+        online_users = str(len(self.ws_connects))
+        await self.console_broadcast(["onlineUsers", online_users])
+        logger.info(f"New client connected. Total: {online_users}")
+        if self.public_groups_json:
+            await self.console_broadcast(["publicGroups", self.public_groups_json])
         while True:
-            recv = cast(MessageEvent, json.loads(await ws.receive_text()))
-            if group := self.public_groups.get(recv["groupId"]):
+            try:
+                recv = TA_MESSAGE_EVENT.validate_python(json.loads(await ws.receive_text()))
+                group_id = recv["groupId"]
+            except WebSocketDisconnect:
+                logger.info("Client disconnected.")
+                break
+            except (json.JSONDecodeError, ValidationError):
+                continue
+            except Exception:
+                logger.exception("Error in websocket_handler")
+                break
+            if group := self.public_groups.get(group_id):
                 recv.update(group)  # type: ignore GroupInfo 包含 MessageEvent 的所有键
                 send = partial(self.broadcast, recv)
             else:
@@ -173,24 +193,7 @@ class ConsoleClient(CloversCore):
                 recv["to_me"] = False
             asyncio.create_task(send(recv))
             recv["ip"] = ws.client.host if ws.client else None
-            yield recv, send
-
-    async def websocket_handler(self, ws: WebSocket):
-        await ws.accept()
-        self.ws_connects.add(ws)
-        online_users = str(len(self.ws_connects))
-        await self.console_broadcast(["onlineUsers", online_users])
-        logger.info(f"New client connected. Total: {online_users}")
-        if self.public_groups_json:
-            await self.console_broadcast(["publicGroups", self.public_groups_json])
-        reveive_event = self.reveive_event(ws)
-        try:
-            async for recv, send in reveive_event:
-                self.dispatch(recv=recv, send=send, ws=ws, client=self)
-        except WebSocketDisconnect:
-            logger.info("Client disconnected.")
-        except Exception:
-            logger.exception("Error in websocket_handler")
+            self.dispatch(recv=recv, send=send, ws=ws, client=self)
         self.ws_connects.discard(ws)
         online_users = str(len(self.ws_connects))
         await self.console_broadcast(["onlineUsers", online_users])

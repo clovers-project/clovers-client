@@ -33,10 +33,10 @@ class ConsoleMessage(BaseMessage):
     type: Literal["system"]
     data: list[str]
     """
-    data 取值
-    - ["message", message] 系统信息
-    - ["title", group_id, title] 把 group_id 群名改为 title
-    - ["onlineUsers" number] 在线人数
+    格式说明: data 的每个元素都是str, 这里标注的是经过 json.dumps 后的 data 类型
+    - ["message", message(str)] 系统信息
+    - ["title", group_id(str), title(str)] 把 group_id 群名改为 title
+    - ["onlineUsers" number(int)] 在线人数
     - ["publicGroups" payload(list[GroupInfo])] 公开群组
     """
 
