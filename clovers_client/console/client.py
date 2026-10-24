@@ -3,6 +3,7 @@ import asyncio
 from pathlib import Path
 from functools import partial
 from collections import deque
+from uuid_utils import uuid4
 from fastapi import FastAPI, File, Header, Depends, Query, UploadFile, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response, FileResponse
@@ -40,8 +41,6 @@ class ConsoleClient(CloversCore):
         self.port = config.port
         self.ws_connects: set[WebSocket] = set()
         # Server
-        self.unicast_id = id_generator()
-        self.broadcast_id = id_generator()
         self.messages: deque[tuple[str, str]] = deque(maxlen=config.message_history_limit)
         # data
         self.data_dir = Path(config.data_dir).resolve()
@@ -134,21 +133,22 @@ class ConsoleClient(CloversCore):
     async def _unicast_payload(ws: WebSocket, payload: str):
         try:
             await ws.send_text(payload)
-        except Exception:
+        except Exception as e:
+            logger.exception(e)
             pass
 
     async def _broadcast_payload(self, payload: str):
         await asyncio.gather(*(self._unicast_payload(ws, payload) for ws in self.ws_connects))
 
     def unicast(self, ws: WebSocket, recv: MessageEvent, data: Message):
-        data["messageId"] = f"unicast_{next(self.unicast_id)}"
+        data["messageId"] = f"unicast_{uuid4()}"
         if "echo" in recv:
             data["echo"] = recv["echo"]
         payload = json.dumps(data)
         return self._unicast_payload(ws, payload)
 
     def broadcast(self, recv: MessageEvent, data: Message):
-        data["messageId"] = f"broadcast_{next(self.broadcast_id)}"
+        data["messageId"] = f"broadcast_{uuid4()}"
         if "echo" in recv:
             data["echo"] = recv["echo"]
         payload = json.dumps(data)

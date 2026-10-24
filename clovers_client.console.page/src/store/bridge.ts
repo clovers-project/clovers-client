@@ -49,7 +49,7 @@ export function startApp(): void {
     });
     client.fetchMessageHistory(lastMessageId).then(
         (messages) => {
-            if (!messages) return;
+            if (!messages || messages.length === 0) return;
             for (const message of messages) {
                 if (message.type === 'system') {
                     useChat.getState().handleSystemMessage(message);
