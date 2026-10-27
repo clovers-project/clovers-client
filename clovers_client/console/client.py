@@ -1,4 +1,5 @@
 import json
+import contextlib
 import asyncio
 from pathlib import Path
 from functools import partial
@@ -10,7 +11,6 @@ from fastapi.responses import Response, FileResponse
 from clovers import CloversCore
 from clovers.logger import logger
 from clovers_client.logger import init_logger
-from clovers_client.utils import id_generator
 from .utils import upload
 from pydantic import TypeAdapter, ValidationError
 from .protocol import GroupInfo, ChatMessage, Message, MessageEvent
@@ -131,11 +131,8 @@ class ConsoleClient(CloversCore):
 
     @staticmethod
     async def _unicast_payload(ws: WebSocket, payload: str):
-        try:
+        with contextlib.suppress(Exception):
             await ws.send_text(payload)
-        except Exception as e:
-            logger.exception(e)
-            pass
 
     async def _broadcast_payload(self, payload: str):
         await asyncio.gather(*(self._unicast_payload(ws, payload) for ws in self.ws_connects))
