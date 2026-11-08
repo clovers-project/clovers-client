@@ -8,7 +8,7 @@ from clovers_client.console import Client
 from clovers_client.event import PermissionLiteral
 from clovers_client.result import OverallResult, SegmentedResult
 from clovers_client.result import FileLike, SequenceMessage, SegmentedMessage, GroupMessage, PrivateMessage
-from .utils import md5, upload, image_url
+from .utils import md5, upload, image_url, detect_suffix
 from typing import Any
 from collections.abc import Callable, Coroutine
 from .protocol import MessageEvent, ConsoleMessage, ChatMessage, Message
@@ -145,23 +145,28 @@ async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, cli
         "groupAvatar": recv["groupAvatar"],
         "permission": "Member",
     }
-    if isinstance(message, str):
-        if message.startswith("http"):
-            data["text"] = f"[下载文件]({message})"
-            await send(data)
-            return
-        else:
+    match message:
+        case str():
+            if message.startswith("http"):
+                data["text"] = f"[下载文件]({message})"
+                await send(data)
+                return
             file = Path(message)
-    elif isinstance(message, Path):
-        file = message
-    else:
-        raise TypeError("file message must be str or Path")
-    if not file.exists():
-        raise FileNotFoundError(file)
+            file_data = file.read_bytes()
+            suffix = file.suffix
+        case Path():
+            file_data = message.read_bytes()
+            suffix = message.suffix
+        case bytes():
+            file_data = message
+            suffix = detect_suffix(file_data)
+        case BytesIO():
+            file_data = message.getvalue()
+            suffix = detect_suffix(file_data)
+        case _:
+            raise TypeError("file message must be FileLike")
     folder = client.stores_dir / "file"
-    folder.mkdir(parents=True, exist_ok=True)
-    file_data = file.read_bytes()
-    file_name = f"{md5(file_data)}{file.suffix}"
+    file_name = f"{md5(file_data)}{suffix}"
     file_path = folder / file_name
     file_path.write_bytes(file_data)
     data["text"] = f"[下载文件](/download/file/{file_name})"

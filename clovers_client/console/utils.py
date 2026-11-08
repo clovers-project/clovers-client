@@ -1,6 +1,7 @@
 import hashlib
 from base64 import b64encode
 from pathlib import Path
+import puremagic
 
 
 def md5(data: bytes):
@@ -29,3 +30,11 @@ def image_url(path: Path, url: str):
         return url
     data = download(path, url[len("/download/") :])
     return f"data:image/png;base64,{ b64encode(data).decode()}" if data else None
+
+
+def detect_suffix(data: bytes) -> str:
+    try:
+        result = puremagic.from_string(data)
+        return result
+    except puremagic.PureError:
+        return ".bin"

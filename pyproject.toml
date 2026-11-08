@@ -1,6 +1,6 @@
 [project]
 name = "clovers-client"
-version = "0.3.7"
+version = "0.3.8"
 description = ""
 authors = [{ name = "KarisAya", email = "karisaya@foxmail.com" }]
 readme = "README.md"
@@ -15,6 +15,7 @@ console = [
     "python-multipart>=0.0.22",
     "websockets>=16.0",
     "uuid-utils>=1.1.0",
+    "puremagic>=2.2.0",
 ]
 onebot-v11 = ["websockets>=15.0.0"]
 
