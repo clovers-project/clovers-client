@@ -120,6 +120,16 @@ async def send_list(message: SequenceMessage, recv: MessageEvent, send: SendMeth
     await send(data)
 
 
+@ADAPTER.send_method("voice")
+def send_voice(message: FileLike, recv: MessageEvent, send: SendMethod, client: Client):
+    return send_file(message, recv, send, client)
+
+
+@ADAPTER.send_method("video")
+def send_video(message: FileLike, recv: MessageEvent, send: SendMethod, client: Client):
+    return send_file(message, recv, send, client)
+
+
 @ADAPTER.send_method("file")
 async def send_file(message: FileLike, recv: MessageEvent, send: SendMethod, client: Client):
     data: ChatMessage = {
