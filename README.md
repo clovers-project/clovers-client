@@ -13,7 +13,7 @@ _✨ 官方 Clovers 机器人客户端 ✨_
 [![Github](https://img.shields.io/badge/GitHub-Clovers-00CC33?logo=github)](https://github.com/clovers-project/clovers)
 [![LICENSE](https://img.shields.io/github/license/clovers-project/clovers-client.svg)](./LICENSE)
 
-[使用文档](https://clovers-project.github.io/#/clovers-client)
+[使用文档](./docs/usage.md) · [在线文档](https://clovers-project.github.io/#/clovers-client)
 
 </div>
 
